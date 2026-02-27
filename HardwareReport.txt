@@ -1,0 +1,10 @@
+﻿=== Hardware Report ===
+
+CPU: Intel(R) Core(TM) i5-8400T CPU @ 1.70GHz | Cores: 6 | Threads: 6 | MaxClockSpeed: 1704 MHz
+RAM: 8 GB
+Mainboard: HP 84EE | Seriennummer: PHBPT0A8JBZ2H1
+Festplatten:
+ - HGST HTS721010A9E630: 931.51 GB
+ - INTEL SSDPEKNW010T9: 953.86 GB
+ - Generic FFFFF SD Card: 3.71 GB
+GPU: Intel(R) UHD Graphics 630 | RAM: 1 GB

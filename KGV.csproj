@@ -1,0 +1,82 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+  </PropertyGroup>
+
+	<ItemGroup>
+		<Content Include="appsettings.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+	</ItemGroup>
+
+ 
+
+  <ItemGroup>
+    <Content Include="bin\Debug\net8.0-windows\KGV.deps.json" />
+    <Content Include="bin\Debug\net8.0-windows\KGV.runtimeconfig.json" />
+    <Content Include="obj\Debug\net8.0-windows\KGV.csproj.FileListAbsolute.txt" />
+    <Content Include="obj\Debug\net8.0-windows\KGV.designer.deps.json" />
+    <Content Include="obj\Debug\net8.0-windows\KGV.designer.runtimeconfig.json" />
+    <Content Include="obj\KGV.csproj.nuget.dgspec.json" />
+    <Content Include="obj\project.assets.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="bin\Debug\net8.0-windows\KGV.dll" />
+    <None Include="bin\Debug\net8.0-windows\KGV.exe" />
+    <None Include="bin\Debug\net8.0-windows\KGV.pdb" />
+    <None Include="KGV.slnx" />
+    <None Include="obj\Debug\net8.0-windows\apphost.exe" />
+    <None Include="obj\Debug\net8.0-windows\KGV.AssemblyInfoInputs.cache" />
+    <None Include="obj\Debug\net8.0-windows\KGV.assets.cache" />
+    <None Include="obj\Debug\net8.0-windows\KGV.csproj.AssemblyReference.cache" />
+    <None Include="obj\Debug\net8.0-windows\KGV.csproj.BuildWithSkipAnalyzers" />
+    <None Include="obj\Debug\net8.0-windows\KGV.csproj.CoreCompileInputs.cache" />
+    <None Include="obj\Debug\net8.0-windows\KGV.dll" />
+    <None Include="obj\Debug\net8.0-windows\KGV.g.resources" />
+    <None Include="obj\Debug\net8.0-windows\KGV.GeneratedMSBuildEditorConfig.editorconfig" />
+    <None Include="obj\Debug\net8.0-windows\KGV.genruntimeconfig.cache" />
+    <None Include="obj\Debug\net8.0-windows\KGV.pdb" />
+    <None Include="obj\Debug\net8.0-windows\KGV_kztzambo_wpftmp.AssemblyInfoInputs.cache" />
+    <None Include="obj\Debug\net8.0-windows\KGV_kztzambo_wpftmp.assets.cache" />
+    <None Include="obj\Debug\net8.0-windows\KGV_kztzambo_wpftmp.GeneratedMSBuildEditorConfig.editorconfig" />
+    <None Include="obj\Debug\net8.0-windows\KGV_MarkupCompile.cache" />
+    <None Include="obj\Debug\net8.0-windows\KGV_MarkupCompile.i.cache" />
+    <None Include="obj\Debug\net8.0-windows\KGV_MarkupCompile.lref" />
+    <None Include="obj\Debug\net8.0-windows\KGV_unhn0duq_wpftmp.AssemblyInfoInputs.cache" />
+    <None Include="obj\Debug\net8.0-windows\KGV_unhn0duq_wpftmp.assets.cache" />
+    <None Include="obj\Debug\net8.0-windows\KGV_unhn0duq_wpftmp.csproj.BuildWithSkipAnalyzers" />
+    <None Include="obj\Debug\net8.0-windows\KGV_unhn0duq_wpftmp.GeneratedMSBuildEditorConfig.editorconfig" />
+    <None Include="obj\Debug\net8.0-windows\MainWindow.baml" />
+    <None Include="obj\Debug\net8.0-windows\refint\KGV.dll" />
+    <None Include="obj\Debug\net8.0-windows\ref\KGV.dll" />
+    <None Include="obj\KGV.csproj.nuget.g.props" />
+    <None Include="obj\KGV.csproj.nuget.g.targets" />
+    <None Include="obj\project.nuget.cache" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.3" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.3" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.3" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.135" />
+    <PackageReference Include="supabase" Version="1.1.1" />
+    <PackageReference Include="Supabase.Postgrest" Version="4.1.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Converters\" />
+    <Folder Include="Data\" />
+    <Folder Include="Resources\Styles\" />
+    <Folder Include="Resources\Templates\" />
+    <Folder Include="Views\Controls\" />
+  </ItemGroup>
+
+</Project>
