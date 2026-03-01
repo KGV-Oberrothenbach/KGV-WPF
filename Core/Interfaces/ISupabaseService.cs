@@ -1,5 +1,7 @@
-﻿using Supabase;
+﻿// File: Core/Interfaces/ISupabaseService.cs
+using Supabase;
 using KGV.Core.Models;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -7,59 +9,70 @@ namespace KGV.Core.Interfaces
 {
     public interface ISupabaseService
     {
-        /// <summary>
-        /// Supabase Client für Auth, Realtime, Storage etc.
-        /// </summary>
         Client Client { get; }
-
-        /// <summary>
-        /// Initialisiert den Supabase Client
-        /// </summary>
         Task InitializeAsync();
 
-        /// <summary>
-        /// Liefert alle verfügbaren Saisons
-        /// </summary>
         Task<List<string>> GetSeasonsAsync();
-
-        /// <summary>
-        /// Liefert alle Mitglieder
-        /// </summary>
         Task<List<MitgliedRecord>> GetMitgliederAsync();
 
-        /// <summary>
-        /// Liefert eine Parzelle anhand der Gartennummer
-        /// </summary>
+        // ✅ Vollständige Stammdaten
+        Task<MitgliedRecord?> GetMitgliedByIdAsync(int mitgliedId);
+        Task<bool> UpdateMitgliedAsync(MemberDTO dto, string userId);
+
         Task<ParzelleRecord?> GetParzelleByNumberAsync(string gartenNr);
-
-        /// <summary>
-        /// Liefert die aktuelle Belegung einer Parzelle
-        /// </summary>
-        Task<ParzellenBelegungRecord?> GetCurrentBelegungForParzelleAsync(int parzelleId);
-
-        /// <summary>
-        /// Liefert alle Parzellen
-        /// </summary>
         Task<List<ParzelleRecord>> GetAllParzellenAsync();
 
-        /// <summary>
-        /// Versucht, ein Mitglied für Bearbeitung zu sperren
-        /// </summary>
-        Task<bool> TryLockMitgliedAsync(int mitgliedId, string userId, int timeoutMinutes = 10);
+        Task<ParzellenBelegungRecord?> GetCurrentBelegungForParzelleAsync(int parzelleId);
 
-        /// <summary>
-        /// Gibt die Sperre eines Mitglieds wieder frei
-        /// </summary>
+        // ✅ Belegungen für Parzellen-Zuweisung
+        Task<List<ParzellenBelegungRecord>> GetBelegungenForMitgliedAsync(int mitgliedId);
+        Task<List<ParzellenBelegungRecord>> GetAllParzellenBelegungenAsync();
+        Task<bool> AssignParzelleToMitgliedAsync(int mitgliedId, int parzelleId, DateTime startDatum);
+        Task<bool> EndParzellenBelegungAsync(int belegungId, DateTime bisDatum);
+
+        Task<List<ZaehlerAblesungDTO>> GetStromAblesungenAsync(int parzelleId);
+        Task<List<ZaehlerAblesungDTO>> GetWasserAblesungenAsync(int parzelleId);
+
+        Task<StromzaehlerRecord?> GetActiveStromzaehlerAsync(int parzelleId, DateTime onDate);
+        Task<WasserzaehlerRecord?> GetActiveWasserzaehlerAsync(int parzelleId, DateTime onDate);
+
+        Task<bool> AddStromzaehlerAsync(int parzelleId, string zaehlernummer, DateTime eichdatum, DateTime eingebautAm);
+        Task<bool> AddWasserzaehlerAsync(int parzelleId, string zaehlernummer, DateTime eichdatum, DateTime eingebautAm);
+
+        Task<bool> SetStromzaehlerAusgebautAmAsync(long stromzaehlerId, DateTime ausgebautAm);
+        Task<bool> SetWasserzaehlerAusgebautAmAsync(long wasserzaehlerId, DateTime ausgebautAm);
+
+        Task<bool> AddAblesungAsync(short zaehlerTyp, long zaehlerId, DateTime ablesedatum, decimal stand, string? fotoPfad);
+        Task<bool> UpdateAblesungAsync(long ablesungId, DateTime ablesedatum, decimal stand, string? fotoPfad);
+
+        // =========================
+        // Nebenmitglied
+        // =========================
+        Task<MitgliedRecord?> GetNebenmitgliedByHauptmitgliedIdAsync(int hauptmitgliedId);
+        Task<MitgliedRecord?> CreateNebenmitgliedAsync(int hauptmitgliedId, string vorname, string nachname, bool adresseUebernehmen);
+
+        // =========================
+        // Arbeitsstunden
+        // =========================
+        Task<List<SaisonRecord>> GetSaisonRecordsAsync();
+        Task<MitgliedRecord?> GetMitgliedByAuthUserIdAsync(string authUserId);
+        Task<List<ArbeitsstundeDTO>> GetArbeitsstundenAsync(params int[] mitgliedIds);
+        Task<bool> AddArbeitsstundeAsync(ArbeitsstundeRecord record);
+        Task<bool> UpdateArbeitsstundeAsync(ArbeitsstundeRecord record);
+        Task<bool> DeleteArbeitsstundeAsync(int arbeitsstundeId);
+        Task<List<(int MitgliedId, string Vorname, string Nachname, int Count)>> GetUnapprovedArbeitsstundenByMitgliedAsync();
+
+        Task<bool> TryLockMitgliedAsync(int mitgliedId, string userId, int timeoutMinutes = 10);
         Task<bool> ReleaseLockMitgliedAsync(int mitgliedId, string userId, bool force = false);
 
-        /// <summary>
-        /// Versucht, eine Arbeitsstunde für Bearbeitung zu sperren
-        /// </summary>
         Task<bool> TryLockArbeitsstundeAsync(int arbeitsstundeId, string userId, int timeoutMinutes = 10);
-
-        /// <summary>
-        /// Gibt die Sperre einer Arbeitsstunde wieder frei
-        /// </summary>
         Task<bool> ReleaseLockArbeitsstundeAsync(int arbeitsstundeId, string userId, bool force = false);
+
+        // =========================
+        // Dokumente (Supabase Storage)
+        // =========================
+        Task<List<DocumentInfo>> GetMitgliedDokumenteAsync(int mitgliedId);
+        Task<List<DocumentInfo>> GetParzelleDokumenteAsync(int parzelleId);
+        Task<string?> CreateDokumentSignedUrlAsync(string storagePath, int expiresInSeconds = 3600);
     }
 }

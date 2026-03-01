@@ -68,7 +68,7 @@ namespace KGV
             _supabaseService = new SupabaseService(clientFactory, null);
 
             // NavigationService braucht SupabaseService für VM-Erzeugung
-            _navigationService = new NavigationService(_supabaseService);
+            _navigationService = new NavigationService(_supabaseService, _authService);
 
             // Letzte Email laden
             string lastEmail = AppSettings.LastEmail ?? string.Empty;

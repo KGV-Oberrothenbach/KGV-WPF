@@ -1,19 +1,20 @@
-﻿using System;
+﻿// File: Core/Models/MemberDTO.cs
+using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Windows.Data;
+using System.ComponentModel;
 
 namespace KGV.Core.Models
 {
-    public class MemberDTO
+    public class MemberDTO : INotifyPropertyChanged
     {
-        // Dirty Tracking (Event-basiert)
+        public event PropertyChangedEventHandler? PropertyChanged;
+
         public event EventHandler? Changed;
 
-        /// <summary>
-        /// Wenn true: Änderungen feuern kein Changed-Event (wichtig für CopyFrom beim Cancel).
-        /// </summary>
         public bool SuppressChangedEvents { get; set; }
+
+        private void OnPropertyChanged(string name) =>
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 
         private void RaiseChanged()
         {
@@ -21,109 +22,128 @@ namespace KGV.Core.Models
             Changed?.Invoke(this, EventArgs.Empty);
         }
 
+        // Stabilisiert DATE-Spalten gegen -1/+1 Drift (Timezone/Kind)
+        private static DateTime? NormalizeDate(DateTime? value)
+        {
+            if (!value.HasValue) return null;
+            var noon = value.Value.Date.AddHours(12);
+            return DateTime.SpecifyKind(noon, DateTimeKind.Unspecified);
+        }
+
+        private bool SetField<T>(ref T field, T value, string propertyName, params string[] alsoNotify)
+        {
+            if (EqualityComparer<T>.Default.Equals(field, value)) return false;
+
+            field = value;
+            OnPropertyChanged(propertyName);
+
+            if (alsoNotify != null)
+            {
+                foreach (var p in alsoNotify)
+                    OnPropertyChanged(p);
+            }
+
+            RaiseChanged();
+            return true;
+        }
+
         private int _id;
         public int Id
         {
             get => _id;
-            set { if (_id == value) return; _id = value; RaiseChanged(); }
+            set => SetField(ref _id, value, nameof(Id));
         }
 
         private string _vorname = "";
         public string Vorname
         {
             get => _vorname;
-            set { if (_vorname == value) return; _vorname = value ?? ""; RaiseChanged(); }
+            set => SetField(ref _vorname, value ?? "", nameof(Vorname), nameof(DisplayName));
         }
 
         private string _nachname = "";
         public string Nachname
         {
             get => _nachname;
-            set { if (_nachname == value) return; _nachname = value ?? ""; RaiseChanged(); }
+            set => SetField(ref _nachname, value ?? "", nameof(Nachname), nameof(DisplayName));
         }
 
         private DateTime? _geburtsdatum;
         public DateTime? Geburtsdatum
         {
             get => _geburtsdatum;
-            set { if (_geburtsdatum == value) return; _geburtsdatum = value; RaiseChanged(); }
+            set => SetField(ref _geburtsdatum, NormalizeDate(value), nameof(Geburtsdatum));
         }
 
         private string _strasse = "";
         public string Strasse
         {
             get => _strasse;
-            set { if (_strasse == value) return; _strasse = value ?? ""; RaiseChanged(); }
+            set => SetField(ref _strasse, value ?? "", nameof(Strasse));
         }
 
         private string _plz = "";
         public string PLZ
         {
             get => _plz;
-            set { if (_plz == value) return; _plz = value ?? ""; RaiseChanged(); }
+            set => SetField(ref _plz, value ?? "", nameof(PLZ));
         }
 
         private string _ort = "";
         public string Ort
         {
             get => _ort;
-            set { if (_ort == value) return; _ort = value ?? ""; RaiseChanged(); }
+            set => SetField(ref _ort, value ?? "", nameof(Ort));
         }
 
         private string _telefon = "";
         public string Telefon
         {
             get => _telefon;
-            set { if (_telefon == value) return; _telefon = value ?? ""; RaiseChanged(); }
+            set => SetField(ref _telefon, value ?? "", nameof(Telefon));
         }
 
         private string _email = "";
         public string Email
         {
             get => _email;
-            set { if (_email == value) return; _email = value ?? ""; RaiseChanged(); }
+            set => SetField(ref _email, value ?? "", nameof(Email), nameof(DisplayName));
         }
 
         private string _bemerkungen = "";
         public string Bemerkungen
         {
             get => _bemerkungen;
-            set { if (_bemerkungen == value) return; _bemerkungen = value ?? ""; RaiseChanged(); }
+            set => SetField(ref _bemerkungen, value ?? "", nameof(Bemerkungen));
         }
 
         private bool _whatsappEinwilligung;
         public bool WhatsappEinwilligung
         {
             get => _whatsappEinwilligung;
-            set { if (_whatsappEinwilligung == value) return; _whatsappEinwilligung = value; RaiseChanged(); }
+            set => SetField(ref _whatsappEinwilligung, value, nameof(WhatsappEinwilligung));
         }
 
         private DateTime? _mitgliedSeit;
         public DateTime? MitgliedSeit
         {
             get => _mitgliedSeit;
-            set { if (_mitgliedSeit == value) return; _mitgliedSeit = value; RaiseChanged(); }
+            set => SetField(ref _mitgliedSeit, NormalizeDate(value), nameof(MitgliedSeit));
         }
 
         private DateTime? _mitgliedEnde;
         public DateTime? MitgliedEnde
         {
             get => _mitgliedEnde;
-            set { if (_mitgliedEnde == value) return; _mitgliedEnde = value; RaiseChanged(); }
+            set => SetField(ref _mitgliedEnde, NormalizeDate(value), nameof(MitgliedEnde), nameof(Aktiv));
         }
 
-        /// <summary>
-        /// Aktiv = MitgliedEnde == null (wie du es vorher hattest)
-        /// </summary>
         public bool Aktiv
         {
             get => MitgliedEnde == null;
             set
             {
-                if (value)
-                {
-                    MitgliedEnde = null; // triggert RaiseChanged über Setter
-                }
+                if (value) MitgliedEnde = null;
             }
         }
 
@@ -131,19 +151,27 @@ namespace KGV.Core.Models
         public string Role
         {
             get => _role;
-            set { if (_role == value) return; _role = value ?? ""; RaiseChanged(); }
+            set => SetField(ref _role, value ?? "", nameof(Role));
         }
 
-        public List<GartenDTO> Gärten { get; set; } = new List<GartenDTO>();
+        private List<GartenDTO> _gärten = new();
+        public List<GartenDTO> Gärten
+        {
+            get => _gärten;
+            set => SetField(ref _gärten, value ?? new List<GartenDTO>(), nameof(Gärten));
+        }
 
-        public string DisplayName =>
-            string.IsNullOrWhiteSpace($"{Vorname} {Nachname}".Trim())
-                ? Email
-                : $"{Vorname} {Nachname}".Trim();
-
-        // ============================
-        // Snapshot / Cancel Hilfen
-        // ============================
+        // WPF kann bei manchen Controls/Templates (z.B. ComboBox) intern eine TwoWay-Bindung erzeugen.
+        // Damit es dabei nicht zu "TwoWay ... funktioniert nicht mit schreibgeschützter Eigenschaft" kommt,
+        // hat DisplayName einen (no-op) Setter.
+        public string DisplayName
+        {
+            get =>
+                string.IsNullOrWhiteSpace($"{Vorname} {Nachname}".Trim())
+                    ? Email
+                    : $"{Vorname} {Nachname}".Trim();
+            set { /* no-op */ }
+        }
 
         public MemberDTO Clone()
         {
@@ -171,6 +199,7 @@ namespace KGV.Core.Models
 
                 Telefon = other.Telefon;
                 Email = other.Email;
+
                 Bemerkungen = other.Bemerkungen;
                 WhatsappEinwilligung = other.WhatsappEinwilligung;
 

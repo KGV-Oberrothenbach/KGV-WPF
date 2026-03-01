@@ -60,6 +60,9 @@ namespace KGV.Core.Models
         [Column("aktiv")]
         public bool Aktiv { get; set; }
 
+        [Column("hauptmitglied_id")]
+        public int? HauptmitgliedId { get; set; }
+
         // ===== Locking (WICHTIG: Spaltennamen aus DB) =====
         // DB: lockedbyuserid / lockat
         [Column("lockedbyuserid")]

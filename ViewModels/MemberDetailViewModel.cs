@@ -1,249 +1,562 @@
-﻿using System;
+﻿// File: ViewModels/MemberDetailViewModel.cs
+using System;
+using System.Collections.ObjectModel;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
+using CommunityToolkit.Mvvm.Messaging;
 using KGV.Core.Interfaces;
 using KGV.Core.Models;
+using KGV.Helpers;
+using KGV.Messages;
+using KGV.Views;
 
 namespace KGV.ViewModels
 {
     public class MemberDetailViewModel : BaseViewModel, INavigationAware
     {
         private readonly ISupabaseService _supabaseService;
-        private string? _lockedByUserId;
+        private readonly IAuthService _authService;
 
-        // Das gebundene DTO (wird in der View gebunden)
+        private string? _lockUserId;
+
         public MemberDTO SelectedMember { get; }
 
-        // Snapshot für Cancel/Dirty
-        private readonly MemberDTO _originalSnapshot;
+        public bool ShowParzellenSection => true;
+        public bool ShowNewContractButton => true;
+
+        private MitgliedRecord? _nebenmitgliedRecord;
+        private bool _hasNebenmitglied;
+        public bool HasNebenmitglied
+        {
+            get => _hasNebenmitglied;
+            private set
+            {
+                if (SetProperty(ref _hasNebenmitglied, value))
+                {
+                    OnPropertyChanged(nameof(ShowNebenmitgliedButton));
+                    OnPropertyChanged(nameof(NebenmitgliedButtonText));
+                }
+            }
+        }
+
+        public bool ShowNebenmitgliedButton => HasNebenmitglied || IsEditMode;
+        public string NebenmitgliedButtonText => HasNebenmitglied ? "Nebenmitglied" : "Nebenmitglied anlegen";
+
+        public bool ShowAdresseUebernehmenButton => false;
+
+        private MemberDTO _originalSnapshot;
+
+        public ObservableCollection<ParzellenBelegungDTO> ParzellenBelegungen { get; } = new();
+        public ObservableCollection<ParzelleRecord> AvailableParzellen { get; } = new();
+
+        private ParzellenBelegungDTO? _selectedBelegung;
+        public ParzellenBelegungDTO? SelectedBelegung
+        {
+            get => _selectedBelegung;
+            set
+            {
+                if (SetProperty(ref _selectedBelegung, value))
+                {
+                    InvalidateCommands();
+                }
+            }
+        }
+
+        private ParzelleRecord? _selectedParzelleToAssign;
+        public ParzelleRecord? SelectedParzelleToAssign
+        {
+            get => _selectedParzelleToAssign;
+            set
+            {
+                if (SetProperty(ref _selectedParzelleToAssign, value))
+                {
+                    InvalidateCommands();
+                }
+            }
+        }
+
+        private DateTime? _assignVonDatum = DateTime.Today;
+        public DateTime? AssignVonDatum
+        {
+            get => _assignVonDatum;
+            set
+            {
+                if (SetProperty(ref _assignVonDatum, value?.Date))
+                {
+                    InvalidateCommands();
+                }
+            }
+        }
 
         private bool _isEditMode;
         public bool IsEditMode
         {
             get => _isEditMode;
-            set
-            {
-                if (_isEditMode == value) return;
-                _isEditMode = value;
-                OnPropertyChanged(nameof(IsEditMode));
-
-                // Buttons neu bewerten
-                InvalidateCommands();
-            }
+            private set => SetProperty(ref _isEditMode, value);
         }
 
         private bool _isDirty;
         public bool IsDirty
         {
             get => _isDirty;
-            private set
+            private set => SetProperty(ref _isDirty, value);
+        }
+
+        public RelayCommand<object?> ToggleEditCommand { get; }
+        public RelayCommand<object?> SaveCommand { get; }
+        public RelayCommand<object?> CancelCommand { get; }
+        public RelayCommand<object?> NebenmitgliedCommand { get; }
+        public RelayCommand<object?> CopyAddressFromHauptmitgliedCommand { get; }
+
+        // noch nicht implementiert (Binding existiert in View)
+        public RelayCommand<object?> NewContractCommand { get; }
+        public RelayCommand<object?> CancelMembershipCommand { get; }
+        public RelayCommand<object?> AssignParzelleCommand { get; }
+        public RelayCommand<object?> EndBelegungCommand { get; }
+        public RelayCommand<object?> OpenSelectedParzelleCommand { get; }
+
+        public MemberDetailViewModel(ISupabaseService supabaseService, IAuthService authService, MemberDTO member)
+        {
+            _supabaseService = supabaseService;
+            _authService = authService;
+            SelectedMember = member;
+
+            _originalSnapshot = SelectedMember.Clone();
+
+            SelectedMember.PropertyChanged += (_, __) =>
             {
-                if (_isDirty == value) return;
-                _isDirty = value;
-                OnPropertyChanged(nameof(IsDirty));
+                if (!IsEditMode)
+                    return;
 
-                // Buttons neu bewerten
+                IsDirty = !SelectedMember.ValueEquals(_originalSnapshot);
                 InvalidateCommands();
-            }
+            };
+
+            ToggleEditCommand = new RelayCommand<object?>(_ => _ = ToggleEditAsync());
+            SaveCommand = new RelayCommand<object?>(_ => _ = SaveAsync(), _ => CanSave());
+            CancelCommand = new RelayCommand<object?>(_ => _ = CancelAsync(), _ => CanCancel());
+            AssignParzelleCommand = new RelayCommand<object?>(_ => _ = AssignParzelleAsync(), _ => CanAssignParzelle());
+            EndBelegungCommand = new RelayCommand<object?>(_ => _ = EndBelegungAsync(), _ => CanEndBelegung());
+            OpenSelectedParzelleCommand = new RelayCommand<object?>(_ => OpenSelectedParzelle(), _ => SelectedBelegung != null);
+
+            NebenmitgliedCommand = new RelayCommand<object?>(_ => _ = NebenmitgliedAsync(), _ => ShowNebenmitgliedButton);
+            CopyAddressFromHauptmitgliedCommand = new RelayCommand<object?>(_ => { }, _ => false);
+
+            NewContractCommand = new RelayCommand<object?>(_ => MessageBox.Show("Noch nicht implementiert.", "Info", MessageBoxButton.OK, MessageBoxImage.Information));
+            CancelMembershipCommand = new RelayCommand<object?>(_ => MessageBox.Show("Noch nicht implementiert.", "Info", MessageBoxButton.OK, MessageBoxImage.Information));
         }
 
-        // Buttons
-        public ICommand EditCommand { get; }
-        public ICommand SaveCommand { get; }
-        public ICommand CancelCommand { get; }
-
-        public ICommand NewContractCommand { get; }
-        public ICommand CancelMembershipCommand { get; }
-
-        public MemberDetailViewModel(ISupabaseService supabaseService, MemberDTO member)
+        private void OpenSelectedParzelle()
         {
-            _supabaseService = supabaseService ?? throw new ArgumentNullException(nameof(supabaseService));
-            SelectedMember = member ?? throw new ArgumentNullException(nameof(member));
+            if (SelectedBelegung == null)
+                return;
 
-            // Originalzustand merken (für Cancel + Dirty Compare)
-            _originalSnapshot = member.Clone();
-
-            EditCommand = new KGV.Helpers.RelayCommand<object?>(async _ => await EditAsync(), _ => !IsEditMode);
-            SaveCommand = new KGV.Helpers.RelayCommand<object?>(async _ => await SaveAsync(), _ => IsEditMode && IsDirty);
-            CancelCommand = new KGV.Helpers.RelayCommand<object?>(async _ => await CancelAsync(), _ => IsEditMode);
-
-            NewContractCommand = new KGV.Helpers.RelayCommand<object?>(_ => NewContract(), _ => true);
-
-            CancelMembershipCommand = new KGV.Helpers.RelayCommand<object?>(
-                _ => CancelMembership(),
-                _ => IsEditMode && SelectedMember.Aktiv);
-
-            // Dirty Tracking aktivieren: sobald Properties verändert werden -> IsDirty setzen
-            SelectedMember.Changed += SelectedMember_Changed;
+            WeakReferenceMessenger.Default.Send(new ParzelleSelectedMessage(SelectedBelegung));
         }
 
-        private void SelectedMember_Changed(object? sender, EventArgs e)
+        public async Task OnNavigatedToAsync()
         {
-            // Dirty nur im EditMode aktiv werten (sonst würde schon reines Anzeigen dirty machen)
-            if (!IsEditMode) return;
+            await LoadMemberAsync();
+            await LoadParzellenAsync();
+            await RefreshNebenmitgliedAsync();
 
-            IsDirty = !SelectedMember.ValueEquals(_originalSnapshot);
-        }
-
-        // =============================
-        // NAVIGATION LIFECYCLE
-        // =============================
-
-        public Task OnNavigatedToAsync()
-        {
-            return Task.CompletedTask;
+            IsEditMode = false;
+            IsDirty = false;
+            InvalidateCommands();
         }
 
         public async Task OnNavigatedFromAsync()
         {
-            // Wenn User weg navigiert während Edit aktiv:
-            // - lock freigeben
-            // - EditMode beenden
-            // - dirty verwerfen (optional)
-            if (IsEditMode && !string.IsNullOrEmpty(_lockedByUserId))
+            if (IsEditMode && !string.IsNullOrEmpty(_lockUserId))
             {
-                await _supabaseService.ReleaseLockMitgliedAsync(SelectedMember.Id, _lockedByUserId, force: false);
-                _lockedByUserId = null;
+                await _supabaseService.ReleaseLockMitgliedAsync(SelectedMember.Id, _lockUserId, force: false);
+                _lockUserId = null;
             }
 
             IsEditMode = false;
             IsDirty = false;
         }
 
-        // =============================
-        // EDIT LOGIK
-        // =============================
-
-        private async Task EditAsync()
+        private async Task RefreshNebenmitgliedAsync()
         {
-            var userId = _supabaseService.Client.Auth.CurrentUser?.Id;
-            if (string.IsNullOrEmpty(userId))
-                return;
+            _nebenmitgliedRecord = await _supabaseService.GetNebenmitgliedByHauptmitgliedIdAsync(SelectedMember.Id);
+            HasNebenmitglied = _nebenmitgliedRecord != null;
+            NebenmitgliedCommand.RaiseCanExecuteChanged();
+        }
 
-            var success = await _supabaseService.TryLockMitgliedAsync(SelectedMember.Id, userId);
-            if (!success)
+        private static MemberDTO ToMemberDto(MitgliedRecord rec)
+        {
+            return new MemberDTO
             {
-                MessageBox.Show("Datensatz ist bereits gesperrt.", "Hinweis");
+                Id = rec.Id,
+                Vorname = rec.Vorname ?? string.Empty,
+                Nachname = rec.Name ?? string.Empty,
+                Geburtsdatum = rec.Geburtsdatum,
+                Strasse = rec.Adresse ?? string.Empty,
+                PLZ = rec.Plz ?? string.Empty,
+                Ort = rec.Ort ?? string.Empty,
+                Telefon = rec.Telefon ?? string.Empty,
+                Email = rec.Email ?? string.Empty,
+                Bemerkungen = rec.Bemerkung ?? string.Empty,
+                WhatsappEinwilligung = rec.WhatsappEinwilligung,
+                MitgliedSeit = rec.MitgliedSeit,
+                MitgliedEnde = rec.MitgliedEnde,
+                Role = rec.Role ?? string.Empty
+            };
+        }
+
+        private async Task NebenmitgliedAsync()
+        {
+            if (HasNebenmitglied)
+            {
+                if (_nebenmitgliedRecord == null)
+                    _nebenmitgliedRecord = await _supabaseService.GetNebenmitgliedByHauptmitgliedIdAsync(SelectedMember.Id);
+
+                if (_nebenmitgliedRecord == null)
+                {
+                    await RefreshNebenmitgliedAsync();
+                    return;
+                }
+
+                var ctx = new NebenmitgliedContext(SelectedMember.Clone(), ToMemberDto(_nebenmitgliedRecord));
+                WeakReferenceMessenger.Default.Send(new NebenmitgliedSelectedMessage(ctx));
                 return;
             }
 
-            _lockedByUserId = userId;
+            if (!IsEditMode)
+                return;
 
-            // Snapshot neu setzen beim Start vom Edit (wichtig, falls man mehrfach rein/raus geht)
-            _originalSnapshot.CopyFrom(SelectedMember);
+            var dlg = new NebenmitgliedDialog
+            {
+                Owner = Application.Current?.MainWindow
+            };
 
-            IsEditMode = true;
-            IsDirty = false;
+            // Vorschlag: Nachname übernehmen
+            dlg.SetInitialValues(vorname: string.Empty, nachname: SelectedMember.Nachname, adresseUebernehmen: true);
+
+            if (dlg.ShowDialog() != true)
+                return;
+
+            if (string.IsNullOrWhiteSpace(dlg.Vorname) || string.IsNullOrWhiteSpace(dlg.Nachname))
+            {
+                MessageBox.Show("Bitte Vorname und Nachname angeben.", "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            var created = await _supabaseService.CreateNebenmitgliedAsync(SelectedMember.Id, dlg.Vorname.Trim(), dlg.Nachname.Trim(), dlg.AdresseUebernehmen);
+            if (created == null)
+            {
+                MessageBox.Show("Nebenmitglied konnte nicht angelegt werden.", "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            await RefreshNebenmitgliedAsync();
+
+            var context = new NebenmitgliedContext(SelectedMember.Clone(), ToMemberDto(created));
+            WeakReferenceMessenger.Default.Send(new NebenmitgliedSelectedMessage(context));
+        }
+
+        private async Task LoadMemberAsync()
+        {
+            var rec = await _supabaseService.GetMitgliedByIdAsync(SelectedMember.Id);
+            if (rec == null)
+                return;
+
+            SelectedMember.Vorname = rec.Vorname ?? "";
+            SelectedMember.Nachname = rec.Name ?? "";
+            SelectedMember.Geburtsdatum = rec.Geburtsdatum;
+
+            SelectedMember.Strasse = rec.Adresse ?? "";
+            SelectedMember.PLZ = rec.Plz ?? "";
+            SelectedMember.Ort = rec.Ort ?? "";
+
+            SelectedMember.Telefon = rec.Telefon ?? "";
+            SelectedMember.Email = rec.Email ?? "";
+
+            SelectedMember.Bemerkungen = rec.Bemerkung ?? "";
+            SelectedMember.WhatsappEinwilligung = rec.WhatsappEinwilligung;
+
+            SelectedMember.MitgliedSeit = rec.MitgliedSeit;
+            SelectedMember.MitgliedEnde = rec.MitgliedEnde;
+
+            SelectedMember.Role = rec.Role ?? "";
+            _originalSnapshot = SelectedMember.Clone();
+        }
+
+        private async Task LoadParzellenAsync()
+        {
+            ParzellenBelegungen.Clear();
+            AvailableParzellen.Clear();
+            SelectedBelegung = null;
+            SelectedParzelleToAssign = null;
+            AssignVonDatum = DateTime.Today;
+
+            var parzellen = await _supabaseService.GetAllParzellenAsync();
+            var memberBelegungen = await _supabaseService.GetBelegungenForMitgliedAsync(SelectedMember.Id);
+            var allBelegungen = await _supabaseService.GetAllParzellenBelegungenAsync();
+
+            var parzById = parzellen.ToDictionary(p => p.Id, p => p);
+
+            foreach (var b in memberBelegungen
+                         .OrderByDescending(x => x.BisDatum == null)
+                         .ThenByDescending(x => x.VonDatum ?? DateTime.MinValue))
+            {
+                parzById.TryGetValue(b.ParzelleId, out var p);
+
+                ParzellenBelegungen.Add(new ParzellenBelegungDTO
+                {
+                    BelegungId = b.Id,
+                    ParzelleId = b.ParzelleId,
+                    MitgliedId = b.MitgliedId,
+                    GartenNr = p?.GartenNr ?? $"#{b.ParzelleId}",
+                    Anlage = p?.Anlage ?? "",
+                    VonDatum = b.VonDatum?.Date,
+                    BisDatum = b.BisDatum?.Date
+                });
+            }
+
+            // Regel:
+            // Frei = keine aktive Belegung heute ODER aktive Belegung hat BisDatum (auch in Zukunft)
+            var today = DateTime.Today;
+
+            var activeToday = allBelegungen
+                .GroupBy(b => b.ParzelleId)
+                .Select(g => g.Where(x =>
+                        (x.VonDatum ?? DateTime.MinValue).Date <= today &&
+                        (x.BisDatum == null || x.BisDatum.Value.Date >= today))
+                    .OrderByDescending(x => x.VonDatum ?? DateTime.MinValue)
+                    .FirstOrDefault())
+                .Where(x => x != null)
+                .ToDictionary(x => x!.ParzelleId, x => x!);
+
+            foreach (var p in parzellen
+                         .OrderBy(x => GetGartenNrSortKey(x.GartenNr))
+                         .ThenBy(x => x.GartenNr, StringComparer.CurrentCultureIgnoreCase))
+            {
+                if (!activeToday.TryGetValue(p.Id, out var akt))
+                {
+                    AvailableParzellen.Add(p);
+                    continue;
+                }
+            }
 
             InvalidateCommands();
         }
 
-        private async Task SaveAsync()
+        private async Task ToggleEditAsync()
         {
-            if (!IsEditMode) return;
-            if (!IsDirty) return;
-
-            try
+            if (!IsEditMode)
             {
-                // TODO: hier später echte Save-Logik rein (Supabase Update)
-                // Beispiel (wenn du so etwas hast):
-                // await _supabaseService.UpdateMitgliedAsync(SelectedMember);
+                var userId = _authService.CurrentUserId;
+                if (string.IsNullOrWhiteSpace(userId))
+                {
+                    MessageBox.Show("Nicht angemeldet. Bitte erneut einloggen.", "Fehler",
+                        MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
 
-                // Nach Save: Snapshot aktualisieren
-                _originalSnapshot.CopyFrom(SelectedMember);
+                var locked = await _supabaseService.TryLockMitgliedAsync(SelectedMember.Id, userId);
+                if (!locked)
+                {
+                    MessageBox.Show("Datensatz ist aktuell gesperrt. Bitte später erneut versuchen.", "Gesperrt",
+                        MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+
+                _lockUserId = userId;
+
+                IsEditMode = true;
+                _originalSnapshot = SelectedMember.Clone();
                 IsDirty = false;
 
-                // EditMode beenden und Lock lösen
-                await UnlockIfNeededAsync();
-                IsEditMode = false;
+                OnPropertyChanged(nameof(ShowNebenmitgliedButton));
+                NebenmitgliedCommand.RaiseCanExecuteChanged();
+            }
+            else
+            {
+                await CancelAsync();
+            }
 
-                MessageBox.Show("Änderungen gespeichert.", "OK");
+            InvalidateCommands();
+        }
+
+        private bool CanSave() => IsEditMode && IsDirty;
+        private bool CanCancel() => IsEditMode;
+
+        private async Task SaveAsync()
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(_lockUserId))
+                {
+                    MessageBox.Show("Kein Lock aktiv. Bitte Bearbeiten erneut starten.", "Fehler",
+                        MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
+                var ok = await _supabaseService.UpdateMitgliedAsync(SelectedMember, _lockUserId);
+                if (!ok)
+                {
+                    MessageBox.Show("Speichern fehlgeschlagen (ggf. Lock verloren oder keine Berechtigung).", "Fehler",
+                        MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
+                _originalSnapshot = SelectedMember.Clone();
+                IsDirty = false;
+
+                if (!string.IsNullOrEmpty(_lockUserId))
+                {
+                    await _supabaseService.ReleaseLockMitgliedAsync(SelectedMember.Id, _lockUserId, force: false);
+                    _lockUserId = null;
+                }
+
+                IsEditMode = false;
+                InvalidateCommands();
+
+                WeakReferenceMessenger.Default.Send(new MemberSavedMessage(SelectedMember.Clone()));
+
+                MessageBox.Show("Mitglied gespeichert.", "OK", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Fehler beim Speichern: {ex.Message}", "Fehler");
-            }
-            finally
-            {
-                InvalidateCommands();
+                MessageBox.Show($"Fehler beim Speichern: {ex.Message}", "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
         private async Task CancelAsync()
         {
-            if (!IsEditMode) return;
-
-            // Wenn dirty, kurz nachfragen
-            if (IsDirty)
-            {
-                var result = MessageBox.Show(
-                    "Änderungen verwerfen?",
-                    "Abbrechen",
-                    MessageBoxButton.YesNo,
-                    MessageBoxImage.Question);
-
-                if (result != MessageBoxResult.Yes)
-                    return;
-            }
-
-            // Werte zurücksetzen
-            SelectedMember.SuppressChangedEvents = true;
             try
             {
                 SelectedMember.CopyFrom(_originalSnapshot);
+
+                if (!string.IsNullOrEmpty(_lockUserId))
+                {
+                    await _supabaseService.ReleaseLockMitgliedAsync(SelectedMember.Id, _lockUserId, force: false);
+                    _lockUserId = null;
+                }
+
+                IsEditMode = false;
+                IsDirty = false;
+                InvalidateCommands();
+
+                OnPropertyChanged(nameof(ShowNebenmitgliedButton));
+                NebenmitgliedCommand.RaiseCanExecuteChanged();
             }
-            finally
+            catch (Exception ex)
             {
-                SelectedMember.SuppressChangedEvents = false;
-            }
-
-            // Zustände zurück
-            IsDirty = false;
-
-            // Lock lösen + EditMode aus
-            await UnlockIfNeededAsync();
-            IsEditMode = false;
-
-            InvalidateCommands();
-        }
-
-        private async Task UnlockIfNeededAsync()
-        {
-            if (!string.IsNullOrEmpty(_lockedByUserId))
-            {
-                await _supabaseService.ReleaseLockMitgliedAsync(SelectedMember.Id, _lockedByUserId, force: false);
-                _lockedByUserId = null;
+                MessageBox.Show($"Fehler beim Abbrechen: {ex.Message}", "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
-        private void CancelMembership()
+        private bool CanAssignParzelle()
         {
             if (!IsEditMode)
-                return;
+                return false;
 
-            var result = MessageBox.Show(
-                "Mitgliedschaft wirklich beenden?",
-                "Bestätigung",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Warning);
+            if (SelectedParzelleToAssign == null)
+                return false;
 
-            if (result != MessageBoxResult.Yes)
-                return;
+            if (!AssignVonDatum.HasValue)
+                return false;
 
-            SelectedMember.MitgliedEnde = DateTime.Today;
-            // Dirty wird durch Changed-Event getriggert
+            return true;
         }
 
-        private void NewContract()
+        private async Task AssignParzelleAsync()
         {
-            // später
+            if (SelectedParzelleToAssign == null)
+                return;
+
+            try
+            {
+                var start = (AssignVonDatum ?? DateTime.Today).Date;
+
+                var ok = await _supabaseService.AssignParzelleToMitgliedAsync(
+                    SelectedMember.Id,
+                    SelectedParzelleToAssign.Id,
+                    start);
+
+                if (!ok)
+                {
+                    MessageBox.Show(
+                        "Zuweisung fehlgeschlagen. Der Datensatz konnte nicht gespeichert werden (keine Details von der Datenbank).",
+                        "Fehler",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
+                    return;
+                }
+
+                await LoadParzellenAsync();
+
+                MessageBox.Show("Parzelle zugewiesen.", "OK", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Fehler beim Zuweisen: {ex.Message}", "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private bool CanEndBelegung()
+        {
+            if (!IsEditMode)
+                return false;
+
+            if (SelectedBelegung == null)
+                return false;
+
+            if (SelectedBelegung.BisDatum.HasValue)
+                return false;
+
+            return true;
+        }
+
+        private async Task EndBelegungAsync()
+        {
+            if (SelectedBelegung == null)
+                return;
+
+            try
+            {
+                var today = DateTime.Today;
+
+                var ok = await _supabaseService.EndParzellenBelegungAsync(SelectedBelegung.BelegungId, today);
+                if (!ok)
+                {
+                    MessageBox.Show("Belegung konnte nicht beendet werden.", "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
+                await LoadParzellenAsync();
+
+                MessageBox.Show("Belegung beendet.", "OK", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Fehler beim Beenden: {ex.Message}", "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         private void InvalidateCommands()
         {
-            // Da RelayCommand<object?> evtl. kein RaiseCanExecuteChanged hat:
-            CommandManager.InvalidateRequerySuggested();
+            SaveCommand.RaiseCanExecuteChanged();
+            CancelCommand.RaiseCanExecuteChanged();
+            AssignParzelleCommand.RaiseCanExecuteChanged();
+            EndBelegungCommand.RaiseCanExecuteChanged();
+            OpenSelectedParzelleCommand.RaiseCanExecuteChanged();
+            NebenmitgliedCommand.RaiseCanExecuteChanged();
         }
+
+        private static int GetGartenNrSortKey(string? gartenNr)
+        {
+            if (string.IsNullOrWhiteSpace(gartenNr))
+                return int.MaxValue;
+
+            var digits = new string(gartenNr.TakeWhile(char.IsDigit).ToArray());
+            return int.TryParse(digits, out var n) ? n : int.MaxValue;
+        }
+
     }
 }

@@ -1,3 +1,4 @@
+// File: Core/Models/ParzelleRecord.cs
 using Supabase.Postgrest.Attributes;
 using Supabase.Postgrest.Models;
 
@@ -15,5 +16,12 @@ namespace KGV.Core.Models
 
         [Column("name")]
         public string Name { get; set; } = string.Empty;
+
+        // Alias (du nutzt im VM/DTO "Anlage")
+        public string Anlage
+        {
+            get => Name;
+            set => Name = value;
+        }
     }
 }

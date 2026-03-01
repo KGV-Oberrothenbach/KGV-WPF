@@ -8,12 +8,6 @@
     <UseWPF>true</UseWPF>
   </PropertyGroup>
 
-	<ItemGroup>
-		<Content Include="appsettings.json">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-	</ItemGroup>
-
  
 
   <ItemGroup>
@@ -72,11 +66,17 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Converters\" />
     <Folder Include="Data\" />
     <Folder Include="Resources\Styles\" />
     <Folder Include="Resources\Templates\" />
     <Folder Include="Views\Controls\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Page Update="Views\AdminRoleView.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
   </ItemGroup>
 
 </Project>

@@ -14,21 +14,24 @@ namespace KGV.Infrastructure.Supabase
         private readonly IConfiguration _config;
         private SupabaseClient? _client;
 
+        public string Url { get; }
+        public string Key { get; }
+
         public SupabaseClientFactory(IConfiguration config)
         {
             _config = config;
+
+            Url = _config["Supabase:Url"]
+                  ?? throw new InvalidOperationException("Supabase URL fehlt in appsettings.json");
+            Key = _config["Supabase:Key"]
+                  ?? throw new InvalidOperationException("Supabase Key fehlt in appsettings.json");
         }
 
         public async Task<SupabaseClient> CreateAsync()
         {
             if (_client != null) return _client;
 
-            var url = _config["Supabase:Url"]
-                      ?? throw new InvalidOperationException("Supabase URL fehlt in appsettings.json");
-            var key = _config["Supabase:Key"]
-                      ?? throw new InvalidOperationException("Supabase Key fehlt in appsettings.json");
-
-            _client = new SupabaseClient(url, key);
+            _client = new SupabaseClient(Url, Key);
             await _client.InitializeAsync();
 
             return _client;

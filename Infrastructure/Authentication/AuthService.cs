@@ -103,8 +103,12 @@ namespace KGV.Infrastructure.Authentication
 
                 if (userRecord != null)
                 {
-                    IsVorstand = string.Equals(userRecord.Role, "Vorstand", StringComparison.OrdinalIgnoreCase);
-                    IsAdmin = string.Equals(userRecord.Role, "Admin", StringComparison.OrdinalIgnoreCase);
+                    var role = (userRecord.Role ?? string.Empty).Trim();
+
+                    // akzeptiere alte/uneinheitliche Rollenwerte aus der DB
+                    // (z.B. "Admin"/"Vorstand" vs. "admin"/"vorstand")
+                    IsVorstand = string.Equals(role, "vorstand", StringComparison.OrdinalIgnoreCase);
+                    IsAdmin = string.Equals(role, "admin", StringComparison.OrdinalIgnoreCase);
                 }
                 else
                 {

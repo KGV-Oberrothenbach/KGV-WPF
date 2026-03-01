@@ -15,5 +15,33 @@
             <views:MemberDetailView />
         </DataTemplate>
 
+        <DataTemplate DataType="{x:Type vm:GartenStromViewModel}">
+            <views:GartenStromView />
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type vm:GartenWasserViewModel}">
+            <views:GartenWasserView />
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type vm:GartenDokumenteViewModel}">
+            <views:GartenDokumenteListeView />
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type vm:ArbeitsstundenViewModel}">
+            <views:ArbeitsstundenView />
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type vm:NebenmitgliedDetailViewModel}">
+            <views:MemberDetailView />
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type vm:AdminRoleViewModel}">
+            <views:AdminRoleView />
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type vm:DokumenteViewModel}">
+            <views:DokumenteView />
+        </DataTemplate>
+
     </Application.Resources>
 </Application>

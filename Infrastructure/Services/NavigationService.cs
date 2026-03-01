@@ -9,10 +9,12 @@ namespace KGV.Infrastructure.Services
     public class NavigationService : INavigationService
     {
         private readonly ISupabaseService _supabaseService;
+        private readonly IAuthService _authService;
 
-        public NavigationService(ISupabaseService supabaseService)
+        public NavigationService(ISupabaseService supabaseService, IAuthService authService)
         {
             _supabaseService = supabaseService ?? throw new ArgumentNullException(nameof(supabaseService));
+            _authService = authService ?? throw new ArgumentNullException(nameof(authService));
         }
 
         /// <summary>
@@ -35,7 +37,12 @@ namespace KGV.Infrastructure.Services
         /// ViewModel-first Factory.
         /// Unterstützt gezielt die ViewModels, die wir gerade nutzen:
         /// - MemberSearchViewModel(ISupabaseService, MainWindowViewModel)
-        /// - MemberDetailViewModel(ISupabaseService, MemberDTO)
+         /// - MemberDetailViewModel(ISupabaseService, IAuthService, MemberDTO)
+        /// - NebenmitgliedDetailViewModel(ISupabaseService, IAuthService, NebenmitgliedContext)
+        /// - ArbeitsstundenViewModel(ISupabaseService, IAuthService, MemberDTO)
+        /// - GartenStromViewModel(ParzellenBelegungDTO)
+        /// - GartenWasserViewModel(ParzellenBelegungDTO)
+        /// - GartenDokumenteViewModel(ParzellenBelegungDTO)
         /// - Fallback: parameterloser Konstruktor
         /// </summary>
         public object? CreateViewModel(Type viewModelType, object shell, object? parameter = null)
@@ -57,7 +64,63 @@ namespace KGV.Infrastructure.Services
                 if (parameter is not MemberDTO member)
                     return null;
 
-                return new MemberDetailViewModel(_supabaseService, member);
+                return new MemberDetailViewModel(_supabaseService, _authService, member);
+            }
+
+            if (viewModelType == typeof(NebenmitgliedDetailViewModel))
+            {
+                if (parameter is not NebenmitgliedContext ctx)
+                    return null;
+
+                return new NebenmitgliedDetailViewModel(_supabaseService, _authService, ctx);
+            }
+
+            if (viewModelType == typeof(ArbeitsstundenViewModel))
+            {
+                if (parameter is not MemberDTO member)
+                    return null;
+
+                return new ArbeitsstundenViewModel(_supabaseService, _authService, member);
+            }
+
+            if (viewModelType == typeof(AdminRoleViewModel))
+            {
+                if (parameter is not MemberDTO member)
+                    return null;
+
+                return new AdminRoleViewModel(_supabaseService, _authService, member);
+            }
+
+            if (viewModelType == typeof(GartenStromViewModel))
+            {
+                if (parameter is not ParzellenBelegungDTO belegung)
+                    return null;
+
+                return new GartenStromViewModel(_supabaseService, belegung);
+            }
+
+            if (viewModelType == typeof(GartenWasserViewModel))
+            {
+                if (parameter is not ParzellenBelegungDTO belegung)
+                    return null;
+
+                return new GartenWasserViewModel(_supabaseService, belegung);
+            }
+
+            if (viewModelType == typeof(GartenDokumenteViewModel))
+            {
+                if (parameter is not ParzellenBelegungDTO belegung)
+                    return null;
+
+                return new GartenDokumenteViewModel(_supabaseService, belegung);
+            }
+
+            if (viewModelType == typeof(DokumenteViewModel))
+            {
+                if (parameter is not DokumenteContext ctx)
+                    return null;
+
+                return new DokumenteViewModel(_supabaseService, ctx);
             }
 
             // Fallback: default ctor

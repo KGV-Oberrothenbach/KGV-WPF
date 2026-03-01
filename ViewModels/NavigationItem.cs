@@ -1,11 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Windows;
 
 namespace KGV.ViewModels
 {
     public class NavigationItem
     {
         public string Title { get; set; } = string.Empty;
+
+        public Thickness ButtonMargin { get; set; } = new Thickness(5);
 
         /// <summary>
         /// Ziel-ViewModel-Typ (ViewModel-first Navigation).

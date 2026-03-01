@@ -1,3 +1,4 @@
+// File: Helpers/RelayCommand.cs
 using System;
 using System.Windows.Input;
 
@@ -8,18 +9,21 @@ namespace KGV.Helpers
         private readonly Action<T?> _execute;
         private readonly Func<T?, bool>? _canExecute;
 
-        public event EventHandler? CanExecuteChanged;
-
         public RelayCommand(Action<T?> execute, Func<T?, bool>? canExecute = null)
         {
             _execute = execute ?? throw new ArgumentNullException(nameof(execute));
             _canExecute = canExecute;
         }
 
+        public event EventHandler? CanExecuteChanged
+        {
+            add => CommandManager.RequerySuggested += value;
+            remove => CommandManager.RequerySuggested -= value;
+        }
+
         public bool CanExecute(object? parameter)
         {
             if (_canExecute == null) return true;
-
             if (parameter is T t) return _canExecute(t);
             return _canExecute((T?)parameter);
         }
@@ -30,7 +34,6 @@ namespace KGV.Helpers
             else _execute((T?)parameter);
         }
 
-        public void RaiseCanExecuteChanged()
-            => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
+        public void RaiseCanExecuteChanged() => CommandManager.InvalidateRequerySuggested();
     }
 }

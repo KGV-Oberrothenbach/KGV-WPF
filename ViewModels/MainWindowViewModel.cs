@@ -8,6 +8,8 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using CommunityToolkit.Mvvm.Messaging;
+using KGV.Messages;
 
 namespace KGV.ViewModels
 {
@@ -39,7 +41,6 @@ namespace KGV.ViewModels
         public ObservableCollection<NavigationItem> MemberNavigationItems { get; } = new();
 
         public ICommand NavigateCommand { get; }
-        public ICommand AssignGardenCommand { get; }
 
         // ======= Rechte =======
         private bool _isAdmin;
@@ -79,11 +80,27 @@ namespace KGV.ViewModels
                 _selectedMember = value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(IsMemberSelected));
+                SelectedParzelle = null;
+                BuildMemberNavigation();
                 UpdateMemberNavigationVisibility();
             }
         }
 
         public bool IsMemberSelected => SelectedMember != null;
+
+        private ParzellenBelegungDTO? _selectedParzelle;
+        public ParzellenBelegungDTO? SelectedParzelle
+        {
+            get => _selectedParzelle;
+            private set
+            {
+                if (_selectedParzelle == value) return;
+                _selectedParzelle = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public IAuthService AuthService => _authService;
 
         public MainWindowViewModel(
             IAuthService authService,
@@ -95,7 +112,6 @@ namespace KGV.ViewModels
             _supabaseService = supabaseService ?? throw new ArgumentNullException(nameof(supabaseService));
 
             NavigateCommand = new RelayCommand<NavigationItem>(item => _ = NavigateByItemAsync(item));
-            AssignGardenCommand = new RelayCommand<object?>(_ => AssignGarden());
 
             SeedSeasons();
             BuildNavigation();
@@ -103,8 +119,23 @@ namespace KGV.ViewModels
             UpdateNavigationVisibility();
             UpdateMemberNavigationVisibility();
 
+            IsAdmin = _authService.IsAdmin;
+
+            WeakReferenceMessenger.Default.Register<ParzelleSelectedMessage>(this, (_, msg) =>
+                _ = OnParzelleSelectedAsync(msg.Belegung));
+
+            WeakReferenceMessenger.Default.Register<NebenmitgliedSelectedMessage>(this, (_, msg) =>
+                _ = OnNebenmitgliedSelectedAsync(msg.Context));
+
             // Start: Mitgliedersuche öffnen
             _ = NavigateToAsync((BaseViewModel)_navigationService.CreateViewModel(typeof(MemberSearchViewModel), this)!);
+        }
+
+        private async Task OnNebenmitgliedSelectedAsync(NebenmitgliedContext ctx)
+        {
+            var created = _navigationService.CreateViewModel(typeof(NebenmitgliedDetailViewModel), this, ctx);
+            if (created is BaseViewModel vm)
+                await NavigateToAsync(vm);
         }
 
         private void SeedSeasons()
@@ -129,14 +160,7 @@ namespace KGV.ViewModels
                 IsVisible = true
             });
 
-            // Admin-Menü (nur sichtbar wenn IsAdmin = true)
-            NavigationItems.Add(new NavigationItem
-            {
-                Title = "Admin-Menü",
-                ViewModelType = null, // später, wenn du AdminViewModel sauber drin hast
-                IsAdminOnly = true,
-                IsVisible = IsAdmin
-            });
+            // Admin-Menü wird nur im Mitglied-Kontext angeboten (siehe MemberNavigationItems)
         }
 
         private void BuildMemberNavigation()
@@ -146,10 +170,88 @@ namespace KGV.ViewModels
             // Stammdaten bearbeiten (Detail)
             MemberNavigationItems.Add(new NavigationItem
             {
-                Title = "Stammdaten bearbeiten",
+                Title = "Stammdaten",
                 ViewModelType = typeof(MemberDetailViewModel),
                 IsVisible = SelectedMember != null
             });
+
+            MemberNavigationItems.Add(new NavigationItem
+            {
+                Title = "Arbeitsstunden",
+                ViewModelType = typeof(ArbeitsstundenViewModel),
+                IsVisible = SelectedMember != null,
+                ButtonMargin = new System.Windows.Thickness(5)
+            });
+
+            MemberNavigationItems.Add(new NavigationItem
+            {
+                Title = "Dokumente",
+                ViewModelType = typeof(DokumenteViewModel),
+                IsVisible = SelectedMember != null,
+                ButtonMargin = new System.Windows.Thickness(5)
+            });
+
+            // Admin-Menü nur im Mitglied-Kontext
+            MemberNavigationItems.Add(new NavigationItem
+            {
+                Title = "Admin-Menü",
+                ViewModelType = typeof(AdminRoleViewModel),
+                IsVisible = SelectedMember != null && IsAdmin
+            });
+
+            if (SelectedMember == null || SelectedParzelle == null)
+                return;
+
+            // Überschrift (nicht klickbar)
+            MemberNavigationItems.Add(new NavigationItem
+            {
+                Title = $"Garten Nr. {SelectedParzelle.GartenNr}",
+                ViewModelType = null,
+                IsVisible = true,
+                ButtonMargin = new System.Windows.Thickness(5, 12, 5, 4)
+            });
+
+            MemberNavigationItems.Add(new NavigationItem
+            {
+                Title = "Strom",
+                ViewModelType = typeof(GartenStromViewModel),
+                Parameter = SelectedParzelle,
+                IsVisible = true,
+                ButtonMargin = new System.Windows.Thickness(25, 5, 5, 5)
+            });
+
+            MemberNavigationItems.Add(new NavigationItem
+            {
+                Title = "Wasser",
+                ViewModelType = typeof(GartenWasserViewModel),
+                Parameter = SelectedParzelle,
+                IsVisible = true,
+                ButtonMargin = new System.Windows.Thickness(25, 5, 5, 5)
+            });
+
+            MemberNavigationItems.Add(new NavigationItem
+            {
+                Title = "Dokumente",
+                ViewModelType = typeof(GartenDokumenteViewModel),
+                Parameter = SelectedParzelle,
+                IsVisible = true,
+                ButtonMargin = new System.Windows.Thickness(25, 5, 5, 5)
+            });
+        }
+
+        private async Task OnParzelleSelectedAsync(ParzellenBelegungDTO belegung)
+        {
+            if (SelectedMember == null)
+                return;
+
+            SelectedParzelle = belegung;
+            BuildMemberNavigation();
+            UpdateMemberNavigationVisibility();
+
+            // Default: nach Doppelklick direkt in Strom-Ansicht springen
+            var created = _navigationService.CreateViewModel(typeof(GartenStromViewModel), this, SelectedParzelle);
+            if (created is BaseViewModel vm)
+                await NavigateToAsync(vm);
         }
 
         private void UpdateNavigationVisibility()
@@ -188,14 +290,27 @@ namespace KGV.ViewModels
                 parameter = SelectedMember;
             }
 
+            if (item.ViewModelType == typeof(ArbeitsstundenViewModel))
+            {
+                if (SelectedMember == null) return;
+                parameter = SelectedMember;
+            }
+
+            if (item.ViewModelType == typeof(DokumenteViewModel))
+            {
+                if (SelectedMember == null) return;
+                parameter = new DokumenteContext(SelectedMember, null);
+            }
+
+            if (item.ViewModelType == typeof(AdminRoleViewModel))
+            {
+                if (SelectedMember == null) return;
+                parameter = SelectedMember;
+            }
+
             var created = _navigationService.CreateViewModel(item.ViewModelType, this, parameter);
             if (created is BaseViewModel vm)
                 await NavigateToAsync(vm);
-        }
-
-        private void AssignGarden()
-        {
-            // später
         }
 
         /// <summary>
