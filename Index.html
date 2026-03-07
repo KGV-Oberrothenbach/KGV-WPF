@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KGV Oberrothenbach – Download</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f4f6f8;
+      color: #222;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 60px auto;
+      background: #ffffff;
+      padding: 32px;
+      border-radius: 12px;
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
+    }
+
+    h1 {
+      margin-top: 0;
+      color: #1f4d2e;
+    }
+
+    p {
+      line-height: 1.6;
+    }
+
+    .download-box {
+      margin: 24px 0;
+      padding: 20px;
+      background: #eef7f0;
+      border: 1px solid #cfe5d4;
+      border-radius: 10px;
+    }
+
+    .download-button {
+      display: inline-block;
+      margin-top: 12px;
+      padding: 12px 20px;
+      background: #2e7d32;
+      color: white;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: bold;
+    }
+
+    .download-button:hover {
+      background: #256628;
+    }
+
+    .hint {
+      margin-top: 24px;
+      font-size: 0.95rem;
+      color: #555;
+    }
+
+    .footer {
+      margin-top: 32px;
+      font-size: 0.9rem;
+      color: #777;
+    }
+
+    code {
+      background: #f0f0f0;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>KGV Oberrothenbach – Software-Download</h1>
+
+    <p>
+      Auf dieser Seite steht die aktuelle Windows-Version der KGV-Software zum Download bereit.
+    </p>
+
+    <div class="download-box">
+      <p><strong>Aktuelle Version:</strong> 0.1.0</p>
+      <p>
+        Die Installation erfolgt über eine MSI-Datei. Bereits vorhandene Installationen
+        können bei einer neueren Version sauber aktualisiert bzw. ersetzt werden.
+      </p>
+      <a class="download-button" href="./downloads/KGV-Wpf-0.1.0.msi">
+        MSI herunterladen
+      </a>
+    </div>
+
+    <p class="hint">
+      Hinweis: Die Anwendung kann beim Start selbst prüfen, ob eine neue Version verfügbar ist,
+      und dann den Download dieser Installationsdatei anbieten.
+    </p>
+
+    <p class="hint">
+      Die Versionsinformationen für die Update-Prüfung liegen in der Datei
+      <code>version.json</code>.
+    </p>
+
+    <div class="footer">
+      Kleingartenverein Oberrothenbach
+    </div>
+  </div>
+</body>
+</html>
