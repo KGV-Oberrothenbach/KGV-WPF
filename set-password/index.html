@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Passwort festlegen – KGV Oberrothenbach</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 520px;
+      margin: 40px auto;
+      padding: 0 16px;
+      line-height: 1.5;
+    }
+    h1 { font-size: 1.6rem; }
+    .box {
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      padding: 20px;
+      margin-top: 20px;
+    }
+    label {
+      display: block;
+      margin-top: 12px;
+      font-weight: bold;
+    }
+    input {
+      width: 100%;
+      padding: 10px;
+      margin-top: 6px;
+      box-sizing: border-box;
+    }
+    button {
+      margin-top: 18px;
+      padding: 10px 16px;
+      cursor: pointer;
+    }
+    .ok { color: green; }
+    .err { color: #b00020; }
+    .muted { color: #666; font-size: 0.95rem; }
+    #downloadLink { display: none; margin-top: 18px; }
+  </style>
+</head>
+<body>
+  <h1>Passwort festlegen</h1>
+
+  <p class="muted">
+    Bitte vergib jetzt dein Passwort für die KGV-App.
+  </p>
+
+  <div class="box">
+    <div id="status" class="muted">Prüfe Einladungslink …</div>
+
+    <form id="pwForm" style="display:none;">
+      <label for="pw1">Neues Passwort</label>
+      <input id="pw1" type="password" autocomplete="new-password" required minlength="8" />
+
+      <label for="pw2">Passwort wiederholen</label>
+      <input id="pw2" type="password" autocomplete="new-password" required minlength="8" />
+
+      <button type="submit">Passwort speichern</button>
+    </form>
+
+    <div id="downloadLink">
+      <p class="ok">Passwort erfolgreich gespeichert.</p>
+      <p>
+        Du kannst jetzt die App herunterladen bzw. öffnen:
+      </p>
+      <p>
+        <a href="https://kgv-oberrothenbach.github.io/KGV-WPF/" target="_blank" rel="noopener">
+          Zur Downloadseite
+        </a>
+      </p>
+    </div>
+  </div>
+
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+
+    const SUPABASE_URL = "https://itjcabiibuodkxayhvjq.supabase.co";
+    const SUPABASE_ANON_KEY = "HIER_DEIN_ANON_KEY";
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const statusEl = document.getElementById("status");
+    const formEl = document.getElementById("pwForm");
+    const downloadEl = document.getElementById("downloadLink");
+    const pw1El = document.getElementById("pw1");
+    const pw2El = document.getElementById("pw2");
+
+    function setStatus(text, cssClass = "muted") {
+      statusEl.className = cssClass;
+      statusEl.textContent = text;
+    }
+
+    async function init() {
+      const hash = window.location.hash || "";
+      const hasTokens =
+        hash.includes("access_token=") ||
+        hash.includes("refresh_token=") ||
+        hash.includes("type=invite") ||
+        hash.includes("type=recovery");
+
+      // Supabase verarbeitet bei Redirects die Tokens aus der URL automatisch über getSession()
+      const { data, error } = await supabase.auth.getSession();
+
+      if (error) {
+        setStatus("Der Einladungslink konnte nicht verarbeitet werden: " + error.message, "err");
+        return;
+      }
+
+      if (data.session) {
+        setStatus("Einladung erkannt. Bitte neues Passwort vergeben.");
+        formEl.style.display = "";
+        return;
+      }
+
+      if (hasTokens) {
+        // kurzer zweiter Versuch, falls die Session noch nicht sofort gesetzt ist
+        setTimeout(async () => {
+          const { data: retryData, error: retryError } = await supabase.auth.getSession();
+          if (retryError) {
+            setStatus("Der Einladungslink konnte nicht verarbeitet werden: " + retryError.message, "err");
+            return;
+          }
+          if (retryData.session) {
+            setStatus("Einladung erkannt. Bitte neues Passwort vergeben.");
+            formEl.style.display = "";
+          } else {
+            setStatus("Kein gültiger Einladungs- oder Recovery-Link gefunden.", "err");
+          }
+        }, 500);
+        return;
+      }
+
+      setStatus("Kein gültiger Einladungs- oder Recovery-Link gefunden.", "err");
+    }
+
+    formEl.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const pw1 = pw1El.value.trim();
+      const pw2 = pw2El.value.trim();
+
+      if (pw1.length < 8) {
+        setStatus("Das Passwort muss mindestens 8 Zeichen lang sein.", "err");
+        return;
+      }
+
+      if (pw1 !== pw2) {
+        setStatus("Die Passwörter stimmen nicht überein.", "err");
+        return;
+      }
+
+      setStatus("Speichere Passwort …");
+
+      const { error } = await supabase.auth.updateUser({ password: pw1 });
+
+      if (error) {
+        setStatus("Passwort konnte nicht gespeichert werden: " + error.message, "err");
+        return;
+      }
+
+      formEl.style.display = "none";
+      statusEl.style.display = "none";
+      downloadEl.style.display = "block";
+    });
+
+    init();
+  </script>
+</body>
+</html>
