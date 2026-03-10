@@ -1,89 +1,455 @@
-<DOCTYPE html>
+<!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>KGV Oberrothenbach – Download</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kleingartenverein Oberrothenbach – App & Zugang</title>
+  <meta
+    name="description"
+    content="Zugang zur Vereins-App für Mitglieder sowie separater Bereich für Vorstand und Admin."
+  />
   <style>
+    :root {
+      --bg: #f4f7f2;
+      --surface: #ffffff;
+      --surface-soft: #eef5ea;
+      --text: #203024;
+      --muted: #5e6f62;
+      --primary: #2f6f3e;
+      --primary-hover: #275c33;
+      --border: #d7e2d3;
+      --warning-bg: #fff8e6;
+      --warning-border: #ead39a;
+      --shadow: 0 10px 28px rgba(32, 48, 36, 0.08);
+      --radius: 18px;
+      --radius-sm: 12px;
+      --max: 1080px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
     body {
-      font-family: Arial, sans-serif;
       margin: 0;
-      padding: 0;
-      background: #f4f6f8;
-      color: #222;
+      font-family: Arial, Helvetica, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top right, rgba(47, 111, 62, 0.08), transparent 22%),
+        linear-gradient(180deg, #f8fbf7 0%, var(--bg) 100%);
+      line-height: 1.55;
     }
+
+    a {
+      color: inherit;
+    }
+
     .container {
-      max-width: 800px;
-      margin: 60px auto;
-      background: #ffffff;
-      padding: 32px;
-      border-radius: 12px;
-      box-shadow: 0 4px 18px rgba(0,0,0,0.08);
+      width: min(100% - 32px, var(--max));
+      margin: 0 auto;
     }
-    h1 {
-      margin-top: 0;
-      color: #1f4d2e;
+
+    .topbar {
+      padding: 18px 0 8px;
     }
-    h2 {
-      margin-top: 32px;
-      color: #1f4d2e;
-    }
-    p, li {
-      line-height: 1.6;
-    }
-    .download-box {
-      margin: 24px 0;
-      padding: 20px;
-      background: #eef7f0;
-      border: 1px solid #cfe5d4;
-      border-radius: 10px;
-    }
-    .download-button {
-      display: inline-block;
-      margin-top: 12px;
-      padding: 12px 20px;
-      background: #2e7d32;
-      color: white;
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
       text-decoration: none;
-      border-radius: 8px;
-      font-weight: bold;
+      font-weight: 700;
+      color: var(--text);
     }
-    .download-button:hover {
-      background: #256628;
+
+    .brand-mark {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary), #4d915d);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 18px;
+      box-shadow: var(--shadow);
+      flex: 0 0 auto;
     }
-    .hint {
-      margin-top: 24px;
-      font-size: 0.95rem;
-      color: #555;
+
+    .hero {
+      padding: 18px 0 34px;
     }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1.5fr 1fr;
+      gap: 22px;
+      align-items: stretch;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .hero-main {
+      padding: 34px;
+    }
+
+    .eyebrow {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: var(--surface-soft);
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 13px;
+      margin-bottom: 14px;
+    }
+
+    h1, h2, h3 {
+      margin: 0 0 12px;
+      line-height: 1.2;
+    }
+
+    h1 {
+      font-size: clamp(30px, 5vw, 46px);
+    }
+
+    h2 {
+      font-size: clamp(24px, 3vw, 32px);
+    }
+
+    h3 {
+      font-size: 20px;
+    }
+
+    p {
+      margin: 0 0 14px;
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    .button-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 20px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 48px;
+      padding: 0 18px;
+      border-radius: 12px;
+      border: 1px solid transparent;
+      text-decoration: none;
+      font-weight: 700;
+      transition: 0.2s ease;
+      cursor: pointer;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+    }
+
+    .btn-secondary {
+      background: #fff;
+      color: var(--primary);
+      border-color: var(--border);
+    }
+
+    .btn-secondary:hover {
+      background: var(--surface-soft);
+    }
+
+    .hero-side {
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 14px;
+    }
+
+    .checklist {
+      margin: 0;
+      padding-left: 20px;
+    }
+
+    .checklist li + li {
+      margin-top: 8px;
+    }
+
+    section {
+      padding: 14px 0 22px;
+    }
+
+    .section-card {
+      padding: 28px;
+    }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-top: 18px;
+    }
+
+    .step {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: #fff;
+      padding: 18px;
+    }
+
+    .step-number {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--surface-soft);
+      color: var(--primary);
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    .info-box {
+      margin-top: 18px;
+      padding: 16px 18px;
+      border-radius: 14px;
+      border: 1px solid var(--warning-border);
+      background: var(--warning-bg);
+    }
+
+    .admin-box {
+      border-top: 4px solid var(--primary);
+    }
+
+    .list {
+      margin: 10px 0 0;
+      padding-left: 20px;
+    }
+
+    .list li + li {
+      margin-top: 8px;
+    }
+
     .footer {
-      margin-top: 32px;
-      font-size: 0.9rem;
-      color: #777;
+      padding: 30px 0 42px;
+      color: var(--muted);
+      font-size: 14px;
+      text-align: center;
     }
-    code {
-      background: #f0f0f0;
+
+    .hint {
+      font-size: 14px;
+      color: var(--muted);
+      margin-top: 10px;
+    }
+
+    code.inline {
+      font-family: Consolas, Monaco, monospace;
+      background: #eef2ed;
+      border: 1px solid var(--border);
+      border-radius: 6px;
       padding: 2px 6px;
-      border-radius: 4px;
+      font-size: 0.95em;
+    }
+
+    @media (max-width: 860px) {
+      .hero-grid,
+      .steps {
+        grid-template-columns: 1fr;
+      }
+
+      .hero-main,
+      .hero-side,
+      .section-card {
+        padding: 22px;
+      }
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>KGV Oberrothenbach – Software-Download</h1>
-    <p>Auf dieser Seite steht die aktuelle Windows-Version der KGV-Software zum Download bereit.</p>
-    <div class="download-box">
-      <p><strong>Aktuelle Version:</strong> 0.1.1</p>
-      <p>Die Installation erfolgt ueber eine Setup-Datei. Bereits vorhandene Installationen koennen bei einer neueren Version sauber aktualisiert bzw. ersetzt werden.</p>
-      <a class="download-button" href="./KGV-Setup.exe">Setup herunterladen</a>
+  <header class="topbar">
+    <div class="container">
+      <a class="brand" href="#">
+        <span class="brand-mark">KGV</span>
+        <span>Kleingartenverein Oberrothenbach</span>
+      </a>
     </div>
-    <h2>Letzte 3 Versionen</h2>
-    <ul>
-﻿      <li><a href="./downloads/0.1.1/KGV-Setup.exe>0.1.1</a></li>
-      <li><a href="./downloads/0.1.0/KGV-Setup.exe>0.1.0</a></li>
-    </ul>
-    <p class="hint">Die Versionsinformationen fuer die Update-Pruefung liegen in der Datei <code>version.json</code>.</p>
-    <div class="footer">Kleingartenverein Oberrothenbach</div>
-  </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="container hero-grid">
+        <div class="card hero-main">
+          <span class="eyebrow">Mitgliederbereich</span>
+          <h1>Willkommen in der Vereins-App</h1>
+          <p class="muted">
+            Für Mitglieder ist die Nutzung über die <strong>Android-App</strong> vorgesehen.
+            Hier kannst du dein Passwort setzen, die App öffnen oder installieren und später
+            deine Vereinsfunktionen mobil nutzen.
+          </p>
+
+          <div class="button-row">
+            <!-- URL ANPASSEN: Link zur Android-/MAUI-App -->
+            <a class="btn btn-primary" href="https://DEINE-ANDROID-APP-URL-EINTRAGEN">
+              Android-App öffnen / herunterladen
+            </a>
+
+            <!-- URL ANPASSEN: falls set-password.html separat bleibt -->
+            <a class="btn btn-secondary" href="set-password.html">
+              Passwort setzen / Einladung abschließen
+            </a>
+          </div>
+
+          <p class="hint">
+            Falls du über einen Einladungslink hierher gekommen bist, nutze bitte anschließend
+            die Android-App.
+          </p>
+        </div>
+
+        <aside class="card hero-side">
+          <h3>Für Mitglieder</h3>
+          <ul class="checklist">
+            <li>Passwort setzen oder Einladung abschließen</li>
+            <li>Vereins-App auf dem Smartphone nutzen</li>
+            <li>Kein Zugang über die Windows-Verwaltungsanwendung nötig</li>
+          </ul>
+
+          <div class="info-box">
+            <strong>Hinweis:</strong><br />
+            Die Windows-Anwendung ist nicht für normale Mitglieder vorgesehen.
+            Bitte nutze als Mitglied immer die mobile Vereins-App.
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section aria-labelledby="mitgliederschritte">
+      <div class="container">
+        <div class="card section-card">
+          <h2 id="mitgliederschritte">So gehst du als Mitglied vor</h2>
+          <p class="muted">
+            Der normale Weg für Mitglieder läuft komplett über das Smartphone.
+          </p>
+
+          <div class="steps">
+            <div class="step">
+              <div class="step-number">1</div>
+              <h3>Einladung öffnen</h3>
+              <p class="muted">
+                Öffne deinen Einladungslink oder die Vereinsseite, um deinen Zugang zu starten.
+              </p>
+            </div>
+
+            <div class="step">
+              <div class="step-number">2</div>
+              <h3>Passwort festlegen</h3>
+              <p class="muted">
+                Setze dein Passwort und schließe die Einrichtung deines Kontos ab.
+              </p>
+            </div>
+
+            <div class="step">
+              <div class="step-number">3</div>
+              <h3>Android-App nutzen</h3>
+              <p class="muted">
+                Melde dich anschließend in der Vereins-App auf deinem Smartphone an.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="vorstand-admin" aria-labelledby="adminzugang">
+      <div class="container">
+        <div class="card section-card admin-box">
+          <h2 id="adminzugang">Zugang für Vorstand und Admin</h2>
+          <p class="muted">
+            Vorstand und Administratoren nutzen weiterhin den separaten Verwaltungszugang.
+            Dieser Bereich ist bewusst getrennt vom normalen Mitgliederzugang.
+          </p>
+
+          <ul class="list">
+            <li>Mitglieder nutzen primär die Android-/MAUI-App.</li>
+            <li>Vorstand und Admin können zusätzlich die Windows-Verwaltungsanwendung verwenden.</li>
+            <li>Beide Zugänge starten über diese eine Seite.</li>
+          </ul>
+
+          <div class="button-row">
+            <!-- URL ANPASSEN: Link zur WPF-App / Installer / Verwaltungsseite -->
+            <a class="btn btn-secondary" href="https://DEIN-WPF-ODER-VERWALTUNGS-LINK">
+              Vorstand / Admin – Verwaltungszugang
+            </a>
+
+            <!-- optional: gleicher Set-Passwort-Link -->
+            <a class="btn btn-secondary" href="set-password.html">
+              Passwort setzen / Einladung abschließen
+            </a>
+          </div>
+
+          <p class="hint">
+            Diesen Bereich bitte nur verwenden, wenn du tatsächlich Vorstand oder Admin bist.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section aria-labelledby="hilfe">
+      <div class="container">
+        <div class="card section-card">
+          <h2 id="hilfe">Hinweise zur Einrichtung</h2>
+          <p class="muted">
+            Damit die Seite direkt zu eurem Ablauf passt, solltest du nur noch die Ziel-Links ersetzen.
+          </p>
+
+          <ul class="list">
+            <li>
+              Ersetze <code class="inline">https://DEINE-ANDROID-APP-URL-EINTRAGEN</code>
+              durch den Link zur Android-/MAUI-App.
+            </li>
+            <li>
+              Ersetze <code class="inline">https://DEIN-WPF-ODER-VERWALTUNGS-LINK</code>
+              durch den Verwaltungslink für Vorstand/Admin.
+            </li>
+            <li>
+              Falls <code class="inline">set-password.html</code> anders heißt oder woanders liegt,
+              passe den Dateinamen an.
+            </li>
+            <li>
+              Leite normale Invite-Links künftig auf diese <code class="inline">index.html</code>,
+              nicht direkt auf die WPF-Anwendung.
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      Kleingartenverein Oberrothenbach – gemeinsamer Einstieg für Mitglieder sowie Vorstand/Admin
+    </div>
+  </footer>
 </body>
 </html>
