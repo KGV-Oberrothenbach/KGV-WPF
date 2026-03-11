@@ -447,7 +447,7 @@
           <div class="card">
             <h2>Aktuelle Version</h2>
             <p class="muted">
-              Die neueste Version wird automatisch aus <code class="inline">./windows/versions.json</code> geladen.
+              Die neueste Version wird automatisch aus <code class="inline">./versions.json</code> geladen.
             </p>
 
             <div class="meta-grid">
@@ -662,10 +662,10 @@
 
     async function loadWindowsVersions() {
       try {
-        const response = await fetch("./windows/versions.json", { cache: "no-store" });
+        const response = await fetch("./versions.json", { cache: "no-store" });
 
         if (!response.ok) {
-          throw new Error("windows/versions.json konnte nicht geladen werden.");
+          throw new Error("versions.json konnte nicht geladen werden.");
         }
 
         const data = await response.json();
