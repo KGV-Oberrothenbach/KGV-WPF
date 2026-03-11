@@ -1,5 +1,5 @@
-{
-  "version": "0.1.1",
-  "downloadUrl": "https://kgv-oberrothenbach.github.io/KGV-WPF/KGV-Setup.exe",
-  "notes": "Neue Version"
+﻿{
+    "version":  "0.1.3",
+    "downloadUrl":  "https://kgv-oberrothenbach.github.io/KGV-WPF/KGV-Setup.exe",
+    "notes":  "Neue Windows-Version"
 }
