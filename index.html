@@ -98,7 +98,7 @@
 
     .content-grid {
       display: grid;
-      grid-template-columns: 1.2fr 0.8fr;
+      grid-template-columns: 1.15fr 0.85fr;
       gap: 22px;
       align-items: start;
     }
@@ -260,52 +260,6 @@
       border-color: var(--danger-border);
     }
 
-    .download-list {
-      display: grid;
-      gap: 14px;
-      margin-top: 18px;
-    }
-
-    .download-item {
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      background: #fff;
-      padding: 18px;
-    }
-
-    .download-head {
-      display: flex;
-      justify-content: space-between;
-      gap: 14px;
-      align-items: flex-start;
-      flex-wrap: wrap;
-    }
-
-    .download-title {
-      font-size: 18px;
-      font-weight: 700;
-      margin: 0 0 6px;
-    }
-
-    .download-sub {
-      color: var(--muted);
-      font-size: 14px;
-      margin: 0;
-    }
-
-    .tag {
-      display: inline-flex;
-      align-items: center;
-      min-height: 28px;
-      padding: 0 10px;
-      border-radius: 999px;
-      background: var(--surface-soft);
-      color: var(--primary);
-      font-weight: 700;
-      font-size: 12px;
-      white-space: nowrap;
-    }
-
     .steps {
       display: grid;
       gap: 14px;
@@ -391,8 +345,8 @@
           <span class="eyebrow">Windows-Verwaltungsapp</span>
           <h1>Download für Vorstand und Admin</h1>
           <p class="muted">
-            Hier findest du die aktuelle Version der Windows-Verwaltungsapp sowie zusätzlich
-            die letzten drei vorherigen Versionen zum manuellen Download.
+            Hier findest du die aktuelle Version der Windows-Verwaltungsapp.
+            Der Download wird automatisch aus der bereitgestellten <code class="inline">version.json</code> geladen.
           </p>
 
           <div id="statusBox" class="status">
@@ -447,7 +401,7 @@
           <div class="card">
             <h2>Aktuelle Version</h2>
             <p class="muted">
-              Die neueste Version wird automatisch aus <code class="inline">./versions.json</code> geladen.
+              Diese Angaben werden automatisch aus <code class="inline">./version.json</code> gelesen.
             </p>
 
             <div class="meta-grid">
@@ -478,15 +432,15 @@
           </div>
 
           <div class="card" style="margin-top: 22px;">
-            <h2>Letzte Versionen</h2>
+            <h2>Zu älteren Versionen</h2>
             <p class="muted">
-              Zusätzlich zur neuesten Version werden die letzten drei vorherigen Versionen angezeigt.
+              Der Veröffentlichungs-Batch stellt derzeit automatisch nur die aktuelle Version bereit.
             </p>
 
-            <div id="olderVersions" class="download-list">
-              <div class="download-item">
-                <p class="muted">Lade ältere Versionen …</p>
-              </div>
+            <div class="box warning-box" style="margin-top: 16px;">
+              <strong>Hinweis:</strong><br />
+              Eine automatische Anzeige der letzten drei Windows-Versionen wird erst dann eingebaut,
+              wenn der Batch diese Informationen ebenfalls automatisch erzeugt.
             </div>
           </div>
         </div>
@@ -501,8 +455,8 @@
                 <div>
                   <h3>Setup herunterladen</h3>
                   <p class="muted">
-                    Lade die gewünschte Version über den Download-Button herunter.
-                    Speichere die Datei nach Möglichkeit im normalen Download-Ordner.
+                    Lade die aktuelle Version über den Download-Button herunter und speichere
+                    die Datei im normalen Download-Ordner.
                   </p>
                 </div>
               </div>
@@ -521,11 +475,11 @@
               <div class="step">
                 <div class="step-number">3</div>
                 <div>
-                  <h3>Warnmeldung bestätigen</h3>
+                  <h3>Warnmeldung prüfen</h3>
                   <p class="muted">
                     Wenn Windows meldet, dass die App von einer nicht vertrauenswürdigen Quelle stammt
-                    oder der Herausgeber unbekannt ist, gehe nur dann weiter, wenn die Datei
-                    wirklich von dieser offiziellen Vereinsseite heruntergeladen wurde.
+                    oder der Herausgeber unbekannt ist, prüfe zuerst, ob die Datei wirklich von dieser
+                    offiziellen Vereinsseite heruntergeladen wurde.
                   </p>
                 </div>
               </div>
@@ -592,10 +546,9 @@
     const latestFile = document.getElementById("latestFile");
     const latestNotes = document.getElementById("latestNotes");
 
-    const olderVersions = document.getElementById("olderVersions");
-
     function setStatus(message, type = "default") {
       statusBox.textContent = message;
+
       if (type === "ok") {
         statusBox.className = "status ok";
       } else if (type === "error") {
@@ -606,9 +559,12 @@
     }
 
     function formatDate(value) {
-      if (!value) return "–";
+      if (!value) {
+        return "–";
+      }
 
       const date = new Date(value);
+
       if (Number.isNaN(date.getTime())) {
         return value;
       }
@@ -620,80 +576,38 @@
       }).format(date);
     }
 
-    function renderOlderVersions(items) {
-      if (!items || items.length === 0) {
-        olderVersions.innerHTML = `
-          <div class="download-item">
-            <p class="muted">Keine älteren Versionen hinterlegt.</p>
-          </div>
-        `;
-        return;
-      }
-
-      olderVersions.innerHTML = items.map((item, index) => {
-        const version = item.version ?? "–";
-        const build = item.build ?? "–";
-        const date = formatDate(item.date);
-        const fileName = item.fileName ?? "–";
-        const notes = item.notes ?? "Keine Hinweise hinterlegt.";
-        const downloadUrl = item.downloadUrl ?? "#";
-
-        return `
-          <div class="download-item">
-            <div class="download-head">
-              <div>
-                <p class="download-title">Version ${version}</p>
-                <p class="download-sub">Build ${build} · ${date} · ${fileName}</p>
-              </div>
-              <span class="tag">Vorherige Version ${index + 1}</span>
-            </div>
-
-            <p class="muted" style="margin-top: 12px;">${notes}</p>
-
-            <div class="button-row">
-              <a class="btn btn-secondary btn-sm" href="${downloadUrl}">
-                Diese Version herunterladen
-              </a>
-            </div>
-          </div>
-        `;
-      }).join("");
-    }
-
-    async function loadWindowsVersions() {
+    async function loadWindowsVersion() {
       try {
-        const response = await fetch("./versions.json", { cache: "no-store" });
+        const response = await fetch("./version.json", { cache: "no-store" });
 
         if (!response.ok) {
-          throw new Error("versions.json konnte nicht geladen werden.");
+          throw new Error("version.json konnte nicht geladen werden.");
         }
 
         const data = await response.json();
-        const versions = Array.isArray(data.versions) ? data.versions : [];
 
-        if (versions.length === 0) {
-          throw new Error("Es wurden keine Versionen gefunden.");
+        const version = data.version ?? "–";
+        const build = data.build ?? "–";
+        const date = formatDate(data.date);
+        const fileName = data.fileName ?? "–";
+        const notes = data.notes ?? "Keine Hinweise hinterlegt.";
+        const downloadUrl = data.downloadUrl;
+
+        latestVersion.textContent = version;
+        latestBuild.textContent = build;
+        latestDate.textContent = date;
+        latestFile.textContent = fileName;
+        latestNotes.textContent = notes;
+
+        if (!downloadUrl) {
+          throw new Error("Die Download-URL fehlt in der version.json.");
         }
 
-        const current = versions[0];
-        const previous = versions.slice(1, 4);
-
-        latestVersion.textContent = current.version ?? "–";
-        latestBuild.textContent = current.build ?? "–";
-        latestDate.textContent = formatDate(current.date);
-        latestFile.textContent = current.fileName ?? "–";
-        latestNotes.textContent = current.notes ?? "Keine Hinweise hinterlegt.";
-
-        if (!current.downloadUrl) {
-          throw new Error("Für die aktuelle Version fehlt die Download-URL.");
-        }
-
-        latestDownloadBtn.href = current.downloadUrl;
+        latestDownloadBtn.href = downloadUrl;
         latestDownloadBtn.style.pointerEvents = "auto";
         latestDownloadBtn.style.opacity = "1";
 
-        renderOlderVersions(previous);
-        setStatus("Aktuelle Windows-Version und vorherige Versionen wurden geladen.", "ok");
+        setStatus("Aktuelle Windows-Version gefunden. Du kannst die Setup-Datei jetzt herunterladen.", "ok");
       } catch (error) {
         latestVersion.textContent = "nicht verfügbar";
         latestBuild.textContent = "nicht verfügbar";
@@ -701,18 +615,12 @@
         latestFile.textContent = "nicht verfügbar";
         latestNotes.textContent = "Versionsinformationen konnten nicht geladen werden.";
 
-        olderVersions.innerHTML = `
-          <div class="download-item">
-            <p class="muted">Ältere Versionen konnten nicht geladen werden.</p>
-          </div>
-        `;
-
         setStatus("Versionsinformationen konnten nicht geladen werden. Bitte später erneut versuchen.", "error");
         console.error(error);
       }
     }
 
-    loadWindowsVersions();
+    loadWindowsVersion();
   </script>
 </body>
 </html>
