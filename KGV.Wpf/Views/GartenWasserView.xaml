@@ -1,0 +1,54 @@
+<UserControl x:Class="KGV.Views.GartenWasserView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="{DynamicResource KgvBackgroundBrush}">
+
+    <Grid Margin="30">
+        <StackPanel>
+            <DockPanel LastChildFill="False">
+                <TextBlock Text="Wasser" FontSize="24" FontWeight="Bold" DockPanel.Dock="Left" />
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <Button Content="Neue Ablesung" Width="120" Height="30" Margin="0,0,10,0"
+                            Command="{Binding NeueAblesungCommand}" />
+                    <Button Content="Bearbeiten" Width="110" Height="30" Margin="0,0,10,0"
+                            Command="{Binding AblesungBearbeitenCommand}" />
+                    <Button Content="Ausbauen" Width="100" Height="30" Margin="0,0,10,0"
+                            Command="{Binding ZaehlerAusbauenCommand}" />
+                    <Button Content="Einbauen" Width="100" Height="30"
+                            Command="{Binding ZaehlerEinbauenCommand}" />
+                </StackPanel>
+            </DockPanel>
+            <TextBlock Text="" Margin="0,10,0,0">
+                <Run Text="Garten: " />
+                <Run Text="{Binding GartenNr, Mode=OneWay}" FontWeight="SemiBold" />
+            </TextBlock>
+
+            <DataGrid ItemsSource="{Binding Ablesungen}"
+                      SelectedItem="{Binding SelectedAblesung}"
+                      AutoGenerateColumns="False"
+                      IsReadOnly="True"
+                      CanUserAddRows="False"
+                      Margin="0,15,0,0"
+                      Height="300">
+                <DataGrid.InputBindings>
+                    <MouseBinding Gesture="LeftDoubleClick" Command="{Binding AblesungBearbeitenCommand}" />
+                </DataGrid.InputBindings>
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Datum" Binding="{Binding Ablesedatum, StringFormat=d}" Width="110" />
+                    <DataGridTextColumn Header="Zählerstand" Binding="{Binding Stand}" Width="*" />
+                    <DataGridTextColumn Header="Zählernummer" Binding="{Binding Zaehlernummer}" Width="160" />
+                    <DataGridTextColumn Header="Eichdatum" Binding="{Binding Eichdatum, StringFormat=d}" Width="110" />
+                    <DataGridTemplateColumn Header="Foto" Width="70">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Button Content="Öffnen"
+                                        Command="{Binding DataContext.OpenFotoCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                        CommandParameter="{Binding FotoPfad}" />
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                </DataGrid.Columns>
+            </DataGrid>
+        </StackPanel>
+    </Grid>
+</UserControl>

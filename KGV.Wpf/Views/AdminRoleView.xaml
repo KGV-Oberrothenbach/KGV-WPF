@@ -1,0 +1,99 @@
+<UserControl x:Class="KGV.Views.AdminRoleView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="{DynamicResource KgvBackgroundBrush}">
+
+    <Grid Margin="30">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <DockPanel Grid.Row="0" LastChildFill="False">
+            <TextBlock Text="Admin-Menü" FontSize="24" FontWeight="Bold" DockPanel.Dock="Left" />
+
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                <Button Content="Nutzerverwaltung" Width="160" Height="35" Margin="0,0,10,0"
+                        Command="{Binding OpenUserManagementCommand}"
+                        IsEnabled="{Binding CanManageUsers}" />
+                <Button Content="Nutzer hinzufügen" Width="160" Height="35" Margin="0,0,10,0"
+                        Command="{Binding AddUserCommand}" />
+                <Button Content="Nutzer löschen" Width="160" Height="35" Margin="0,0,10,0"
+                        Command="{Binding DeleteUserCommand}" />
+                <Button Content="Speichern" Width="160" Height="35" Command="{Binding SaveCommand}" />
+            </StackPanel>
+        </DockPanel>
+
+        <TextBlock Grid.Row="1" Margin="0,15,0,0">
+            <Run Text="Mitglied: " />
+            <Run Text="{Binding SelectedMember.Nachname}" FontWeight="SemiBold" />
+            <Run Text=" " />
+            <Run Text="{Binding SelectedMember.Vorname}" FontWeight="SemiBold" />
+            <Run Text=" (ID: " />
+            <Run Text="{Binding SelectedMember.Id}" />
+            <Run Text=")" />
+        </TextBlock>
+
+        <Border Grid.Row="2" Margin="0,15,0,0" Padding="10" Background="{StaticResource KgvSurfaceBrush}">
+            <StackPanel>
+                <TextBlock>
+                    <Run Text="E-Mail: " />
+                    <Run Text="{Binding SelectedMember.Email}" FontWeight="SemiBold" />
+                    <Run Text=" (" />
+                    <Run Text="{Binding EmailStatusText, Mode=OneWay}" />
+                    <Run Text=")" />
+                </TextBlock>
+
+                <TextBlock>
+                    <Run Text="Nutzerkonto: " />
+                    <Run Text="{Binding UserAccountStatusText, Mode=OneWay}" FontWeight="SemiBold" />
+                </TextBlock>
+
+                <TextBlock>
+                    <Run Text="Effektive Rolle: " />
+                    <Run Text="{Binding EffectiveRoleText, Mode=OneWay}" FontWeight="SemiBold" />
+                </TextBlock>
+
+                <TextBlock>
+                    <TextBlock.Style>
+                        <Style TargetType="{x:Type TextBlock}">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding HasPreparedRole}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                    <Run Text="Vorbereitete Rolle: " />
+                    <Run Text="{Binding PreparedRoleText, Mode=OneWay}" FontWeight="SemiBold" />
+                </TextBlock>
+            </StackPanel>
+        </Border>
+
+        <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,15,0,0">
+            <TextBlock Text="Rolle:" VerticalAlignment="Center" Margin="0,0,10,0" />
+            <ComboBox Width="200"
+                      ItemsSource="{Binding Roles}"
+                      SelectedItem="{Binding SelectedRole}"
+                      IsEnabled="{Binding IsRoleEditable}" />
+        </StackPanel>
+
+        <TextBlock Grid.Row="4" Margin="0,10,0,0" Foreground="DarkRed" FontWeight="SemiBold">
+            <TextBlock.Style>
+                <Style TargetType="{x:Type TextBlock}">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsRoleEditable}" Value="False">
+                            <Setter Property="Visibility" Value="Visible" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </TextBlock.Style>
+            Rollenbearbeitung für dieses Mitglied ist gesperrt.
+        </TextBlock>
+    </Grid>
+</UserControl>

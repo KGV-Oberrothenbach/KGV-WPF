@@ -1,0 +1,52 @@
+<!-- Datei: KGV.Wpf/Views/MemberSearchView.xaml -->
+
+<UserControl x:Class="KGV.Views.MemberSearchView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="{DynamicResource KgvBackgroundBrush}">
+
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="100" />
+        </Grid.RowDefinitions>
+
+        <TextBlock Text="Mitgliedersuche" FontSize="18" FontWeight="Bold" />
+
+        <StackPanel Orientation="Horizontal" Grid.Row="1" Margin="0,8,0,8">
+            <TextBox Width="300" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
+            <Button Content="Suchen" Margin="8,0,0,0" Command="{Binding SearchCommand}" />
+            <CheckBox Content="nach Gartennummer suchen"
+                      Margin="12,0,0,0"
+                      IsChecked="{Binding SearchByParzelle}" />
+        </StackPanel>
+
+        <StackPanel Grid.Row="2">
+            <ListView x:Name="ResultsListView"
+                      ItemsSource="{Binding Results}"
+                      SelectedItem="{Binding SelectedResult}"
+                      Height="300"
+                      MouseDoubleClick="ResultsListView_MouseDoubleClick"
+                      KeyDown="ResultsListView_KeyDown">
+
+                <!-- Wir zeigen Name/Nachname robust an – ohne Converter -->
+                <ListView.View>
+                    <GridView>
+                        <GridViewColumn Header="Name"
+                                        DisplayMemberBinding="{Binding Nachname}" />
+                        <GridViewColumn Header="Vorname"
+                                        DisplayMemberBinding="{Binding Vorname}" />
+                    </GridView>
+                </ListView.View>
+            </ListView>
+        </StackPanel>
+
+        <!-- ⚡ Debug-Output -->
+        <ListBox Grid.Row="3"
+                 ItemsSource="{Binding DebugMessages}"
+                 Height="100"
+                 Background="#f0f0f0"/>
+    </Grid>
+</UserControl>

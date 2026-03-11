@@ -1,0 +1,106 @@
+<!-- Datei: KGV/Views/MainWindow.xaml -->
+
+<Window x:Class="KGV.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:helpers="clr-namespace:KGV.Wpf.Helpers"
+        Title="KGV Hauptfenster" Height="951" Width="1510"
+        WindowStartupLocation="CenterScreen">
+
+    <Window.Resources>
+        <helpers:BoolToVisibilityConverterLocal x:Key="BoolToVisibilityConverterLocal"/>
+        <helpers:IsCurrentViewModelTypeConverter x:Key="IsCurrentViewModelTypeConverter" />
+    </Window.Resources>
+
+    <DockPanel>
+        <!-- Obere Leiste -->
+        <StackPanel DockPanel.Dock="Top"
+                    Orientation="Horizontal"
+                    Background="{StaticResource KgvSurfaceBrush}"
+                    Height="50"
+                    VerticalAlignment="Center">
+        </StackPanel>
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="250"/>
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Sidebar -->
+            <StackPanel Grid.Column="0" Background="{StaticResource KgvSurfaceBrush}" Margin="0">
+                <!-- Saison Dropdown -->
+                <StackPanel Orientation="Vertical" Margin="5">
+                    <TextBlock Text="Saison" Margin="0,0,0,4"/>
+                    <ComboBox ItemsSource="{Binding Seasons}" SelectedItem="{Binding SelectedSeason}"/>
+                </StackPanel>
+
+                <ItemsControl ItemsSource="{Binding NavigationItems}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Button Content="{Binding Title}" Margin="{Binding ButtonMargin}"
+                                    Command="{Binding DataContext.NavigateCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                    CommandParameter="{Binding}"
+                                    Visibility="{Binding IsVisible, Converter={StaticResource BoolToVisibilityConverterLocal}}">
+                                <Button.Style>
+                                    <Style TargetType="{x:Type Button}" BasedOn="{StaticResource NavigationButton}">
+                                        <Style.Triggers>
+                                            <DataTrigger Value="True">
+                                                <DataTrigger.Binding>
+                                                    <MultiBinding Converter="{StaticResource IsCurrentViewModelTypeConverter}">
+                                                        <Binding Path="DataContext.CurrentViewModel" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                                        <Binding Path="ViewModelType" />
+                                                    </MultiBinding>
+                                                </DataTrigger.Binding>
+                                                <Setter Property="Background" Value="{StaticResource KgvPrimaryBrush}" />
+                                                <Setter Property="Foreground" Value="White" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <!-- Mitglied-spezifisches Menü (sichtbar, wenn ein Mitglied ausgewählt ist) -->
+                <StackPanel Margin="5" Visibility="{Binding IsMemberSelected, Converter={StaticResource BoolToVisibilityConverterLocal}}">
+                    <TextBlock Text="Mitglied" FontWeight="Bold" Margin="5,10,5,4" />
+
+                    <ItemsControl ItemsSource="{Binding MemberNavigationItems}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Content="{Binding Title}" Margin="{Binding ButtonMargin}"
+                                        Command="{Binding DataContext.NavigateCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                        CommandParameter="{Binding}"
+                                        Visibility="{Binding IsVisible, Converter={StaticResource BoolToVisibilityConverterLocal}}">
+                                    <Button.Style>
+                                        <Style TargetType="{x:Type Button}" BasedOn="{StaticResource NavigationButton}">
+                                            <Style.Triggers>
+                                                <DataTrigger Value="True">
+                                                    <DataTrigger.Binding>
+                                                        <MultiBinding Converter="{StaticResource IsCurrentViewModelTypeConverter}">
+                                                            <Binding Path="DataContext.CurrentViewModel" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                                            <Binding Path="ViewModelType" />
+                                                        </MultiBinding>
+                                                    </DataTrigger.Binding>
+                                                    <Setter Property="Background" Value="{StaticResource KgvPrimaryBrush}" />
+                                                    <Setter Property="Foreground" Value="White" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                </StackPanel>
+            </StackPanel>
+
+            <!-- ContentControl für Views -->
+            <!-- WICHTIG: Binding auf CurrentViewModel (nicht CurrentView) -->
+            <ContentControl Grid.Column="1" Content="{Binding CurrentViewModel}" Margin="5"/>
+        </Grid>
+    </DockPanel>
+</Window>

@@ -1,0 +1,407 @@
+@echo off
+setlocal EnableExtensions EnableDelayedExpansion
+chcp 65001 >nul
+
+set "WAIT_AT_END=1"
+if /I "%~1"=="NOPAUSE" set "WAIT_AT_END=0"
+
+rem ============================================================
+rem KGV - WPF Release + Inno Setup
+rem
+rem Lokal:
+rem   D:\Programmieren\KGV-Publish\wpf\<version>\KGV-Setup-<version>.exe
+rem   D:\Programmieren\KGV-Publish\wpf\<version>\KGV-Setup.exe
+rem   D:\Programmieren\KGV-Publish\wpf\<version>\version.json
+rem
+rem Git-Ordner:
+rem   D:\Programmieren\KGV-GitHub\KGV-Setup-<version>.exe
+rem   D:\Programmieren\KGV-GitHub\KGV-Setup.exe
+rem   D:\Programmieren\KGV-GitHub\version.json
+rem
+rem Es werden lokal und im Git-Ordner nur die letzten KEEP_COUNT
+rem Versionen behalten.
+rem
+rem WICHTIG:
+rem - index.html und set-password.html werden nicht angefasst.
+rem - android\ wird nicht angefasst.
+rem ============================================================
+
+set "ROOT=%~dp0"
+set "WPF_PROJECT=%ROOT%KGV.Wpf\KGV.Wpf.csproj"
+set "INNO_SCRIPT=%ROOT%Installer\InnoSetup\KGV.Wpf.iss"
+
+set "BASE_URL=https://kgv-oberrothenbach.github.io/KGV-WPF"
+set "GIT_REMOTE_URL=https://KGV-Oberrothenbach@github.com/KGV-Oberrothenbach/KGV-WPF.git"
+set "GIT_CREDENTIAL_USERNAME=KGV-Oberrothenbach"
+set "GIT_USER_NAME=KGV-Oberrothenbach"
+set "GIT_USER_EMAIL="
+
+set "LOCAL_WPF_ROOT=D:\Programmieren\KGV-Publish\wpf"
+set "APPFILES_ROOT=D:\Programmieren\KGV-Publish\wpf\AppFiles"
+set "APPFILES_CURRENT=%APPFILES_ROOT%\Current"
+
+set "GIT_ROOT=D:\Programmieren\KGV-GitHub"
+set "KEEP_COUNT=3"
+
+set "CONFIG=Release"
+set "RUNTIME=win-x64"
+
+if exist "C:\Users\Braen\AppData\Local\Programs\Inno Setup 6\ISCC.exe" (
+    set "ISCC=C:\Users\Braen\AppData\Local\Programs\Inno Setup 6\ISCC.exe"
+) else if exist "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" (
+    set "ISCC=C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+) else (
+    echo FEHLER: ISCC.exe nicht gefunden.
+    if "%WAIT_AT_END%"=="1" pause
+    exit /b 1
+)
+
+echo ===============================================
+echo KGV WPF Release + Inno Setup
+echo ===============================================
+echo.
+
+if not exist "%WPF_PROJECT%" (
+    echo FEHLER: WPF-Projekt nicht gefunden:
+    echo   "%WPF_PROJECT%"
+    if "%WAIT_AT_END%"=="1" pause
+    exit /b 1
+)
+
+if not exist "%INNO_SCRIPT%" (
+    echo FEHLER: Inno-Setup-Skript nicht gefunden:
+    echo   "%INNO_SCRIPT%"
+    if "%WAIT_AT_END%"=="1" pause
+    exit /b 1
+)
+
+if not exist "%LOCAL_WPF_ROOT%" mkdir "%LOCAL_WPF_ROOT%"
+if not exist "%APPFILES_ROOT%" mkdir "%APPFILES_ROOT%"
+if not exist "%GIT_ROOT%" (
+    echo FEHLER: Git-Ordner nicht gefunden:
+    echo   "%GIT_ROOT%"
+    if "%WAIT_AT_END%"=="1" pause
+    exit /b 1
+)
+
+echo [0/7] Git-Ordner synchronisieren...
+pushd "%GIT_ROOT%"
+
+git remote set-url origin "%GIT_REMOTE_URL%"
+if errorlevel 1 (
+    echo FEHLER: git remote set-url origin fehlgeschlagen.
+    popd
+    if "%WAIT_AT_END%"=="1" pause
+    exit /b 1
+)
+
+git config --local credential.username "%GIT_CREDENTIAL_USERNAME%"
+git config --local user.name "%GIT_USER_NAME%"
+if not "%GIT_USER_EMAIL%"=="" git config --local user.email "%GIT_USER_EMAIL%"
+git config --local pull.rebase true
+
+set "GIT_STATUS_FILE=%TEMP%\kgv_git_status_wpf_%RANDOM%.txt"
+git status --porcelain > "%GIT_STATUS_FILE%" 2>nul
+for %%A in ("%GIT_STATUS_FILE%") do set "GIT_STATUS_SIZE=%%~zA"
+if not defined GIT_STATUS_SIZE set "GIT_STATUS_SIZE=0"
+del /q "%GIT_STATUS_FILE%" 2>nul
+
+if not "%GIT_STATUS_SIZE%"=="0" (
+    echo FEHLER: Der Git-Ordner hat bereits lokale Aenderungen.
+    echo Bitte zuerst im Ordner "%GIT_ROOT%" committen, pushen oder bereinigen.
+    git status --short
+    popd
+    if "%WAIT_AT_END%"=="1" pause
+    exit /b 1
+)
+
+git pull --rebase origin main
+if errorlevel 1 (
+    echo FEHLER: git pull --rebase origin main fehlgeschlagen.
+    popd
+    if "%WAIT_AT_END%"=="1" pause
+    exit /b 1
+)
+
+popd
+
+set "APP_VERSION="
+set "VERSION_SOURCE="
+
+for /f "usebackq delims=" %%v in (`powershell -NoProfile -Command "(Select-Xml -Path '%WPF_PROJECT%' -XPath '//Project/PropertyGroup/Version/text()' | Select-Object -First 1).Node.Value.Trim()"`) do set "APP_VERSION=%%v"
+if defined APP_VERSION set "VERSION_SOURCE=Version aus csproj"
+
+if not defined APP_VERSION (
+    for /f "usebackq delims=" %%v in (`powershell -NoProfile -Command "(Select-Xml -Path '%WPF_PROJECT%' -XPath '//Project/PropertyGroup/FileVersion/text()' | Select-Object -First 1).Node.Value.Trim()"`) do set "APP_VERSION=%%v"
+    if defined APP_VERSION set "VERSION_SOURCE=FileVersion aus csproj"
+)
+
+if not defined APP_VERSION (
+    for /f "usebackq delims=" %%v in (`powershell -NoProfile -Command "(Select-Xml -Path '%WPF_PROJECT%' -XPath '//Project/PropertyGroup/AssemblyVersion/text()' | Select-Object -First 1).Node.Value.Trim()"`) do set "APP_VERSION=%%v"
+    if defined APP_VERSION set "VERSION_SOURCE=AssemblyVersion aus csproj"
+)
+
+if not defined APP_VERSION (
+    echo FEHLER: Keine gueltige Version in KGV.Wpf.csproj gefunden.
+    if "%WAIT_AT_END%"=="1" pause
+    exit /b 1
+)
+
+if "%APP_VERSION%"=="" (
+    echo FEHLER: Version ist leer oder besteht nur aus Leerzeichen.
+    if "%WAIT_AT_END%"=="1" pause
+    exit /b 1
+)
+
+for /f "usebackq delims=" %%v in (`powershell -NoProfile -Command "$v='%APP_VERSION%'; if($v -match '^\d+\.\d+\.\d+\.0$'){ $v.Substring(0,$v.Length-2) } else { $v }"`) do set "APP_VERSION=%%v"
+
+if "%APP_VERSION%"=="" (
+    echo FEHLER: Version ist nach der Normalisierung leer.
+    if "%WAIT_AT_END%"=="1" pause
+    exit /b 1
+)
+
+set "VERSION_DIR=%LOCAL_WPF_ROOT%\%APP_VERSION%"
+set "CURRENT_INSTALLER_DIR=%LOCAL_WPF_ROOT%\Installers\Current"
+
+set "LOCAL_VERSIONED_SETUP=%VERSION_DIR%\KGV-Setup-%APP_VERSION%.exe"
+set "LOCAL_CURRENT_SETUP=%VERSION_DIR%\KGV-Setup.exe"
+set "LOCAL_JSON_PATH=%VERSION_DIR%\version.json"
+
+set "GIT_VERSIONED_SETUP=%GIT_ROOT%\KGV-Setup-%APP_VERSION%.exe"
+set "GIT_CURRENT_SETUP=%GIT_ROOT%\KGV-Setup.exe"
+set "GIT_JSON_PATH=%GIT_ROOT%\version.json"
+
+set "SETUP_SOURCE="
+
+echo Verwendete Version: %APP_VERSION% (%VERSION_SOURCE%)
+echo WPF-Projekt:        %WPF_PROJECT%
+echo Inno-Skript:        %INNO_SCRIPT%
+echo Git-Zielordner:     %GIT_ROOT%
+echo.
+
+if exist "%VERSION_DIR%" rmdir /s /q "%VERSION_DIR%" >nul 2>&1
+mkdir "%VERSION_DIR%" >nul 2>&1
+
+if exist "%APPFILES_CURRENT%" rmdir /s /q "%APPFILES_CURRENT%" >nul 2>&1
+mkdir "%APPFILES_CURRENT%" >nul 2>&1
+
+if exist "%CURRENT_INSTALLER_DIR%" rmdir /s /q "%CURRENT_INSTALLER_DIR%" >nul 2>&1
+mkdir "%CURRENT_INSTALLER_DIR%" >nul 2>&1
+
+echo [1/7] dotnet clean...
+dotnet clean "%WPF_PROJECT%" -c %CONFIG%
+if errorlevel 1 (
+    echo FEHLER: dotnet clean fehlgeschlagen.
+    if "%WAIT_AT_END%"=="1" pause
+    exit /b 1
+)
+
+echo.
+echo [2/7] dotnet restore...
+dotnet restore "%WPF_PROJECT%"
+if errorlevel 1 (
+    echo FEHLER: dotnet restore fehlgeschlagen.
+    if "%WAIT_AT_END%"=="1" pause
+    exit /b 1
+)
+
+echo.
+echo [3/7] dotnet publish...
+dotnet publish "%WPF_PROJECT%" -c %CONFIG% -r %RUNTIME% --self-contained false -o "%APPFILES_CURRENT%"
+if errorlevel 1 (
+    echo FEHLER: dotnet publish fehlgeschlagen.
+    if "%WAIT_AT_END%"=="1" pause
+    exit /b 1
+)
+
+if not exist "%APPFILES_CURRENT%\KGV.Wpf.exe" (
+    echo FEHLER: KGV.Wpf.exe wurde im Publish-Ordner nicht gefunden.
+    if "%WAIT_AT_END%"=="1" pause
+    exit /b 1
+)
+
+echo.
+echo [4/7] Inno Setup bauen...
+"%ISCC%" /DPublishDir="%APPFILES_CURRENT%" /O"%CURRENT_INSTALLER_DIR%" "%INNO_SCRIPT%"
+if errorlevel 1 (
+    echo FEHLER: Inno Setup fehlgeschlagen.
+    if "%WAIT_AT_END%"=="1" pause
+    exit /b 1
+)
+
+if exist "%CURRENT_INSTALLER_DIR%\KGV-Setup.exe" (
+    set "SETUP_SOURCE=%CURRENT_INSTALLER_DIR%\KGV-Setup.exe"
+)
+
+if not defined SETUP_SOURCE (
+    for /f "delims=" %%f in ('dir /b /a:-d "%CURRENT_INSTALLER_DIR%\KGV-Setup-*.exe" 2^>nul') do (
+        set "SETUP_SOURCE=%CURRENT_INSTALLER_DIR%\%%f"
+        goto :SetupFound
+    )
+)
+
+if not defined SETUP_SOURCE (
+    echo FEHLER: Kein Installer gefunden:
+    echo   "%CURRENT_INSTALLER_DIR%\KGV-Setup.exe"
+    echo   "%CURRENT_INSTALLER_DIR%\KGV-Setup-*.exe"
+    if "%WAIT_AT_END%"=="1" pause
+    exit /b 1
+)
+
+:SetupFound
+echo Verwendete Setup-Quelle:
+echo   "%SETUP_SOURCE%"
+
+echo.
+echo [5/7] Dateien verteilen...
+copy /y "%SETUP_SOURCE%" "%LOCAL_VERSIONED_SETUP%" >nul
+if errorlevel 1 (
+    echo FEHLER: Lokales versionsbezogenes Setup konnte nicht geschrieben werden.
+    if "%WAIT_AT_END%"=="1" pause
+    exit /b 1
+)
+
+copy /y "%SETUP_SOURCE%" "%LOCAL_CURRENT_SETUP%" >nul
+if errorlevel 1 (
+    echo FEHLER: Lokales aktuelles Setup konnte nicht geschrieben werden.
+    if "%WAIT_AT_END%"=="1" pause
+    exit /b 1
+)
+
+copy /y "%SETUP_SOURCE%" "%GIT_VERSIONED_SETUP%" >nul
+if errorlevel 1 (
+    echo FEHLER: Git versionsbezogenes Setup konnte nicht geschrieben werden.
+    if "%WAIT_AT_END%"=="1" pause
+    exit /b 1
+)
+
+copy /y "%SETUP_SOURCE%" "%GIT_CURRENT_SETUP%" >nul
+if errorlevel 1 (
+    echo FEHLER: Git aktuelles Setup konnte nicht geschrieben werden.
+    if "%WAIT_AT_END%"=="1" pause
+    exit /b 1
+)
+
+powershell -NoProfile -Command ^
+  "$o = [ordered]@{ version='%APP_VERSION%'; downloadUrl='%BASE_URL%/KGV-Setup.exe'; notes='Neue Windows-Version' };" ^
+  "$json = ConvertTo-Json -InputObject $o -Depth 5;" ^
+  "Set-Content -Path '%LOCAL_JSON_PATH%' -Value $json -Encoding utf8;" ^
+  "Set-Content -Path '%GIT_JSON_PATH%' -Value $json -Encoding utf8"
+if errorlevel 1 (
+    echo FEHLER: version.json konnte nicht geschrieben werden.
+    if "%WAIT_AT_END%"=="1" pause
+    exit /b 1
+)
+
+echo.
+echo [6/7] Alte WPF-Versionen bereinigen...
+
+powershell -NoProfile -Command ^
+  "$keep=%KEEP_COUNT%;" ^
+  "$root='%LOCAL_WPF_ROOT%';" ^
+  "if(Test-Path $root){" ^
+  "  Get-ChildItem -LiteralPath $root -Directory |" ^
+  "    Where-Object { $_.Name -match '^\d+(\.\d+){1,3}$' } |" ^
+  "    Sort-Object { [version]$_.Name } -Descending |" ^
+  "    Select-Object -Skip $keep |" ^
+  "    Remove-Item -Recurse -Force -ErrorAction SilentlyContinue" ^
+  "}"
+if errorlevel 1 (
+    echo FEHLER: Konnte lokale WPF-Versionen nicht bereinigen.
+    if "%WAIT_AT_END%"=="1" pause
+    exit /b 1
+)
+
+powershell -NoProfile -Command ^
+  "$keep=%KEEP_COUNT%;" ^
+  "$root='%GIT_ROOT%';" ^
+  "if(Test-Path $root){" ^
+  "  Get-ChildItem -LiteralPath $root -File -Filter 'KGV-Setup-*.exe' |" ^
+  "    Sort-Object { if($_.BaseName -match '^KGV-Setup-(?<v>\d+(?:\.\d+){1,3})$'){ [version]$Matches['v'] } else { [version]'0.0.0.0' } } -Descending |" ^
+  "    Select-Object -Skip $keep |" ^
+  "    Remove-Item -Force -ErrorAction SilentlyContinue" ^
+  "}"
+if errorlevel 1 (
+    echo FEHLER: Konnte Git-WPF-Versionen nicht bereinigen.
+    if "%WAIT_AT_END%"=="1" pause
+    exit /b 1
+)
+
+echo.
+echo [7/7] Git-Aenderungen pruefen und hochladen...
+pushd "%GIT_ROOT%"
+
+git status --short
+
+git add .
+if errorlevel 1 (
+    echo FEHLER: git add fehlgeschlagen.
+    popd
+    if "%WAIT_AT_END%"=="1" pause
+    exit /b 1
+)
+
+git diff --cached --quiet
+if not errorlevel 1 (
+    echo Keine Git-Aenderungen zum Committen gefunden.
+    popd
+    echo.
+    echo ===============================================
+    echo Fertig
+    echo ===============================================
+    echo Lokales Setup: "%LOCAL_VERSIONED_SETUP%"
+    echo Lokale JSON:   "%LOCAL_JSON_PATH%"
+    echo Git Setup:     "%GIT_VERSIONED_SETUP%"
+    echo Git Current:   "%GIT_CURRENT_SETUP%"
+    echo Git JSON:      "%GIT_JSON_PATH%"
+    echo.
+    if "%WAIT_AT_END%"=="1" pause
+    endlocal
+    exit /b 0
+)
+
+git commit -m "WPF %APP_VERSION% veroeffentlicht"
+if errorlevel 1 (
+    echo FEHLER: git commit fehlgeschlagen.
+    popd
+    if "%WAIT_AT_END%"=="1" pause
+    exit /b 1
+)
+
+git push --set-upstream origin main
+if errorlevel 1 (
+    echo Erster git push fehlgeschlagen. Versuche git pull --rebase origin main und erneuten Push...
+    git pull --rebase origin main
+    if errorlevel 1 (
+        echo FEHLER: git pull --rebase origin main nach Push-Fehler fehlgeschlagen.
+        popd
+        if "%WAIT_AT_END%"=="1" pause
+        exit /b 1
+    )
+
+    git push --set-upstream origin main
+    if errorlevel 1 (
+        echo FEHLER: git push fehlgeschlagen.
+        popd
+        if "%WAIT_AT_END%"=="1" pause
+        exit /b 1
+    )
+)
+
+popd
+
+echo Git-Upload erfolgreich.
+echo.
+echo ===============================================
+echo Fertig
+echo ===============================================
+echo Lokales Setup: "%LOCAL_VERSIONED_SETUP%"
+echo Lokale JSON:   "%LOCAL_JSON_PATH%"
+echo Git Setup:     "%GIT_VERSIONED_SETUP%"
+echo Git Current:   "%GIT_CURRENT_SETUP%"
+echo Git JSON:      "%GIT_JSON_PATH%"
+echo.
+if "%WAIT_AT_END%"=="1" pause
+endlocal
+exit /b 0

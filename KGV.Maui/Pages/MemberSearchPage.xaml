@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewmodels="clr-namespace:KGV.Maui.ViewModels"
+             xmlns:sys="clr-namespace:System;assembly=System.Runtime"
+             x:Class="KGV.Maui.Pages.MemberSearchPage"
+             x:DataType="viewmodels:MemberSearchViewModel"
+             Title="Mitgliedersuche">
+
+    <Grid Padding="24" RowDefinitions="Auto,Auto,*,Auto" RowSpacing="12">
+        <Label Text="Mitgliedersuche" FontSize="24" FontAttributes="Bold" />
+
+        <VerticalStackLayout Grid.Row="1" Spacing="8">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                <Entry Placeholder="Suche" Text="{Binding SearchText}" />
+                <Button Grid.Column="1" Text="Suchen" Command="{Binding SearchCommand}" />
+            </Grid>
+
+            <HorizontalStackLayout Spacing="8">
+                <CheckBox IsChecked="{Binding SearchByParzelle}" />
+                <Label Text="nach Gartennummer suchen" VerticalTextAlignment="Center" />
+            </HorizontalStackLayout>
+
+            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" />
+        </VerticalStackLayout>
+
+        <CollectionView x:Name="ResultsCollectionView"
+                        Grid.Row="2"
+                        ItemsSource="{Binding Results}"
+                        SelectionMode="Single"
+                        SelectionChanged="ResultsCollectionView_SelectionChanged">
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="viewmodels:MemberSearchResultItem">
+                    <Grid Padding="12" RowDefinitions="Auto,Auto" RowSpacing="2">
+                        <Label Text="{Binding Title}" FontAttributes="Bold" />
+                        <Label Grid.Row="1" Text="{Binding Subtitle}" FontSize="12" Opacity="0.8" />
+                    </Grid>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <CollectionView Grid.Row="3" ItemsSource="{Binding DebugMessages}" HeightRequest="120">
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="sys:String">
+                    <Label Text="{Binding .}" FontSize="12" />
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+    </Grid>
+</ContentPage>

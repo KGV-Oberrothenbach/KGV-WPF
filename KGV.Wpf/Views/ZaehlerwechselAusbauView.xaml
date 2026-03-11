@@ -1,0 +1,103 @@
+﻿<UserControl x:Class="KGV.Views.ZaehlerwechselAusbauView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:helpers="clr-namespace:KGV.Wpf.Helpers"
+             Background="{StaticResource KgvBackgroundBrush}">
+
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
+        <helpers:StringNotEmptyToVisibilityConverter x:Key="StringNotEmptyToVisibility" />
+    </UserControl.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="24" MaxWidth="900">
+            <TextBlock Text="Zählerwechsel – Ausbau" FontSize="28" FontWeight="Bold" TextWrapping="Wrap" />
+
+            <TextBlock Margin="0,8,0,0"
+                       Text="Aktiver Zähler gefunden. Bitte Endstand und Ausbaudatum erfassen."
+                       Foreground="{StaticResource KgvMutedBrush}"
+                       TextWrapping="Wrap" />
+
+            <Border Margin="0,18,0,0"
+                    Padding="14"
+                    Background="{StaticResource KgvSurfaceBrush}"
+                    BorderBrush="{StaticResource KgvBorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8">
+                <StackPanel>
+                    <TextBlock Text="Anlage" FontWeight="SemiBold" />
+                    <TextBlock Text="{Binding AnlageText}" Margin="0,2,0,8" TextWrapping="Wrap" />
+
+                    <TextBlock Text="Garten-Nr." FontWeight="SemiBold" />
+                    <TextBlock Text="{Binding GartenNrText}" Margin="0,2,0,8" TextWrapping="Wrap" />
+
+                    <TextBlock Text="Medium" FontWeight="SemiBold" />
+                    <TextBlock Text="{Binding MediumText}" Margin="0,2,0,8" TextWrapping="Wrap" />
+
+                    <TextBlock Text="RFID" FontWeight="SemiBold" />
+                    <TextBlock Text="{Binding RfidText}" Margin="0,2,0,8" TextWrapping="Wrap" />
+
+                    <TextBlock Text="Zählernummer" FontWeight="SemiBold"
+                               Visibility="{Binding HasZaehlernummer, Converter={StaticResource BoolToVis}}" />
+                    <TextBlock Text="{Binding ZaehlernummerText}" Margin="0,2,0,8"
+                               Visibility="{Binding HasZaehlernummer, Converter={StaticResource BoolToVis}}"
+                               TextWrapping="Wrap" />
+
+                    <TextBlock Text="Eingebaut am" FontWeight="SemiBold" />
+                    <TextBlock Text="{Binding EingebautText}" Margin="0,2,0,8" TextWrapping="Wrap" />
+
+                    <TextBlock Text="Eichfällig am" FontWeight="SemiBold" />
+                    <TextBlock Text="{Binding EichfaelligText}" Margin="0,2,0,0" TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
+
+            <Border Margin="0,18,0,0"
+                    Padding="14"
+                    Background="{StaticResource KgvSurfaceBrush}"
+                    BorderBrush="{StaticResource KgvBorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Visibility="{Binding HasAktiverZaehler, Converter={StaticResource BoolToVis}}">
+                <StackPanel>
+                    <TextBlock Text="Ausbau" FontSize="18" FontWeight="Bold" />
+
+                    <TextBlock Margin="0,10,0,0" Text="Endstand" FontWeight="SemiBold" />
+                    <TextBox Margin="0,6,0,0"
+                             Text="{Binding EndstandText, UpdateSourceTrigger=PropertyChanged}" />
+
+                    <TextBlock Margin="0,10,0,0" Text="Ausbaudatum" FontWeight="SemiBold" />
+                    <DatePicker Margin="0,6,0,0"
+                                SelectedDate="{Binding AusgebautAm}" />
+
+                    <Button Margin="0,12,0,0"
+                            Content="Foto auswählen (lokal)"
+                            Command="{Binding ChooseFotoCommand}" />
+
+                    <TextBlock Margin="0,6,0,0"
+                               Text="{Binding FotoPfad}"
+                               Foreground="{StaticResource KgvMutedBrush}"
+                               Visibility="{Binding FotoPfad, Converter={StaticResource StringNotEmptyToVisibility}}"
+                               TextWrapping="Wrap" />
+
+                    <Button Margin="0,12,0,0"
+                            Style="{StaticResource PrimaryButton}"
+                            Content="Ausbau speichern"
+                            Command="{Binding SaveCommand}" />
+
+                    <TextBlock Margin="0,12,0,0"
+                               Text="{Binding SuccessText}"
+                               Foreground="{StaticResource KgvMutedBrush}"
+                               Visibility="{Binding SuccessText, Converter={StaticResource StringNotEmptyToVisibility}}"
+                               TextWrapping="Wrap" />
+
+                    <TextBlock Margin="0,8,0,0"
+                               Text="{Binding ErrorText}"
+                               Foreground="Red"
+                               Visibility="{Binding ErrorText, Converter={StaticResource StringNotEmptyToVisibility}}"
+                               TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
+

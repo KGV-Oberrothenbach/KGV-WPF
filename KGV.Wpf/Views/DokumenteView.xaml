@@ -1,0 +1,50 @@
+﻿<UserControl x:Class="KGV.Views.DokumenteView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="{DynamicResource KgvBackgroundBrush}">
+
+    <Grid Margin="30">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <DockPanel Grid.Row="0" LastChildFill="False">
+            <TextBlock Text="Dokumente" FontSize="24" FontWeight="Bold" DockPanel.Dock="Left" />
+            <Button DockPanel.Dock="Right" Content="Aktualisieren" Width="160" Height="35" Command="{Binding RefreshCommand}" />
+        </DockPanel>
+
+        <Grid Grid.Row="1" Margin="0,15,0,0">
+            <GroupBox Header="Mitglied">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Margin="0,0,0,10">
+                        <Run Text="Name: " />
+                        <Run Text="{Binding Context.Member.Nachname}" FontWeight="SemiBold" />
+                        <Run Text=" " />
+                        <Run Text="{Binding Context.Member.Vorname}" FontWeight="SemiBold" />
+                        <Run Text=" (ID: " />
+                        <Run Text="{Binding Context.Member.Id}" />
+                        <Run Text=")" />
+                    </TextBlock>
+
+                    <ListView ItemsSource="{Binding MitgliedDokumente}">
+                        <ListView.View>
+                            <GridView>
+                                <GridViewColumn Header="Datei" Width="350" DisplayMemberBinding="{Binding Name}" />
+                                <GridViewColumn Header="Geändert" Width="160" DisplayMemberBinding="{Binding UpdatedAt}" />
+                                <GridViewColumn Header="Größe" Width="80" DisplayMemberBinding="{Binding Size}" />
+                                <GridViewColumn Header="" Width="100">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Button Content="Öffnen" Command="{Binding DataContext.OpenCommand, RelativeSource={RelativeSource AncestorType=ListView}}" CommandParameter="{Binding}" />
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+                            </GridView>
+                        </ListView.View>
+                    </ListView>
+                </DockPanel>
+            </GroupBox>
+        </Grid>
+    </Grid>
+</UserControl>

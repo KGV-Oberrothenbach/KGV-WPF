@@ -1,0 +1,74 @@
+﻿<UserControl x:Class="KGV.Views.AblesenView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="{StaticResource KgvBackgroundBrush}">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="24" MaxWidth="900">
+            <TextBlock Text="Ablesen"
+                       FontSize="28"
+                       FontWeight="Bold"
+                       TextWrapping="Wrap" />
+
+            <TextBlock Margin="0,8,0,0"
+                       Text="Bitte wÃ¤hle eine Funktion."
+                       Foreground="{StaticResource KgvMutedBrush}"
+                       TextWrapping="Wrap" />
+
+            <UniformGrid Margin="0,18,0,0" Columns="2">
+                <Button Margin="0,0,12,12"
+                        Background="{StaticResource KgvSurfaceBrush}"
+                        BorderBrush="{StaticResource KgvBorderBrush}"
+                        BorderThickness="1"
+                        Padding="14"
+                        HorizontalContentAlignment="Left"
+                        Command="{Binding OpenAblesungErfassenCommand}">
+                    <StackPanel>
+                        <TextBlock Text="Ablesung erfassen" FontWeight="Bold" FontSize="16" />
+                        <TextBlock Text="RFID scannen und Ablesung aufnehmen" Margin="0,4,0,0" Foreground="{StaticResource KgvMutedBrush}" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Button>
+
+                <Button Margin="0,0,0,12"
+                        Background="{StaticResource KgvSurfaceBrush}"
+                        BorderBrush="{StaticResource KgvBorderBrush}"
+                        BorderThickness="1"
+                        Padding="14"
+                        HorizontalContentAlignment="Left"
+                        Command="{Binding OpenZaehlerwechselCommand}">
+                    <StackPanel>
+                        <TextBlock Text="Zählerwechsel" FontWeight="Bold" FontSize="16" />
+                        <TextBlock Text="Tag scannen und je nach Zustand Ausbau oder Einbau starten" Margin="0,4,0,0" Foreground="{StaticResource KgvMutedBrush}" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Button>
+
+                <Button Margin="0,0,12,0"
+                        Background="{StaticResource KgvSurfaceBrush}"
+                        BorderBrush="{StaticResource KgvBorderBrush}"
+                        BorderThickness="1"
+                        Padding="14"
+                        HorizontalContentAlignment="Left"
+                        Command="{Binding OpenRfidEinrichtenCommand}">
+                    <StackPanel>
+                        <TextBlock Text="RFID einrichten" FontWeight="Bold" FontSize="16" />
+                        <TextBlock Text="Parzelle wählen, Medium wählen und Tag zuordnen" Margin="0,4,0,0" Foreground="{StaticResource KgvMutedBrush}" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Button>
+
+                <Button Background="{StaticResource KgvSurfaceBrush}"
+                        BorderBrush="{StaticResource KgvBorderBrush}"
+                        BorderThickness="1"
+                        Padding="14"
+                        HorizontalContentAlignment="Left"
+                        Command="{Binding OpenFaelligeZaehlerCommand}">
+                    <StackPanel>
+                        <TextBlock Text="Fällige Zähler" FontWeight="Bold" FontSize="16" />
+                        <TextBlock Text="Zähler mit naher Eichfälligkeit anzeigen" Margin="0,4,0,0" Foreground="{StaticResource KgvMutedBrush}" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Button>
+            </UniformGrid>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
+
+

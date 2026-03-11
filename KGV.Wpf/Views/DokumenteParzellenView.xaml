@@ -1,0 +1,8 @@
+﻿<Window x:Class="KGV.Views.DokumenteParzellenView"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="DokumenteParzellenView" Height="400" Width="600">
+    <Grid>
+        <TextBlock Text="DokumenteParzellenView" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="24"/>
+    </Grid>
+</Window>

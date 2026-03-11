@@ -1,0 +1,14 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- KGV Design System (from Logo) -->
+    <SolidColorBrush x:Key="KgvBackgroundBrush" Color="#FEFBEF" />
+    <SolidColorBrush x:Key="KgvSurfaceBrush" Color="#F1ECDD" />
+    <SolidColorBrush x:Key="KgvPrimaryBrush" Color="#B7BA5A" />
+    <SolidColorBrush x:Key="KgvAccentBrush" Color="#EFCD54" />
+    <SolidColorBrush x:Key="KgvTextBrush" Color="#1B150A" />
+    <SolidColorBrush x:Key="KgvMutedBrush" Color="#727362" />
+    <SolidColorBrush x:Key="KgvBorderBrush" Color="#A89837" />
+
+</ResourceDictionary>
+

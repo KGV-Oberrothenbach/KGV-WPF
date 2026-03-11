@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "KGV.Maui": {
+      "commandName": "Project",
+      "hotReloadEnabled": false
+    }
+  }
+}

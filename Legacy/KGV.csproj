@@ -1,0 +1,102 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <!-- Verhindert doppelt generierte Assembly-Attribute im WPF-WPFTMP Build -->
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="KGV.Core\KGV.Core.csproj" />
+    <ProjectReference Include="KGV.Infrastructure\KGV.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Core wird jetzt in `KGV.Core` kompiliert (inkrementelles Splitten ohne Datei-Move). -->
+    <Compile Remove="Core\**\*.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Infrastructure wird jetzt in `KGV.Infrastructure` kompiliert (WPF-spezifische Dateien bleiben im App-Projekt). -->
+    <Compile Remove="Infrastructure\Authentication\**\*.cs" />
+    <Compile Remove="Infrastructure\Supabase\**\*.cs" />
+    <Compile Remove="Infrastructure\Services\SupabaseService.cs" />
+    <Compile Remove="Infrastructure\MockAuthService.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Verhindert, dass die App versehentlich generierte `obj/**` Quellen der Sub-Projekte mitkompiliert -->
+    <Compile Remove="KGV.Core\obj\**\*.cs" />
+    <Compile Remove="KGV.Core\bin\**\*.cs" />
+    <Compile Remove="KGV.Infrastructure\obj\**\*.cs" />
+    <Compile Remove="KGV.Infrastructure\bin\**\*.cs" />
+    <Compile Remove="KGV.Wpf\obj\**\*.cs" />
+    <Compile Remove="KGV.Wpf\bin\**\*.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Das neue Host-Projekt `KGV.Wpf` liegt als Unterordner im Repo.
+         Damit `KGV` nicht versehentlich dessen Quellen/XAML kompiliert, schließen wir es hier aus. -->
+    <Compile Remove="KGV.Wpf\**\*.cs" />
+    <Page Remove="KGV.Wpf\**\*.xaml" />
+    <ApplicationDefinition Remove="KGV.Wpf\**\*.xaml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Das MAUI-Projekt liegt ebenfalls als Unterordner im Repo.
+         Damit `KGV` nicht versehentlich MAUI-XAML als WPF-XAML kompiliert, schließen wir es hier aus. -->
+    <Compile Remove="KGV.Maui\**\*.cs" />
+    <Page Remove="KGV.Maui\**\*.xaml" />
+    <ApplicationDefinition Remove="KGV.Maui\**\*.xaml" />
+  </ItemGroup>
+
+  
+
+  <ItemGroup>
+    <Content Include="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+ 
+
+  <!-- Hinweis: `bin/**` und `obj/**` gehören nicht in die Projektdatei.
+       Diese Einträge verursachen instabile Builds (z.B. doppelte Assembly-Attribute).
+       SDK-style Projects bringen diese Outputs automatisch selbst mit. -->
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.3" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.3" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.3" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.135" />
+    <PackageReference Include="supabase" Version="1.1.1" />
+    <PackageReference Include="Supabase.Postgrest" Version="4.1.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Data\" />
+    <Folder Include="Resources\Styles\" />
+    <Folder Include="Resources\Templates\" />
+    <Folder Include="Views\Controls\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="KGV.Infrastructure\KGV.Infrastructure.csproj" />
+    <None Include="KGV.Wpf\KGV.Wpf.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Page Update="Views\AdminRoleView.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+  </ItemGroup>
+
+</Project>

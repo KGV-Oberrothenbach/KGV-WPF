@@ -1,0 +1,102 @@
+<Application x:Class="KGV.Wpf.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:KGV.Wpf.ViewModels"
+             xmlns:views="clr-namespace:KGV.Views">
+
+    <Application.Resources>
+        <ResourceDictionary>
+
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Themes/Colors.xaml" />
+                <ResourceDictionary Source="Themes/Controls.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+
+            <!-- ViewModel-first Navigation -->
+            <DataTemplate DataType="{x:Type vm:HomeViewModel}">
+                <views:HomeView />
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type vm:MemberSearchViewModel}">
+                <views:MemberSearchView />
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type vm:MemberDetailViewModel}">
+                <views:MemberDetailView />
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type vm:GartenStromViewModel}">
+                <views:GartenStromView />
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type vm:GartenWasserViewModel}">
+                <views:GartenWasserView />
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type vm:GartenDokumenteViewModel}">
+                <views:GartenDokumenteListeView />
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type vm:ArbeitsstundenViewModel}">
+                <views:ArbeitsstundenView />
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type vm:NebenmitgliedDetailViewModel}">
+                <views:MemberDetailView />
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type vm:AdminRoleViewModel}">
+                <views:AdminRoleView />
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type vm:UserManagementViewModel}">
+                <views:UserManagementView />
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type vm:DokumenteViewModel}">
+                <views:DokumenteView />
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type vm:ExportViewModel}">
+                <views:ExportView />
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type vm:AblesenViewModel}">
+                <views:AblesenView />
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type vm:FeaturePlaceholderViewModel}">
+                <views:FeaturePlaceholderView />
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type vm:AblesungErfassenViewModel}">
+                <views:AblesungErfassenView />
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type vm:RfidScanContextViewModel}">
+                <views:RfidScanContextView />
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type vm:ZaehlerwechselScanViewModel}">
+                <views:ZaehlerwechselScanView />
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type vm:ZaehlerwechselAusbauViewModel}">
+                <views:ZaehlerwechselAusbauView />
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type vm:ZaehlerwechselEinbauViewModel}">
+                <views:ZaehlerwechselEinbauView />
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type vm:RfidEinrichtenViewModel}">
+                <views:RfidEinrichtenView />
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type vm:FaelligeZaehlerViewModel}">
+                <views:FaelligeZaehlerView />
+            </DataTemplate>
+
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

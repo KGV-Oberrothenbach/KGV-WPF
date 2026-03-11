@@ -1,0 +1,111 @@
+<UserControl x:Class="KGV.Views.RfidEinrichtenView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:helpers="clr-namespace:KGV.Wpf.Helpers"
+             Background="{StaticResource KgvBackgroundBrush}">
+
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
+        <helpers:StringNotEmptyToVisibilityConverter x:Key="StringNotEmptyToVisibility" />
+    </UserControl.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="24" MaxWidth="900">
+            <TextBlock Text="RFID einrichten" FontSize="28" FontWeight="Bold" TextWrapping="Wrap" />
+            <TextBlock Margin="0,8,0,0"
+                       Text="Parzelle wählen, Medium wählen, UID scannen/eingeben, prüfen und speichern."
+                       Foreground="{StaticResource KgvMutedBrush}"
+                       TextWrapping="Wrap" />
+
+            <ProgressBar Margin="0,12,0,0"
+                         IsIndeterminate="True"
+                         Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}" />
+
+            <Border Margin="0,18,0,0"
+                    Padding="14"
+                    Background="{StaticResource KgvSurfaceBrush}"
+                    BorderBrush="{StaticResource KgvBorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8">
+                <StackPanel>
+                    <TextBlock Text="1) Parzelle" FontSize="18" FontWeight="Bold" />
+                    <ComboBox Margin="0,10,0,0"
+                              ItemsSource="{Binding Parzellen}"
+                              SelectedItem="{Binding SelectedParzelle}"
+                              IsEditable="True"
+                              IsTextSearchEnabled="True"
+                              TextSearch.TextPath="GartenNr">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel>
+                                    <TextBlock>
+                                        <Run Text="Garten " />
+                                        <Run Text="{Binding GartenNr}" FontWeight="SemiBold" />
+                                        <Run Text=" – " />
+                                        <Run Text="{Binding Anlage}" />
+                                    </TextBlock>
+                                    <TextBlock Foreground="{StaticResource KgvMutedBrush}" FontSize="12">
+                                        <Run Text="Strom: " />
+                                        <Run Text="{Binding RfidStrom}" />
+                                        <Run Text=" | Wasser: " />
+                                        <Run Text="{Binding RfidWasser}" />
+                                    </TextBlock>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+
+                    <TextBlock Margin="0,10,0,0" Text="Aktuell Strom-RFID" FontWeight="SemiBold" />
+                    <TextBlock Margin="0,2,0,0" Text="{Binding SelectedParzelleRfidStrom}" TextWrapping="Wrap" />
+
+                    <TextBlock Margin="0,10,0,0" Text="Aktuell Wasser-RFID" FontWeight="SemiBold" />
+                    <TextBlock Margin="0,2,0,0" Text="{Binding SelectedParzelleRfidWasser}" TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
+
+            <Border Margin="0,18,0,0"
+                    Padding="14"
+                    Background="{StaticResource KgvSurfaceBrush}"
+                    BorderBrush="{StaticResource KgvBorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8">
+                <StackPanel>
+                    <TextBlock Text="2) Medium" FontSize="18" FontWeight="Bold" />
+                    <ComboBox Margin="0,10,0,0"
+                              ItemsSource="{Binding MediumOptions}"
+                              SelectedItem="{Binding SelectedMedium}" />
+
+                    <TextBlock Margin="0,14,0,0" Text="3) UID" FontSize="18" FontWeight="Bold" />
+                    <TextBox Margin="0,10,0,0"
+                             Text="{Binding UidText, UpdateSourceTrigger=PropertyChanged}" />
+
+                    <StackPanel Margin="0,12,0,0" Orientation="Horizontal">
+                        <Button Content="Prüfen" Command="{Binding CheckCommand}" />
+                        <Button Margin="12,0,0,0"
+                                Style="{StaticResource PrimaryButton}"
+                                Content="Speichern"
+                                Command="{Binding SaveCommand}" />
+                    </StackPanel>
+
+                    <TextBlock Margin="0,12,0,0"
+                               Text="{Binding InfoText}"
+                               Foreground="{StaticResource KgvMutedBrush}"
+                               Visibility="{Binding InfoText, Converter={StaticResource StringNotEmptyToVisibility}}"
+                               TextWrapping="Wrap" />
+
+                    <TextBlock Margin="0,8,0,0"
+                               Text="{Binding SuccessText}"
+                               Foreground="{StaticResource KgvMutedBrush}"
+                               Visibility="{Binding SuccessText, Converter={StaticResource StringNotEmptyToVisibility}}"
+                               TextWrapping="Wrap" />
+
+                    <TextBlock Margin="0,8,0,0"
+                               Text="{Binding ErrorText}"
+                               Foreground="Red"
+                               Visibility="{Binding ErrorText, Converter={StaticResource StringNotEmptyToVisibility}}"
+                               TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

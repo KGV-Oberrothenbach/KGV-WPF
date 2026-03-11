@@ -1,0 +1,74 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<RootNamespace>KGV.Maui</RootNamespace>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+
+		<!-- Android-only MAUI app -->
+		<TargetFramework>net9.0-android</TargetFramework>
+
+		<OutputType>Exe</OutputType>
+		<UseMaui>true</UseMaui>
+		<SingleProject>true</SingleProject>
+
+		<ApplicationId>de.kgv.oberrothenbach</ApplicationId>
+		<ApplicationTitle>KGV</ApplicationTitle>
+
+		<!-- Min/Target SDK -->
+		<AndroidMinSdkVersion>21</AndroidMinSdkVersion>
+		<AndroidTargetSdkVersion>35</AndroidTargetSdkVersion>
+		<SupportedOSPlatformVersion>21</SupportedOSPlatformVersion>
+
+		<ApplicationDisplayVersion>0.1.3</ApplicationDisplayVersion>
+		<ApplicationVersion>1</ApplicationVersion>
+	</PropertyGroup>
+
+	<!-- Debug stability settings -->
+	<PropertyGroup Condition="'$(Configuration)'=='Debug'">
+		<AndroidLinkMode>None</AndroidLinkMode>
+		<AndroidUseSharedRuntime>true</AndroidUseSharedRuntime>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)'=='Release'">
+		<!-- Für reale Verteilung explizit eine installierbare APK erzeugen (nicht AAB). -->
+		<AndroidPackageFormat>apk</AndroidPackageFormat>
+		<!-- Default: kein eigener Keystore. Release wird dann mit Debug-Key signiert (installierbar).
+		     Ein echter Release-Keystore wird ausschließlich über den Publish-Aufruf (z.B. `release_android.bat`) gesetzt. -->
+		<AndroidKeyStore>false</AndroidKeyStore>
+	</PropertyGroup>
+
+	<!-- Ensure MSBuild can find Android SDK when building from CLI (or if VS value is empty) -->
+	<PropertyGroup Condition="('$(AndroidSdkDirectory)'=='' Or !Exists('$(AndroidSdkDirectory)\platform-tools\adb.exe')) And Exists('$(LocalAppData)\Android\Sdk\platform-tools\adb.exe')">
+		<AndroidSdkDirectory>$(LocalAppData)\Android\Sdk</AndroidSdkDirectory>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(AndroidSdkDirectory)'!='' And ('$(AdbToolPath)'=='' Or !Exists('$(AdbToolPath)\$(AdbToolExe)'))">
+		<AdbToolPath>$(AndroidSdkDirectory)\platform-tools</AdbToolPath>
+		<AdbToolExe Condition="'$(AdbToolExe)'==''">adb.exe</AdbToolExe>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\KGV.Core\KGV.Core.csproj" />
+		<ProjectReference Include="..\KGV.Infrastructure\KGV.Infrastructure.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.3" />
+		<PackageReference Include="Microsoft.Maui.Controls" Version="9.0.120" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<MauiAsset Include="..\Configuration\appsettings.enc" Link="appsettings.enc" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#2E7D32" />
+		<MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#2E7D32" BaseSize="128,128" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<MauiImage Include="Resources\Images\*.svg" />
+	</ItemGroup>
+
+</Project>
