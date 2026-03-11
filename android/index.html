@@ -6,7 +6,7 @@
   <title>Android-App – KGV Oberrothenbach</title>
   <meta
     name="description"
-    content="Downloadseite für die Android-App des Kleingartenvereins Oberrothenbach."
+    content="Downloadseite und Installationsanleitung für die Android-App des Kleingartenvereins Oberrothenbach."
   />
   <style>
     :root {
@@ -22,13 +22,20 @@
       --ok-border: #bcd8c2;
       --warn-bg: #fff8e6;
       --warn-border: #ead39a;
+      --danger-bg: #fff0f0;
+      --danger-border: #e5b5b5;
       --shadow: 0 10px 28px rgba(32, 48, 36, 0.08);
       --radius: 18px;
-      --max: 860px;
+      --radius-sm: 12px;
+      --max: 960px;
     }
 
     * {
       box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
     }
 
     body {
@@ -39,6 +46,10 @@
         radial-gradient(circle at top right, rgba(47, 111, 62, 0.08), transparent 22%),
         linear-gradient(180deg, #f8fbf7 0%, var(--bg) 100%);
       line-height: 1.55;
+    }
+
+    a {
+      color: inherit;
     }
 
     .container {
@@ -96,7 +107,7 @@
       margin-bottom: 14px;
     }
 
-    h1, h2 {
+    h1, h2, h3 {
       margin: 0 0 12px;
       line-height: 1.2;
     }
@@ -106,8 +117,12 @@
     }
 
     h2 {
-      margin-top: 26px;
-      font-size: 22px;
+      font-size: 26px;
+      margin-top: 28px;
+    }
+
+    h3 {
+      font-size: 20px;
     }
 
     p {
@@ -137,6 +152,7 @@
       font-weight: 700;
       transition: 0.2s ease;
       cursor: pointer;
+      text-align: center;
     }
 
     .btn-primary {
@@ -158,14 +174,6 @@
       background: var(--surface-soft);
     }
 
-    .box {
-      margin-top: 20px;
-      padding: 16px 18px;
-      border-radius: 14px;
-      border: 1px solid var(--border);
-      background: #fff;
-    }
-
     .status {
       margin-top: 18px;
       padding: 14px 16px;
@@ -179,17 +187,96 @@
       background: var(--ok-bg);
     }
 
-    .meta {
-      margin-top: 8px;
+    .status.error {
+      border-color: var(--danger-border);
+      background: var(--danger-bg);
     }
 
-    .meta strong {
-      display: inline-block;
-      min-width: 88px;
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px 18px;
+      margin-top: 18px;
+    }
+
+    .meta-item {
+      padding: 14px 16px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: #fff;
+    }
+
+    .meta-label {
+      display: block;
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .meta-value {
+      font-weight: 700;
+      word-break: break-word;
+    }
+
+    .box {
+      margin-top: 20px;
+      padding: 18px 20px;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      background: #fff;
+    }
+
+    .soft-box {
+      background: var(--surface-soft);
+    }
+
+    .warning-box {
+      background: var(--warn-bg);
+      border-color: var(--warn-border);
+    }
+
+    .danger-box {
+      background: var(--danger-bg);
+      border-color: var(--danger-border);
+    }
+
+    .steps {
+      display: grid;
+      gap: 14px;
+      margin-top: 18px;
+    }
+
+    .step {
+      display: grid;
+      grid-template-columns: 40px 1fr;
+      gap: 14px;
+      align-items: start;
+      padding: 16px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: #fff;
+    }
+
+    .step-number {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--surface-soft);
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 16px;
     }
 
     ul {
+      margin: 10px 0 0;
       padding-left: 20px;
+    }
+
+    li + li {
+      margin-top: 8px;
     }
 
     .footer {
@@ -208,7 +295,12 @@
       font-size: 0.95em;
     }
 
-    @media (max-width: 680px) {
+    @media (max-width: 760px) {
+      .card,
+      .meta-grid {
+        grid-template-columns: 1fr;
+      }
+
       .card {
         padding: 22px;
       }
@@ -229,9 +321,10 @@
     <div class="container">
       <div class="card">
         <span class="eyebrow">Android-App</span>
-        <h1>Vereins-App herunterladen</h1>
+        <h1>Vereins-App herunterladen und installieren</h1>
         <p class="muted">
-          Hier findest du die aktuelle Android-Version der KGV-App für Mitglieder.
+          Hier findest du die aktuelle Android-Version der KGV-App sowie eine ausführliche
+          Schritt-für-Schritt-Anleitung für die Installation auf deinem Smartphone.
         </p>
 
         <div id="statusBox" class="status">
@@ -239,7 +332,12 @@
         </div>
 
         <div class="button-row">
-          <a id="downloadBtn" class="btn btn-primary" href="#" style="pointer-events:none; opacity:0.6;">
+          <a
+            id="downloadBtn"
+            class="btn btn-primary"
+            href="#"
+            style="pointer-events:none; opacity:0.6;"
+          >
             APK herunterladen
           </a>
 
@@ -254,26 +352,130 @@
 
         <div class="box">
           <h2>Aktuelle Version</h2>
-          <p class="meta"><strong>Version:</strong> <span id="versionText">–</span></p>
-          <p class="meta"><strong>Build:</strong> <span id="buildText">–</span></p>
-          <p class="meta"><strong>Datei:</strong> <span id="fileText">–</span></p>
-          <p class="meta"><strong>Hinweise:</strong> <span id="notesText">–</span></p>
+
+          <div class="meta-grid">
+            <div class="meta-item">
+              <span class="meta-label">Version</span>
+              <span id="versionText" class="meta-value">–</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">Build</span>
+              <span id="buildText" class="meta-value">–</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">Datei</span>
+              <span id="fileText" class="meta-value">–</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">Hinweise</span>
+              <span id="notesText" class="meta-value">–</span>
+            </div>
+          </div>
         </div>
 
-        <div class="box">
-          <h2>Hinweise zur Installation</h2>
+        <div class="box soft-box">
+          <h2>Vor der Installation</h2>
           <ul>
-            <li>Öffne die heruntergeladene APK auf deinem Android-Gerät.</li>
-            <li>Je nach Gerät musst du die Installation aus dieser Quelle einmal erlauben.</li>
-            <li>Wenn bereits eine ältere Version installiert ist, muss die App mit demselben Signaturschlüssel erstellt worden sein.</li>
+            <li>Nutze möglichst den Browser auf dem Smartphone, auf dem die App installiert werden soll.</li>
+            <li>Die APK sollte nur von dieser offiziellen Vereinsseite geladen werden.</li>
+            <li>Je nach Hersteller sehen die Menüs etwas anders aus. Die Bezeichnungen können leicht abweichen.</li>
           </ul>
         </div>
 
         <div class="box">
-          <h2>Technischer Pfad</h2>
+          <h2>Schritt-für-Schritt-Anleitung</h2>
+
+          <div class="steps">
+            <div class="step">
+              <div class="step-number">1</div>
+              <div>
+                <h3>APK herunterladen</h3>
+                <p class="muted">
+                  Tippe auf <strong>APK herunterladen</strong> und warte, bis der Download vollständig
+                  abgeschlossen ist.
+                </p>
+              </div>
+            </div>
+
+            <div class="step">
+              <div class="step-number">2</div>
+              <div>
+                <h3>Download öffnen</h3>
+                <p class="muted">
+                  Öffne anschließend die heruntergeladene APK über die Benachrichtigung,
+                  den Download-Ordner oder die Dateien-App.
+                </p>
+              </div>
+            </div>
+
+            <div class="step">
+              <div class="step-number">3</div>
+              <div>
+                <h3>Installation aus dieser Quelle erlauben</h3>
+                <p class="muted">
+                  Wenn Android die Installation blockiert, erlaube sie einmalig für die App,
+                  über die du die Datei geöffnet hast, zum Beispiel Browser oder Dateien-App.
+                </p>
+              </div>
+            </div>
+
+            <div class="step">
+              <div class="step-number">4</div>
+              <div>
+                <h3>Installation bestätigen</h3>
+                <p class="muted">
+                  Kehre zur APK zurück und tippe auf <strong>Installieren</strong>.
+                  Warte, bis die Installation abgeschlossen ist.
+                </p>
+              </div>
+            </div>
+
+            <div class="step">
+              <div class="step-number">5</div>
+              <div>
+                <h3>App öffnen und anmelden</h3>
+                <p class="muted">
+                  Öffne danach die App und melde dich mit deinen Zugangsdaten an.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="box warning-box">
+          <h2>Wenn Android die Installation blockiert</h2>
+          <ul>
+            <li>Die Meldung lautet oft sinngemäß, dass Installationen aus dieser Quelle nicht erlaubt sind.</li>
+            <li>Tippe dann auf <strong>Einstellungen</strong> oder <strong>Zulassen</strong>.</li>
+            <li>Erlaube die Installation für genau die App, aus der du die APK geöffnet hast.</li>
+            <li>Wechsle danach zurück und starte die Installation erneut.</li>
+          </ul>
+        </div>
+
+        <div class="box warning-box">
+          <h2>Wenn Google Play Protect warnt</h2>
+          <ul>
+            <li>Eine Warnung ist bei direkt verteilten APK-Dateien möglich.</li>
+            <li>Installiere nur weiter, wenn du die APK wirklich von dieser offiziellen Vereinsseite geladen hast.</li>
+            <li>Je nach Gerät kannst du dann <strong>Trotzdem installieren</strong> oder <strong>Weitere Details</strong> auswählen.</li>
+          </ul>
+        </div>
+
+        <div class="box danger-box">
+          <h2>Häufige Probleme</h2>
+          <ul>
+            <li><strong>„App wurde nicht installiert“:</strong> Häufig ist bereits eine ältere App mit anderer Signatur installiert. Dann zuerst die alte App deinstallieren und danach die neue APK installieren.</li>
+            <li><strong>APK lässt sich nicht öffnen:</strong> Prüfe, ob der Download vollständig abgeschlossen wurde.</li>
+            <li><strong>Nach dem Antippen passiert nichts:</strong> Öffne die Datei direkt über die Dateien-App oder den Download-Ordner.</li>
+            <li><strong>Speicherplatzproblem:</strong> Prüfe, ob auf dem Gerät noch genügend freier Speicher vorhanden ist.</li>
+          </ul>
+        </div>
+
+        <div class="box">
+          <h2>Technischer Hinweis</h2>
           <p class="muted">
             Diese Seite liest die Datei <code class="inline">version.json</code> aus diesem Ordner
-            und zeigt den dort hinterlegten aktuellen Downloadlink an.
+            und verwendet den dort hinterlegten aktuellen Downloadlink.
           </p>
         </div>
       </div>
@@ -282,7 +484,7 @@
 
   <footer class="footer">
     <div class="container">
-      Kleingartenverein Oberrothenbach – Android-App Download
+      Kleingartenverein Oberrothenbach – Android-App Download und Installationsanleitung
     </div>
   </footer>
 
@@ -294,9 +496,15 @@
     const fileText = document.getElementById("fileText");
     const notesText = document.getElementById("notesText");
 
-    function setStatus(message, ok = false) {
+    function setStatus(message, type = "default") {
       statusBox.textContent = message;
-      statusBox.className = ok ? "status ok" : "status";
+      if (type === "ok") {
+        statusBox.className = "status ok";
+      } else if (type === "error") {
+        statusBox.className = "status error";
+      } else {
+        statusBox.className = "status";
+      }
     }
 
     async function loadVersionInfo() {
@@ -321,21 +529,20 @@
         notesText.textContent = notes;
 
         if (!downloadUrl) {
-          setStatus("Die Download-URL fehlt in der version.json.", false);
-          return;
+          throw new Error("Die Download-URL fehlt in der version.json.");
         }
 
         downloadBtn.href = downloadUrl;
         downloadBtn.style.pointerEvents = "auto";
         downloadBtn.style.opacity = "1";
 
-        setStatus("Aktuelle Version gefunden. Du kannst die APK jetzt herunterladen.", true);
+        setStatus("Aktuelle Android-Version gefunden. Du kannst die APK jetzt herunterladen.", "ok");
       } catch (error) {
         versionText.textContent = "nicht verfügbar";
         buildText.textContent = "nicht verfügbar";
         fileText.textContent = "nicht verfügbar";
         notesText.textContent = "Versionsinformationen konnten nicht geladen werden.";
-        setStatus("Versionsinformationen konnten nicht geladen werden. Bitte später erneut versuchen.", false);
+        setStatus("Versionsinformationen konnten nicht geladen werden. Bitte später erneut versuchen.", "error");
         console.error(error);
       }
     }
