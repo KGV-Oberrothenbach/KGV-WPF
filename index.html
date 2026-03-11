@@ -1,430 +1,826 @@
-@echo off
-setlocal EnableExtensions EnableDelayedExpansion
-chcp 65001 >nul
-
-set "WAIT_AT_END=1"
-if /I "%~1"=="NOPAUSE" set "WAIT_AT_END=0"
-
-rem ============================================================
-rem KGV - WPF Release + Inno Setup
-rem
-rem Lokal:
-rem   D:\Programmieren\KGV-Publish\wpf\<version>\KGV-Setup-<version>.exe
-rem   D:\Programmieren\KGV-Publish\wpf\<version>\KGV-Setup.exe
-rem   D:\Programmieren\KGV-Publish\wpf\<version>\version.json
-rem
-rem Git-Ordner:
-rem   D:\Programmieren\KGV-GitHub\KGV-Setup-<version>.exe
-rem   D:\Programmieren\KGV-GitHub\KGV-Setup.exe
-rem   D:\Programmieren\KGV-GitHub\version.json
-rem
-rem Es werden lokal und im Git-Ordner die letzten KEEP_COUNT
-rem versionierten Releases behalten.
-rem
-rem KEEP_COUNT=4 bedeutet:
-rem   aktuelle Version + 3 vorherige Versionen
-rem
-rem WICHTIG:
-rem - index.html und set-password.html werden nicht angefasst.
-rem - android\ wird nicht angefasst.
-rem ============================================================
-
-set "ROOT=%~dp0"
-set "WPF_PROJECT=%ROOT%KGV.Wpf\KGV.Wpf.csproj"
-set "INNO_SCRIPT=%ROOT%Installer\InnoSetup\KGV.Wpf.iss"
-
-set "BASE_URL=https://kgv-oberrothenbach.github.io/KGV-WPF"
-set "GIT_REMOTE_URL=https://KGV-Oberrothenbach@github.com/KGV-Oberrothenbach/KGV-WPF.git"
-set "GIT_CREDENTIAL_USERNAME=KGV-Oberrothenbach"
-set "GIT_USER_NAME=KGV-Oberrothenbach"
-set "GIT_USER_EMAIL="
-
-set "LOCAL_WPF_ROOT=D:\Programmieren\KGV-Publish\wpf"
-set "APPFILES_ROOT=D:\Programmieren\KGV-Publish\wpf\AppFiles"
-set "APPFILES_CURRENT=%APPFILES_ROOT%\Current"
-
-set "GIT_ROOT=D:\Programmieren\KGV-GitHub"
-set "KEEP_COUNT=4"
-
-set "CONFIG=Release"
-set "RUNTIME=win-x64"
-
-if exist "C:\Users\Braen\AppData\Local\Programs\Inno Setup 6\ISCC.exe" (
-    set "ISCC=C:\Users\Braen\AppData\Local\Programs\Inno Setup 6\ISCC.exe"
-) else if exist "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" (
-    set "ISCC=C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
-) else (
-    echo FEHLER: ISCC.exe nicht gefunden.
-    if "%WAIT_AT_END%"=="1" pause
-    exit /b 1
-)
-
-echo ===============================================
-echo KGV WPF Release + Inno Setup
-echo ===============================================
-echo.
-
-if not exist "%WPF_PROJECT%" (
-    echo FEHLER: WPF-Projekt nicht gefunden:
-    echo   "%WPF_PROJECT%"
-    if "%WAIT_AT_END%"=="1" pause
-    exit /b 1
-)
-
-if not exist "%INNO_SCRIPT%" (
-    echo FEHLER: Inno-Setup-Skript nicht gefunden:
-    echo   "%INNO_SCRIPT%"
-    if "%WAIT_AT_END%"=="1" pause
-    exit /b 1
-)
-
-if not exist "%LOCAL_WPF_ROOT%" mkdir "%LOCAL_WPF_ROOT%"
-if not exist "%APPFILES_ROOT%" mkdir "%APPFILES_ROOT%"
-if not exist "%GIT_ROOT%" (
-    echo FEHLER: Git-Ordner nicht gefunden:
-    echo   "%GIT_ROOT%"
-    if "%WAIT_AT_END%"=="1" pause
-    exit /b 1
-)
-
-echo [0/7] Git-Ordner synchronisieren...
-pushd "%GIT_ROOT%"
-
-git remote set-url origin "%GIT_REMOTE_URL%"
-if errorlevel 1 (
-    echo FEHLER: git remote set-url origin fehlgeschlagen.
-    popd
-    if "%WAIT_AT_END%"=="1" pause
-    exit /b 1
-)
-
-git config --local credential.username "%GIT_CREDENTIAL_USERNAME%"
-git config --local user.name "%GIT_USER_NAME%"
-if not "%GIT_USER_EMAIL%"=="" git config --local user.email "%GIT_USER_EMAIL%"
-git config --local pull.rebase true
-
-set "GIT_STATUS_FILE=%TEMP%\kgv_git_status_wpf_%RANDOM%.txt"
-git status --porcelain > "%GIT_STATUS_FILE%" 2>nul
-for %%A in ("%GIT_STATUS_FILE%") do set "GIT_STATUS_SIZE=%%~zA"
-if not defined GIT_STATUS_SIZE set "GIT_STATUS_SIZE=0"
-del /q "%GIT_STATUS_FILE%" 2>nul
-
-if not "%GIT_STATUS_SIZE%"=="0" (
-    echo FEHLER: Der Git-Ordner hat bereits lokale Aenderungen.
-    echo Bitte zuerst im Ordner "%GIT_ROOT%" committen, pushen oder bereinigen.
-    git status --short
-    popd
-    if "%WAIT_AT_END%"=="1" pause
-    exit /b 1
-)
-
-git pull --rebase origin main
-if errorlevel 1 (
-    echo FEHLER: git pull --rebase origin main fehlgeschlagen.
-    popd
-    if "%WAIT_AT_END%"=="1" pause
-    exit /b 1
-)
-
-popd
-
-set "APP_VERSION="
-set "VERSION_SOURCE="
-
-for /f "usebackq delims=" %%v in (`powershell -NoProfile -Command "(Select-Xml -Path '%WPF_PROJECT%' -XPath '//Project/PropertyGroup/Version/text()' | Select-Object -First 1).Node.Value.Trim()"`) do set "APP_VERSION=%%v"
-if defined APP_VERSION set "VERSION_SOURCE=Version aus csproj"
-
-if not defined APP_VERSION (
-    for /f "usebackq delims=" %%v in (`powershell -NoProfile -Command "(Select-Xml -Path '%WPF_PROJECT%' -XPath '//Project/PropertyGroup/FileVersion/text()' | Select-Object -First 1).Node.Value.Trim()"`) do set "APP_VERSION=%%v"
-    if defined APP_VERSION set "VERSION_SOURCE=FileVersion aus csproj"
-)
-
-if not defined APP_VERSION (
-    for /f "usebackq delims=" %%v in (`powershell -NoProfile -Command "(Select-Xml -Path '%WPF_PROJECT%' -XPath '//Project/PropertyGroup/AssemblyVersion/text()' | Select-Object -First 1).Node.Value.Trim()"`) do set "APP_VERSION=%%v"
-    if defined APP_VERSION set "VERSION_SOURCE=AssemblyVersion aus csproj"
-)
-
-if not defined APP_VERSION (
-    echo FEHLER: Keine gueltige Version in KGV.Wpf.csproj gefunden.
-    if "%WAIT_AT_END%"=="1" pause
-    exit /b 1
-)
-
-if "%APP_VERSION%"=="" (
-    echo FEHLER: Version ist leer oder besteht nur aus Leerzeichen.
-    if "%WAIT_AT_END%"=="1" pause
-    exit /b 1
-)
-
-for /f "usebackq delims=" %%v in (`powershell -NoProfile -Command "$v='%APP_VERSION%'; if($v -match '^\d+\.\d+\.\d+\.0$'){ $v.Substring(0,$v.Length-2) } else { $v }"`) do set "APP_VERSION=%%v"
-
-if "%APP_VERSION%"=="" (
-    echo FEHLER: Version ist nach der Normalisierung leer.
-    if "%WAIT_AT_END%"=="1" pause
-    exit /b 1
-)
-
-set "APP_BUILD="
-for /f "usebackq delims=" %%v in (`powershell -NoProfile -Command "$parts='%APP_VERSION%'.Split('.'); $parts[$parts.Length-1]"`) do set "APP_BUILD=%%v"
-
-if not defined APP_BUILD (
-    echo FEHLER: Build konnte aus der Version nicht ermittelt werden.
-    if "%WAIT_AT_END%"=="1" pause
-    exit /b 1
-)
-
-set "RELEASE_DATE="
-for /f "usebackq delims=" %%v in (`powershell -NoProfile -Command "Get-Date -Format 'yyyy-MM-dd'"`) do set "RELEASE_DATE=%%v"
-
-if not defined RELEASE_DATE (
-    echo FEHLER: Release-Datum konnte nicht ermittelt werden.
-    if "%WAIT_AT_END%"=="1" pause
-    exit /b 1
-)
-
-set "VERSION_DIR=%LOCAL_WPF_ROOT%\%APP_VERSION%"
-set "CURRENT_INSTALLER_DIR=%LOCAL_WPF_ROOT%\Installers\Current"
-
-set "LOCAL_VERSIONED_SETUP=%VERSION_DIR%\KGV-Setup-%APP_VERSION%.exe"
-set "LOCAL_CURRENT_SETUP=%VERSION_DIR%\KGV-Setup.exe"
-set "LOCAL_JSON_PATH=%VERSION_DIR%\version.json"
-
-set "GIT_VERSIONED_SETUP=%GIT_ROOT%\KGV-Setup-%APP_VERSION%.exe"
-set "GIT_CURRENT_SETUP=%GIT_ROOT%\KGV-Setup.exe"
-set "GIT_JSON_PATH=%GIT_ROOT%\version.json"
-
-set "SETUP_SOURCE="
-
-echo Verwendete Version: %APP_VERSION% (%VERSION_SOURCE%)
-echo Build:              %APP_BUILD%
-echo Release-Datum:      %RELEASE_DATE%
-echo WPF-Projekt:        %WPF_PROJECT%
-echo Inno-Skript:        %INNO_SCRIPT%
-echo Git-Zielordner:     %GIT_ROOT%
-echo.
-
-if exist "%VERSION_DIR%" rmdir /s /q "%VERSION_DIR%" >nul 2>&1
-mkdir "%VERSION_DIR%" >nul 2>&1
-
-if exist "%APPFILES_CURRENT%" rmdir /s /q "%APPFILES_CURRENT%" >nul 2>&1
-mkdir "%APPFILES_CURRENT%" >nul 2>&1
-
-if exist "%CURRENT_INSTALLER_DIR%" rmdir /s /q "%CURRENT_INSTALLER_DIR%" >nul 2>&1
-mkdir "%CURRENT_INSTALLER_DIR%" >nul 2>&1
-
-echo [1/7] dotnet clean...
-dotnet clean "%WPF_PROJECT%" -c %CONFIG%
-if errorlevel 1 (
-    echo FEHLER: dotnet clean fehlgeschlagen.
-    if "%WAIT_AT_END%"=="1" pause
-    exit /b 1
-)
-
-echo.
-echo [2/7] dotnet restore...
-dotnet restore "%WPF_PROJECT%"
-if errorlevel 1 (
-    echo FEHLER: dotnet restore fehlgeschlagen.
-    if "%WAIT_AT_END%"=="1" pause
-    exit /b 1
-)
-
-echo.
-echo [3/7] dotnet publish...
-dotnet publish "%WPF_PROJECT%" -c %CONFIG% -r %RUNTIME% --self-contained false -o "%APPFILES_CURRENT%"
-if errorlevel 1 (
-    echo FEHLER: dotnet publish fehlgeschlagen.
-    if "%WAIT_AT_END%"=="1" pause
-    exit /b 1
-)
-
-if not exist "%APPFILES_CURRENT%\KGV.Wpf.exe" (
-    echo FEHLER: KGV.Wpf.exe wurde im Publish-Ordner nicht gefunden.
-    if "%WAIT_AT_END%"=="1" pause
-    exit /b 1
-)
-
-echo.
-echo [4/7] Inno Setup bauen...
-"%ISCC%" /DPublishDir="%APPFILES_CURRENT%" /O"%CURRENT_INSTALLER_DIR%" "%INNO_SCRIPT%"
-if errorlevel 1 (
-    echo FEHLER: Inno Setup fehlgeschlagen.
-    if "%WAIT_AT_END%"=="1" pause
-    exit /b 1
-)
-
-if exist "%CURRENT_INSTALLER_DIR%\KGV-Setup.exe" (
-    set "SETUP_SOURCE=%CURRENT_INSTALLER_DIR%\KGV-Setup.exe"
-)
-
-if not defined SETUP_SOURCE (
-    for /f "delims=" %%f in ('dir /b /a:-d "%CURRENT_INSTALLER_DIR%\KGV-Setup-*.exe" 2^>nul') do (
-        set "SETUP_SOURCE=%CURRENT_INSTALLER_DIR%\%%f"
-        goto :SetupFound
-    )
-)
-
-if not defined SETUP_SOURCE (
-    echo FEHLER: Kein Installer gefunden:
-    echo   "%CURRENT_INSTALLER_DIR%\KGV-Setup.exe"
-    echo   "%CURRENT_INSTALLER_DIR%\KGV-Setup-*.exe"
-    if "%WAIT_AT_END%"=="1" pause
-    exit /b 1
-)
-
-:SetupFound
-echo Verwendete Setup-Quelle:
-echo   "%SETUP_SOURCE%"
-
-echo.
-echo [5/7] Dateien verteilen...
-copy /y "%SETUP_SOURCE%" "%LOCAL_VERSIONED_SETUP%" >nul
-if errorlevel 1 (
-    echo FEHLER: Lokales versionsbezogenes Setup konnte nicht geschrieben werden.
-    if "%WAIT_AT_END%"=="1" pause
-    exit /b 1
-)
-
-copy /y "%SETUP_SOURCE%" "%LOCAL_CURRENT_SETUP%" >nul
-if errorlevel 1 (
-    echo FEHLER: Lokales aktuelles Setup konnte nicht geschrieben werden.
-    if "%WAIT_AT_END%"=="1" pause
-    exit /b 1
-)
-
-copy /y "%SETUP_SOURCE%" "%GIT_VERSIONED_SETUP%" >nul
-if errorlevel 1 (
-    echo FEHLER: Git versionsbezogenes Setup konnte nicht geschrieben werden.
-    if "%WAIT_AT_END%"=="1" pause
-    exit /b 1
-)
-
-copy /y "%SETUP_SOURCE%" "%GIT_CURRENT_SETUP%" >nul
-if errorlevel 1 (
-    echo FEHLER: Git aktuelles Setup konnte nicht geschrieben werden.
-    if "%WAIT_AT_END%"=="1" pause
-    exit /b 1
-)
-
-powershell -NoProfile -Command ^
-  "$o = [ordered]@{ version='%APP_VERSION%'; build=%APP_BUILD%; date='%RELEASE_DATE%'; fileName='KGV-Setup-%APP_VERSION%.exe'; notes='Neue Windows-Version'; downloadUrl='%BASE_URL%/KGV-Setup-%APP_VERSION%.exe' };" ^
-  "$json = ConvertTo-Json -InputObject $o -Depth 5;" ^
-  "Set-Content -Path '%LOCAL_JSON_PATH%' -Value $json -Encoding utf8;" ^
-  "Set-Content -Path '%GIT_JSON_PATH%' -Value $json -Encoding utf8"
-if errorlevel 1 (
-    echo FEHLER: version.json konnte nicht geschrieben werden.
-    if "%WAIT_AT_END%"=="1" pause
-    exit /b 1
-)
-
-echo.
-echo [6/7] Alte WPF-Versionen bereinigen...
-
-powershell -NoProfile -Command ^
-  "$keep=%KEEP_COUNT%;" ^
-  "$root='%LOCAL_WPF_ROOT%';" ^
-  "if(Test-Path $root){" ^
-  "  Get-ChildItem -LiteralPath $root -Directory |" ^
-  "    Where-Object { $_.Name -match '^\d+(\.\d+){1,3}$' } |" ^
-  "    Sort-Object { [version]$_.Name } -Descending |" ^
-  "    Select-Object -Skip $keep |" ^
-  "    Remove-Item -Recurse -Force -ErrorAction SilentlyContinue" ^
-  "}"
-if errorlevel 1 (
-    echo FEHLER: Konnte lokale WPF-Versionen nicht bereinigen.
-    if "%WAIT_AT_END%"=="1" pause
-    exit /b 1
-)
-
-powershell -NoProfile -Command ^
-  "$keep=%KEEP_COUNT%;" ^
-  "$root='%GIT_ROOT%';" ^
-  "if(Test-Path $root){" ^
-  "  Get-ChildItem -LiteralPath $root -File -Filter 'KGV-Setup-*.exe' |" ^
-  "    Sort-Object { if($_.BaseName -match '^KGV-Setup-(?<v>\d+(?:\.\d+){1,3})$'){ [version]$Matches['v'] } else { [version]'0.0.0.0' } } -Descending |" ^
-  "    Select-Object -Skip $keep |" ^
-  "    Remove-Item -Force -ErrorAction SilentlyContinue" ^
-  "}"
-if errorlevel 1 (
-    echo FEHLER: Konnte Git-WPF-Versionen nicht bereinigen.
-    if "%WAIT_AT_END%"=="1" pause
-    exit /b 1
-)
-
-echo.
-echo [7/7] Git-Aenderungen pruefen und hochladen...
-pushd "%GIT_ROOT%"
-
-git status --short
-
-git add .
-if errorlevel 1 (
-    echo FEHLER: git add fehlgeschlagen.
-    popd
-    if "%WAIT_AT_END%"=="1" pause
-    exit /b 1
-)
-
-git diff --cached --quiet
-if not errorlevel 1 (
-    echo Keine Git-Aenderungen zum Committen gefunden.
-    popd
-    echo.
-    echo ===============================================
-    echo Fertig
-    echo ===============================================
-    echo Lokales Setup: "%LOCAL_VERSIONED_SETUP%"
-    echo Lokale JSON:   "%LOCAL_JSON_PATH%"
-    echo Git Setup:     "%GIT_VERSIONED_SETUP%"
-    echo Git Current:   "%GIT_CURRENT_SETUP%"
-    echo Git JSON:      "%GIT_JSON_PATH%"
-    echo.
-    if "%WAIT_AT_END%"=="1" pause
-    endlocal
-    exit /b 0
-)
-
-git commit -m "WPF %APP_VERSION% veroeffentlicht"
-if errorlevel 1 (
-    echo FEHLER: git commit fehlgeschlagen.
-    popd
-    if "%WAIT_AT_END%"=="1" pause
-    exit /b 1
-)
-
-git push --set-upstream origin main
-if errorlevel 1 (
-    echo Erster git push fehlgeschlagen. Versuche git pull --rebase origin main und erneuten Push...
-    git pull --rebase origin main
-    if errorlevel 1 (
-        echo FEHLER: git pull --rebase origin main nach Push-Fehler fehlgeschlagen.
-        popd
-        if "%WAIT_AT_END%"=="1" pause
-        exit /b 1
-    )
-
-    git push --set-upstream origin main
-    if errorlevel 1 (
-        echo FEHLER: git push fehlgeschlagen.
-        popd
-        if "%WAIT_AT_END%"=="1" pause
-        exit /b 1
-    )
-)
-
-popd
-
-echo Git-Upload erfolgreich.
-echo.
-echo ===============================================
-echo Fertig
-echo ===============================================
-echo Lokales Setup: "%LOCAL_VERSIONED_SETUP%"
-echo Lokale JSON:   "%LOCAL_JSON_PATH%"
-echo Git Setup:     "%GIT_VERSIONED_SETUP%"
-echo Git Current:   "%GIT_CURRENT_SETUP%"
-echo Git JSON:      "%GIT_JSON_PATH%"
-echo.
-if "%WAIT_AT_END%"=="1" pause
-endlocal
-exit /b 0
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kleingartenverein Oberrothenbach – Downloads & Zugang</title>
+  <meta
+    name="description"
+    content="Downloadseite für die Windows-Verwaltungsapp sowie Einstieg zur Android-App des Kleingartenvereins Oberrothenbach."
+  />
+  <style>
+    :root {
+      --bg: #f4f7f2;
+      --surface: #ffffff;
+      --surface-soft: #eef5ea;
+      --text: #203024;
+      --muted: #5e6f62;
+      --primary: #2f6f3e;
+      --primary-hover: #275c33;
+      --border: #d7e2d3;
+      --ok-bg: #edf7ef;
+      --ok-border: #bcd8c2;
+      --warn-bg: #fff8e6;
+      --warn-border: #ead39a;
+      --danger-bg: #fff0f0;
+      --danger-border: #e5b5b5;
+      --shadow: 0 10px 28px rgba(32, 48, 36, 0.08);
+      --radius: 18px;
+      --radius-sm: 12px;
+      --max: 1120px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top right, rgba(47, 111, 62, 0.08), transparent 22%),
+        linear-gradient(180deg, #f8fbf7 0%, var(--bg) 100%);
+      line-height: 1.55;
+    }
+
+    a {
+      color: inherit;
+    }
+
+    .container {
+      width: min(100% - 32px, var(--max));
+      margin: 0 auto;
+    }
+
+    .topbar {
+      padding: 18px 0 8px;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .brand-mark {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary), #4d915d);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 18px;
+      box-shadow: var(--shadow);
+      flex: 0 0 auto;
+    }
+
+    main {
+      padding: 18px 0 40px;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1.45fr 0.95fr;
+      gap: 22px;
+      align-items: stretch;
+      margin-bottom: 22px;
+    }
+
+    .content-grid {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 22px;
+      align-items: start;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 30px;
+    }
+
+    .eyebrow {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: var(--surface-soft);
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 13px;
+      margin-bottom: 14px;
+    }
+
+    h1, h2, h3 {
+      margin: 0 0 12px;
+      line-height: 1.2;
+    }
+
+    h1 {
+      font-size: clamp(30px, 5vw, 46px);
+    }
+
+    h2 {
+      font-size: clamp(24px, 3vw, 32px);
+    }
+
+    h3 {
+      font-size: 20px;
+    }
+
+    p {
+      margin: 0 0 14px;
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    .button-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 20px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 48px;
+      padding: 0 18px;
+      border-radius: 12px;
+      border: 1px solid transparent;
+      text-decoration: none;
+      font-weight: 700;
+      transition: 0.2s ease;
+      cursor: pointer;
+      text-align: center;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+    }
+
+    .btn-secondary {
+      background: #fff;
+      color: var(--primary);
+      border-color: var(--border);
+    }
+
+    .btn-secondary:hover {
+      background: var(--surface-soft);
+    }
+
+    .btn-sm {
+      min-height: 42px;
+      padding: 0 14px;
+      font-size: 14px;
+    }
+
+    .status {
+      margin-top: 18px;
+      padding: 14px 16px;
+      border-radius: 14px;
+      border: 1px solid var(--warn-border);
+      background: var(--warn-bg);
+    }
+
+    .status.ok {
+      border-color: var(--ok-border);
+      background: var(--ok-bg);
+    }
+
+    .status.error {
+      border-color: var(--danger-border);
+      background: var(--danger-bg);
+    }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px 18px;
+      margin-top: 18px;
+    }
+
+    .meta-item {
+      padding: 14px 16px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: #fff;
+    }
+
+    .meta-label {
+      display: block;
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .meta-value {
+      font-weight: 700;
+      word-break: break-word;
+    }
+
+    .box {
+      margin-top: 22px;
+      padding: 20px;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      background: #fff;
+    }
+
+    .soft-box {
+      background: var(--surface-soft);
+    }
+
+    .warning-box {
+      background: var(--warn-bg);
+      border-color: var(--warn-border);
+    }
+
+    .danger-box {
+      background: var(--danger-bg);
+      border-color: var(--danger-border);
+    }
+
+    .download-list {
+      display: grid;
+      gap: 14px;
+      margin-top: 18px;
+    }
+
+    .download-item {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: #fff;
+      padding: 18px;
+    }
+
+    .download-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+
+    .download-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin: 0 0 6px;
+    }
+
+    .download-sub {
+      color: var(--muted);
+      font-size: 14px;
+      margin: 0;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      padding: 0 10px;
+      border-radius: 999px;
+      background: var(--surface-soft);
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .steps {
+      display: grid;
+      gap: 14px;
+      margin-top: 18px;
+    }
+
+    .step {
+      display: grid;
+      grid-template-columns: 40px 1fr;
+      gap: 14px;
+      align-items: start;
+      padding: 16px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: #fff;
+    }
+
+    .step-number {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--surface-soft);
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 16px;
+    }
+
+    ul {
+      margin: 10px 0 0;
+      padding-left: 20px;
+    }
+
+    li + li {
+      margin-top: 8px;
+    }
+
+    .footer {
+      padding: 0 0 36px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    code.inline {
+      font-family: Consolas, Monaco, monospace;
+      background: #eef2ed;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 2px 6px;
+      font-size: 0.95em;
+    }
+
+    @media (max-width: 900px) {
+      .hero-grid,
+      .content-grid,
+      .meta-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .card {
+        padding: 22px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="container">
+      <a class="brand" href="./index.html">
+        <span class="brand-mark">KGV</span>
+        <span>Kleingartenverein Oberrothenbach</span>
+      </a>
+    </div>
+  </header>
+
+  <main>
+    <div class="container">
+      <section class="hero-grid">
+        <div class="card">
+          <span class="eyebrow">Windows-Verwaltungsapp</span>
+          <h1>Download für Vorstand und Admin</h1>
+          <p class="muted">
+            Hier findest du automatisch die neueste Windows-Verwaltungsapp sowie
+            zusätzlich die letzten drei vorherigen Versionen.
+          </p>
+
+          <div id="statusBox" class="status">
+            Lade verfügbare Windows-Versionen …
+          </div>
+
+          <div class="button-row">
+            <a
+              id="latestDownloadBtn"
+              class="btn btn-primary"
+              href="#"
+              style="pointer-events:none; opacity:0.6;"
+            >
+              Neueste Windows-App herunterladen
+            </a>
+
+            <a class="btn btn-secondary" href="./android/index.html">
+              Zur Android-App
+            </a>
+          </div>
+        </div>
+
+        <aside class="card">
+          <span class="eyebrow">Wichtiger Hinweis</span>
+          <h3>Für Mitglieder</h3>
+          <p class="muted">
+            Normale Mitglieder nutzen bitte die mobile Android-App.
+            Die Windows-Verwaltungsapp ist für Vorstand und Admin vorgesehen.
+          </p>
+
+          <div class="box soft-box">
+            <strong>Android-App:</strong><br />
+            Der Download und die vollständige Installationsanleitung befinden sich unter
+            <code class="inline">/android/index.html</code>.
+            <div class="button-row">
+              <a class="btn btn-secondary btn-sm" href="./android/index.html">
+                Android-Seite öffnen
+              </a>
+            </div>
+          </div>
+
+          <div class="box warning-box">
+            <strong>Ohne Code-Signing-Zertifikat möglich:</strong><br />
+            Beim Download oder Start der Windows-App kann Windows oder dein Browser eine
+            Warnung anzeigen. Das ist bei nicht signierten Vereinsprogrammen normal.
+          </div>
+        </aside>
+      </section>
+
+      <section class="content-grid">
+        <div>
+          <div class="card">
+            <h2>Aktuelle Version</h2>
+            <p class="muted">
+              Die Versionen werden direkt aus dem GitHub-Repository gelesen.
+            </p>
+
+            <div class="meta-grid">
+              <div class="meta-item">
+                <span class="meta-label">Version</span>
+                <span id="latestVersion" class="meta-value">–</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Datei</span>
+                <span id="latestFile" class="meta-value">–</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Datum</span>
+                <span id="latestDate" class="meta-value">–</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Download</span>
+                <span id="latestLinkText" class="meta-value">–</span>
+              </div>
+            </div>
+
+            <div class="box">
+              <h3>Hinweise zur aktuellen Version</h3>
+              <p class="muted">
+                Die aktuellste Version wird automatisch aus Dateien mit dem Muster
+                <code class="inline">KGV-Setup-x.y.z.exe</code> ermittelt.
+              </p>
+            </div>
+          </div>
+
+          <div class="card" style="margin-top: 22px;">
+            <h2>Letzte Versionen</h2>
+            <p class="muted">
+              Zusätzlich zur aktuellen Version werden automatisch die drei vorherigen Versionen angezeigt.
+            </p>
+
+            <div id="olderVersions" class="download-list">
+              <div class="download-item">
+                <p class="muted">Lade ältere Versionen …</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="card">
+            <h2>Installationsanleitung für Windows</h2>
+
+            <div class="steps">
+              <div class="step">
+                <div class="step-number">1</div>
+                <div>
+                  <h3>Setup herunterladen</h3>
+                  <p class="muted">
+                    Lade die gewünschte Version über den Download-Button herunter.
+                    Speichere die Datei nach Möglichkeit im normalen Download-Ordner.
+                  </p>
+                </div>
+              </div>
+
+              <div class="step">
+                <div class="step-number">2</div>
+                <div>
+                  <h3>Datei öffnen</h3>
+                  <p class="muted">
+                    Öffne die heruntergeladene <strong>Setup-Datei</strong> per Doppelklick.
+                    Falls die Anwendung bereits läuft, schließe sie vorher vollständig.
+                  </p>
+                </div>
+              </div>
+
+              <div class="step">
+                <div class="step-number">3</div>
+                <div>
+                  <h3>Warnmeldung prüfen</h3>
+                  <p class="muted">
+                    Wenn Windows meldet, dass die App von einer nicht vertrauenswürdigen Quelle stammt
+                    oder der Herausgeber unbekannt ist, prüfe zuerst, ob die Datei wirklich von dieser
+                    offiziellen Vereinsseite heruntergeladen wurde.
+                  </p>
+                </div>
+              </div>
+
+              <div class="step">
+                <div class="step-number">4</div>
+                <div>
+                  <h3>Installation abschließen</h3>
+                  <p class="muted">
+                    Folge dem Setup-Assistenten. Danach kannst du die App über die Verknüpfung
+                    oder das Startmenü starten.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div class="box warning-box">
+              <h3>Was tun bei „nicht vertrauenswürdiger Quelle“?</h3>
+              <ul>
+                <li>Prüfe zuerst, ob du die Datei wirklich von dieser offiziellen KGV-Seite geladen hast.</li>
+                <li>Bei Microsoft Defender SmartScreen klicke auf <strong>Weitere Informationen</strong>.</li>
+                <li>Danach erscheint in der Regel die Schaltfläche <strong>Trotzdem ausführen</strong>.</li>
+                <li>Nur dann fortfahren, wenn Herkunft und Dateiname plausibel sind.</li>
+              </ul>
+            </div>
+
+            <div class="box warning-box">
+              <h3>Was tun, wenn der Browser den Download blockiert?</h3>
+              <ul>
+                <li>In Microsoft Edge erscheint oft zuerst eine Warnung beim Download.</li>
+                <li>Dort kannst du in der Download-Leiste oder im Downloadfenster meist <strong>Behalten</strong> auswählen.</li>
+                <li>Auch hier gilt: nur freigeben, wenn der Download von dieser offiziellen Vereinsseite stammt.</li>
+              </ul>
+            </div>
+
+            <div class="box danger-box">
+              <h3>Falls eine Installation nicht möglich ist</h3>
+              <ul>
+                <li>Prüfe, ob die Datei vollständig heruntergeladen wurde.</li>
+                <li>Starte die Setup-Datei notfalls per Rechtsklick und dann <strong>Als Administrator ausführen</strong>.</li>
+                <li>Falls eine ältere Version geöffnet ist, diese vorher schließen.</li>
+                <li>Falls weiterhin Probleme auftreten, lade die aktuelle Version erneut herunter.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      Kleingartenverein Oberrothenbach – Windows-Verwaltungsapp und Einstieg zur Android-App
+    </div>
+  </footer>
+
+  <script>
+    const MANUAL_GITHUB_OWNER = "";
+    const MANUAL_GITHUB_REPO = "";
+    const GITHUB_BRANCH = "main";
+
+    const statusBox = document.getElementById("statusBox");
+    const latestDownloadBtn = document.getElementById("latestDownloadBtn");
+    const latestVersion = document.getElementById("latestVersion");
+    const latestFile = document.getElementById("latestFile");
+    const latestDate = document.getElementById("latestDate");
+    const latestLinkText = document.getElementById("latestLinkText");
+    const olderVersions = document.getElementById("olderVersions");
+
+    function setStatus(message, type = "default") {
+      statusBox.textContent = message;
+
+      if (type === "ok") {
+        statusBox.className = "status ok";
+      } else if (type === "error") {
+        statusBox.className = "status error";
+      } else {
+        statusBox.className = "status";
+      }
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
+    }
+
+    function formatDate(value) {
+      if (!value) {
+        return "nicht verfügbar";
+      }
+
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) {
+        return value;
+      }
+
+      return new Intl.DateTimeFormat("de-DE", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric"
+      }).format(date);
+    }
+
+    function parseVersion(fileName) {
+      const match = fileName.match(/^KGV-Setup-(\d+)\.(\d+)\.(\d+)\.exe$/i);
+      if (!match) {
+        return null;
+      }
+
+      return {
+        major: Number(match[1]),
+        minor: Number(match[2]),
+        patch: Number(match[3]),
+        text: `${match[1]}.${match[2]}.${match[3]}`
+      };
+    }
+
+    function compareVersions(a, b) {
+      if (a.version.major !== b.version.major) {
+        return b.version.major - a.version.major;
+      }
+      if (a.version.minor !== b.version.minor) {
+        return b.version.minor - a.version.minor;
+      }
+      return b.version.patch - a.version.patch;
+    }
+
+    function detectGitHubRepo() {
+      if (MANUAL_GITHUB_OWNER && MANUAL_GITHUB_REPO) {
+        return {
+          owner: MANUAL_GITHUB_OWNER,
+          repo: MANUAL_GITHUB_REPO
+        };
+      }
+
+      const host = window.location.hostname.toLowerCase();
+      const pathParts = window.location.pathname.split("/").filter(Boolean);
+
+      if (host.endsWith(".github.io")) {
+        const owner = host.split(".")[0];
+
+        if (pathParts.length > 0 && pathParts[0] !== "index.html") {
+          return {
+            owner,
+            repo: pathParts[0]
+          };
+        }
+
+        return {
+          owner,
+          repo: `${owner}.github.io`
+        };
+      }
+
+      throw new Error("GitHub-Repository konnte nicht automatisch erkannt werden. Bitte MANUAL_GITHUB_OWNER und MANUAL_GITHUB_REPO im Script setzen.");
+    }
+
+    async function fetchRepoRootFiles(owner, repo) {
+      const apiUrl = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/contents?ref=${encodeURIComponent(GITHUB_BRANCH)}`;
+      const response = await fetch(apiUrl, { cache: "no-store" });
+
+      if (!response.ok) {
+        throw new Error(`GitHub-Inhalt konnte nicht geladen werden (${response.status}).`);
+      }
+
+      return await response.json();
+    }
+
+    async function fetchLastCommitDate(owner, repo, path) {
+      const apiUrl = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/commits?path=${encodeURIComponent(path)}&per_page=1&sha=${encodeURIComponent(GITHUB_BRANCH)}`;
+      const response = await fetch(apiUrl, { cache: "no-store" });
+
+      if (!response.ok) {
+        return null;
+      }
+
+      const commits = await response.json();
+      if (!Array.isArray(commits) || commits.length === 0) {
+        return null;
+      }
+
+      return commits[0]?.commit?.committer?.date
+        ?? commits[0]?.commit?.author?.date
+        ?? null;
+    }
+
+    function buildDownloadItemHtml(item, index) {
+      const label = index === 0 ? "Aktuelle Version" : `Vorherige Version ${index}`;
+      const safeVersion = escapeHtml(item.version.text);
+      const safeName = escapeHtml(item.name);
+      const safeDate = escapeHtml(formatDate(item.lastCommitDate));
+      const safeUrl = escapeHtml(item.downloadUrl);
+
+      return `
+        <div class="download-item">
+          <div class="download-head">
+            <div>
+              <p class="download-title">Version ${safeVersion}</p>
+              <p class="download-sub">${safeName} · ${safeDate}</p>
+            </div>
+            <span class="tag">${label}</span>
+          </div>
+
+          <div class="button-row">
+            <a class="btn btn-secondary btn-sm" href="${safeUrl}">
+              Diese Version herunterladen
+            </a>
+          </div>
+        </div>
+      `;
+    }
+
+    async function loadWindowsVersions() {
+      try {
+        const repoInfo = detectGitHubRepo();
+        const files = await fetchRepoRootFiles(repoInfo.owner, repoInfo.repo);
+
+        if (!Array.isArray(files)) {
+          throw new Error("Unerwartete Antwort vom GitHub-API.");
+        }
+
+        const exeFiles = files
+          .filter(file => file && file.type === "file" && typeof file.name === "string")
+          .map(file => {
+            const version = parseVersion(file.name);
+            return version ? {
+              name: file.name,
+              version,
+              downloadUrl: file.download_url || file.html_url || "#"
+            } : null;
+          })
+          .filter(Boolean)
+          .sort(compareVersions);
+
+        if (exeFiles.length === 0) {
+          throw new Error("Keine versionierten Dateien im Format KGV-Setup-x.y.z.exe gefunden.");
+        }
+
+        const topItems = exeFiles.slice(0, 4);
+
+        const withDates = await Promise.all(
+          topItems.map(async item => ({
+            ...item,
+            lastCommitDate: await fetchLastCommitDate(repoInfo.owner, repoInfo.repo, item.name)
+          }))
+        );
+
+        const current = withDates[0];
+        const previous = withDates.slice(1, 4);
+
+        latestVersion.textContent = current.version.text;
+        latestFile.textContent = current.name;
+        latestDate.textContent = formatDate(current.lastCommitDate);
+        latestLinkText.textContent = "Verfügbar";
+
+        latestDownloadBtn.href = current.downloadUrl;
+        latestDownloadBtn.style.pointerEvents = "auto";
+        latestDownloadBtn.style.opacity = "1";
+
+        if (previous.length === 0) {
+          olderVersions.innerHTML = `
+            <div class="download-item">
+              <p class="muted">Noch keine älteren Versionen gefunden.</p>
+            </div>
+          `;
+        } else {
+          olderVersions.innerHTML = previous
+            .map((item, index) => buildDownloadItemHtml(item, index + 1))
+            .join("");
+        }
+
+        setStatus("Windows-Versionen wurden automatisch geladen.", "ok");
+      } catch (error) {
+        latestVersion.textContent = "nicht verfügbar";
+        latestFile.textContent = "nicht verfügbar";
+        latestDate.textContent = "nicht verfügbar";
+        latestLinkText.textContent = "nicht verfügbar";
+
+        olderVersions.innerHTML = `
+          <div class="download-item">
+            <p class="muted">Ältere Versionen konnten nicht geladen werden.</p>
+          </div>
+        `;
+
+        setStatus("Windows-Versionen konnten nicht geladen werden. Bitte später erneut versuchen.", "error");
+        console.error(error);
+      }
+    }
+
+    loadWindowsVersions();
+  </script>
+</body>
+</html>
