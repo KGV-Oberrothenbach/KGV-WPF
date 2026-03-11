@@ -1,9 +1,9 @@
 ﻿{
     "platform":  "android",
-    "version":  "0.1.0",
+    "version":  "0.1.1",
     "build":  1,
-    "fileName":  "KGV-android-v0.1.0.apk",
-    "downloadUrl":  "https://kgv-oberrothenbach.github.io/KGV-WPF/android/KGV-android-v0.1.0.apk",
+    "fileName":  "KGV-android-v0.1.1.apk",
+    "downloadUrl":  "https://kgv-oberrothenbach.github.io/KGV-WPF/android/KGV-android-v0.1.1.apk",
     "mandatory":  false,
     "notes":  "Neue Android-Version"
 }
