@@ -1,5 +1,36 @@
 ﻿{
-    "version":  "0.1.3",
-    "downloadUrl":  "https://kgv-oberrothenbach.github.io/KGV-WPF/KGV-Setup.exe",
-    "notes":  "Neue Windows-Version"
+  "versions": [
+    {
+      "version": "0.1.4",
+      "build": 4,
+      "date": "2026-03-11",
+      "fileName": "KGV-WPF-0.1.4-setup.exe",
+      "notes": "Aktuelle Version.",
+      "downloadUrl": "./KGV-WPF-0.1.4-setup.exe"
+    },
+    {
+      "version": "0.1.3",
+      "build": 3,
+      "date": "2026-03-10",
+      "fileName": "KGV-WPF-0.1.3-setup.exe",
+      "notes": "Vorherige Version.",
+      "downloadUrl": "./KGV-WPF-0.1.3-setup.exe"
+    },
+    {
+      "version": "0.1.2",
+      "build": 2,
+      "date": "2026-03-09",
+      "fileName": "KGV-WPF-0.1.2-setup.exe",
+      "notes": "Vorherige Version.",
+      "downloadUrl": "./KGV-WPF-0.1.2-setup.exe"
+    },
+    {
+      "version": "0.1.1",
+      "build": 1,
+      "date": "2026-03-08",
+      "fileName": "KGV-WPF-0.1.1-setup.exe",
+      "notes": "Vorherige Version.",
+      "downloadUrl": "./KGV-WPF-0.1.1-setup.exe"
+    }
+  ]
 }
