@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Kleingartenverein Oberrothenbach – App & Zugang</title>
+  <title>Kleingartenverein Oberrothenbach – Downloads & Zugang</title>
   <meta
     name="description"
-    content="Zugang zur Vereins-App für Mitglieder sowie separater Bereich für Vorstand und Admin."
+    content="Downloadseite für die Windows-Verwaltungsapp sowie Einstieg zur Android-App des Kleingartenvereins Oberrothenbach."
   />
   <style>
     :root {
@@ -18,12 +18,16 @@
       --primary: #2f6f3e;
       --primary-hover: #275c33;
       --border: #d7e2d3;
-      --warning-bg: #fff8e6;
-      --warning-border: #ead39a;
+      --ok-bg: #edf7ef;
+      --ok-border: #bcd8c2;
+      --warn-bg: #fff8e6;
+      --warn-border: #ead39a;
+      --danger-bg: #fff0f0;
+      --danger-border: #e5b5b5;
       --shadow: 0 10px 28px rgba(32, 48, 36, 0.08);
       --radius: 18px;
       --radius-sm: 12px;
-      --max: 1080px;
+      --max: 1120px;
     }
 
     * {
@@ -80,15 +84,23 @@
       flex: 0 0 auto;
     }
 
-    .hero {
-      padding: 18px 0 34px;
+    main {
+      padding: 18px 0 40px;
     }
 
     .hero-grid {
       display: grid;
-      grid-template-columns: 1.5fr 1fr;
+      grid-template-columns: 1.45fr 0.95fr;
       gap: 22px;
       align-items: stretch;
+      margin-bottom: 22px;
+    }
+
+    .content-grid {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 22px;
+      align-items: start;
     }
 
     .card {
@@ -96,10 +108,7 @@
       border: 1px solid var(--border);
       border-radius: var(--radius);
       box-shadow: var(--shadow);
-    }
-
-    .hero-main {
-      padding: 34px;
+      padding: 30px;
     }
 
     .eyebrow {
@@ -157,6 +166,7 @@
       font-weight: 700;
       transition: 0.2s ease;
       cursor: pointer;
+      text-align: center;
     }
 
     .btn-primary {
@@ -178,48 +188,144 @@
       background: var(--surface-soft);
     }
 
-    .hero-side {
-      padding: 24px;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      gap: 14px;
+    .btn-sm {
+      min-height: 42px;
+      padding: 0 14px;
+      font-size: 14px;
     }
 
-    .checklist {
-      margin: 0;
-      padding-left: 20px;
+    .status {
+      margin-top: 18px;
+      padding: 14px 16px;
+      border-radius: 14px;
+      border: 1px solid var(--warn-border);
+      background: var(--warn-bg);
     }
 
-    .checklist li + li {
-      margin-top: 8px;
+    .status.ok {
+      border-color: var(--ok-border);
+      background: var(--ok-bg);
     }
 
-    section {
-      padding: 14px 0 22px;
+    .status.error {
+      border-color: var(--danger-border);
+      background: var(--danger-bg);
     }
 
-    .section-card {
-      padding: 28px;
-    }
-
-    .steps {
+    .meta-grid {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 16px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px 18px;
       margin-top: 18px;
     }
 
-    .step {
+    .meta-item {
+      padding: 14px 16px;
       border: 1px solid var(--border);
       border-radius: var(--radius-sm);
+      background: #fff;
+    }
+
+    .meta-label {
+      display: block;
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .meta-value {
+      font-weight: 700;
+      word-break: break-word;
+    }
+
+    .box {
+      margin-top: 22px;
+      padding: 20px;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      background: #fff;
+    }
+
+    .soft-box {
+      background: var(--surface-soft);
+    }
+
+    .warning-box {
+      background: var(--warn-bg);
+      border-color: var(--warn-border);
+    }
+
+    .danger-box {
+      background: var(--danger-bg);
+      border-color: var(--danger-border);
+    }
+
+    .download-list {
+      display: grid;
+      gap: 14px;
+      margin-top: 18px;
+    }
+
+    .download-item {
+      border: 1px solid var(--border);
+      border-radius: 14px;
       background: #fff;
       padding: 18px;
     }
 
+    .download-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+
+    .download-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin: 0 0 6px;
+    }
+
+    .download-sub {
+      color: var(--muted);
+      font-size: 14px;
+      margin: 0;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      padding: 0 10px;
+      border-radius: 999px;
+      background: var(--surface-soft);
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .steps {
+      display: grid;
+      gap: 14px;
+      margin-top: 18px;
+    }
+
+    .step {
+      display: grid;
+      grid-template-columns: 40px 1fr;
+      gap: 14px;
+      align-items: start;
+      padding: 16px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: #fff;
+    }
+
     .step-number {
-      width: 34px;
-      height: 34px;
+      width: 40px;
+      height: 40px;
       border-radius: 50%;
       display: inline-flex;
       align-items: center;
@@ -227,41 +333,23 @@
       background: var(--surface-soft);
       color: var(--primary);
       font-weight: 700;
-      margin-bottom: 10px;
+      font-size: 16px;
     }
 
-    .info-box {
-      margin-top: 18px;
-      padding: 16px 18px;
-      border-radius: 14px;
-      border: 1px solid var(--warning-border);
-      background: var(--warning-bg);
-    }
-
-    .admin-box {
-      border-top: 4px solid var(--primary);
-    }
-
-    .list {
+    ul {
       margin: 10px 0 0;
       padding-left: 20px;
     }
 
-    .list li + li {
+    li + li {
       margin-top: 8px;
     }
 
     .footer {
-      padding: 30px 0 42px;
-      color: var(--muted);
-      font-size: 14px;
+      padding: 0 0 36px;
       text-align: center;
-    }
-
-    .hint {
-      font-size: 14px;
       color: var(--muted);
-      margin-top: 10px;
+      font-size: 14px;
     }
 
     code.inline {
@@ -273,15 +361,14 @@
       font-size: 0.95em;
     }
 
-    @media (max-width: 860px) {
+    @media (max-width: 900px) {
       .hero-grid,
-      .steps {
+      .content-grid,
+      .meta-grid {
         grid-template-columns: 1fr;
       }
 
-      .hero-main,
-      .hero-side,
-      .section-card {
+      .card {
         padding: 22px;
       }
     }
@@ -290,7 +377,7 @@
 <body>
   <header class="topbar">
     <div class="container">
-      <a class="brand" href="#">
+      <a class="brand" href="./index.html">
         <span class="brand-mark">KGV</span>
         <span>Kleingartenverein Oberrothenbach</span>
       </a>
@@ -298,153 +385,334 @@
   </header>
 
   <main>
-    <section class="hero">
-      <div class="container hero-grid">
-        <div class="card hero-main">
-          <span class="eyebrow">Mitgliederbereich</span>
-          <h1>Willkommen in der Vereins-App</h1>
+    <div class="container">
+      <section class="hero-grid">
+        <div class="card">
+          <span class="eyebrow">Windows-Verwaltungsapp</span>
+          <h1>Download für Vorstand und Admin</h1>
           <p class="muted">
-            Für Mitglieder ist die Nutzung über die <strong>Android-App</strong> vorgesehen.
-            Hier kannst du dein Passwort setzen, die App öffnen oder installieren und später
-            deine Vereinsfunktionen mobil nutzen.
+            Hier findest du die aktuelle Version der Windows-Verwaltungsapp sowie zusätzlich
+            die letzten drei vorherigen Versionen zum manuellen Download.
           </p>
 
-          <div class="button-row">
-            <a class="btn btn-primary" href="android/">
-              Android-App öffnen / herunterladen
-            </a>
-
-            <a class="btn btn-secondary" href="set-password.html">
-              Passwort setzen / Einladung abschließen
-            </a>
+          <div id="statusBox" class="status">
+            Lade Versionsinformationen …
           </div>
 
-          <p class="hint">
-            Falls du über einen Einladungslink hierher gekommen bist, nutze bitte anschließend
-            die Android-App.
-          </p>
+          <div class="button-row">
+            <a
+              id="latestDownloadBtn"
+              class="btn btn-primary"
+              href="#"
+              style="pointer-events:none; opacity:0.6;"
+            >
+              Neueste Windows-App herunterladen
+            </a>
+
+            <a class="btn btn-secondary" href="./android/index.html">
+              Zur Android-App
+            </a>
+          </div>
         </div>
 
-        <aside class="card hero-side">
+        <aside class="card">
+          <span class="eyebrow">Wichtiger Hinweis</span>
           <h3>Für Mitglieder</h3>
-          <ul class="checklist">
-            <li>Passwort setzen oder Einladung abschließen</li>
-            <li>Vereins-App auf dem Smartphone nutzen</li>
-            <li>Kein Zugang über die Windows-Verwaltungsanwendung nötig</li>
-          </ul>
+          <p class="muted">
+            Normale Mitglieder nutzen bitte die mobile Android-App.
+            Die Windows-Verwaltungsapp ist für Vorstand und Admin vorgesehen.
+          </p>
 
-          <div class="info-box">
-            <strong>Hinweis:</strong><br />
-            Die Windows-Anwendung ist nicht für normale Mitglieder vorgesehen.
-            Bitte nutze als Mitglied immer die mobile Vereins-App.
+          <div class="box soft-box">
+            <strong>Android-App:</strong><br />
+            Der Download und die vollständige Installationsanleitung befinden sich unter
+            <code class="inline">/android/index.html</code>.
+            <div class="button-row">
+              <a class="btn btn-secondary btn-sm" href="./android/index.html">
+                Android-Seite öffnen
+              </a>
+            </div>
+          </div>
+
+          <div class="box warning-box">
+            <strong>Ohne Code-Signing-Zertifikat möglich:</strong><br />
+            Beim Download oder Start der Windows-App kann Windows oder dein Browser eine
+            Warnung anzeigen. Das ist bei nicht signierten Vereinsprogrammen normal.
           </div>
         </aside>
-      </div>
-    </section>
+      </section>
 
-    <section aria-labelledby="mitgliederschritte">
-      <div class="container">
-        <div class="card section-card">
-          <h2 id="mitgliederschritte">So gehst du als Mitglied vor</h2>
-          <p class="muted">
-            Der normale Weg für Mitglieder läuft komplett über das Smartphone.
-          </p>
+      <section class="content-grid">
+        <div>
+          <div class="card">
+            <h2>Aktuelle Version</h2>
+            <p class="muted">
+              Die neueste Version wird automatisch aus <code class="inline">./windows/versions.json</code> geladen.
+            </p>
 
-          <div class="steps">
-            <div class="step">
-              <div class="step-number">1</div>
-              <h3>Einladung öffnen</h3>
-              <p class="muted">
-                Öffne deinen Einladungslink oder die Vereinsseite, um deinen Zugang zu starten.
-              </p>
+            <div class="meta-grid">
+              <div class="meta-item">
+                <span class="meta-label">Version</span>
+                <span id="latestVersion" class="meta-value">–</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Build</span>
+                <span id="latestBuild" class="meta-value">–</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Datum</span>
+                <span id="latestDate" class="meta-value">–</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Datei</span>
+                <span id="latestFile" class="meta-value">–</span>
+              </div>
             </div>
 
-            <div class="step">
-              <div class="step-number">2</div>
-              <h3>Passwort festlegen</h3>
-              <p class="muted">
-                Setze dein Passwort und schließe die Einrichtung deines Kontos ab.
-              </p>
-            </div>
-
-            <div class="step">
-              <div class="step-number">3</div>
-              <h3>Android-App nutzen</h3>
-              <p class="muted">
-                Melde dich anschließend in der Vereins-App auf deinem Smartphone an.
+            <div class="box">
+              <h3>Hinweise zur aktuellen Version</h3>
+              <p id="latestNotes" class="muted">
+                Noch keine Versionsinformationen geladen.
               </p>
             </div>
           </div>
-        </div>
-      </div>
-    </section>
 
-    <section id="vorstand-admin" aria-labelledby="adminzugang">
-      <div class="container">
-        <div class="card section-card admin-box">
-          <h2 id="adminzugang">Zugang für Vorstand und Admin</h2>
-          <p class="muted">
-            Vorstand und Administratoren nutzen weiterhin den separaten Verwaltungszugang.
-            Dieser Bereich ist bewusst getrennt vom normalen Mitgliederzugang.
-          </p>
+          <div class="card" style="margin-top: 22px;">
+            <h2>Letzte Versionen</h2>
+            <p class="muted">
+              Zusätzlich zur neuesten Version werden die letzten drei vorherigen Versionen angezeigt.
+            </p>
 
-          <ul class="list">
-            <li>Mitglieder nutzen primär die Android-/MAUI-App.</li>
-            <li>Vorstand und Admin können zusätzlich die Windows-Verwaltungsanwendung verwenden.</li>
-            <li>Beide Zugänge starten über diese eine Seite.</li>
-          </ul>
-
-          <div class="button-row">
-            <a class="btn btn-secondary" href="https://DEIN-WPF-ODER-VERWALTUNGS-LINK" target="_blank" rel="noopener">
-              Vorstand / Admin – Verwaltungszugang
-            </a>
-
-            <a class="btn btn-secondary" href="set-password.html">
-              Passwort setzen / Einladung abschließen
-            </a>
+            <div id="olderVersions" class="download-list">
+              <div class="download-item">
+                <p class="muted">Lade ältere Versionen …</p>
+              </div>
+            </div>
           </div>
-
-          <p class="hint">
-            Diesen Bereich bitte nur verwenden, wenn du tatsächlich Vorstand oder Admin bist.
-          </p>
         </div>
-      </div>
-    </section>
 
-    <section aria-labelledby="hilfe">
-      <div class="container">
-        <div class="card section-card">
-          <h2 id="hilfe">Hinweise zur Einrichtung</h2>
-          <p class="muted">
-            Diese Seite dient als gemeinsamer Einstieg für Mitglieder sowie Vorstand/Admin.
-          </p>
+        <div>
+          <div class="card">
+            <h2>Installationsanleitung für Windows</h2>
 
-          <ul class="list">
-            <li>
-              Der Mitglieder-Download verweist auf den Ordner <code class="inline">android/</code>.
-              Dort liegen die Android-App und die zugehörige <code class="inline">version.json</code>.
-            </li>
-            <li>
-              Ersetze <code class="inline">https://DEIN-WPF-ODER-VERWALTUNGS-LINK</code>
-              durch den echten Verwaltungslink für Vorstand/Admin.
-            </li>
-            <li>
-              Falls <code class="inline">set-password.html</code> später anders heißt oder woanders liegt,
-              passe den Link entsprechend an.
-            </li>
-            <li>
-              Normale Mitglieder nutzen bitte immer den Android-Weg und nicht die Windows-Anwendung.
-            </li>
-          </ul>
+            <div class="steps">
+              <div class="step">
+                <div class="step-number">1</div>
+                <div>
+                  <h3>Setup herunterladen</h3>
+                  <p class="muted">
+                    Lade die gewünschte Version über den Download-Button herunter.
+                    Speichere die Datei nach Möglichkeit im normalen Download-Ordner.
+                  </p>
+                </div>
+              </div>
+
+              <div class="step">
+                <div class="step-number">2</div>
+                <div>
+                  <h3>Datei öffnen</h3>
+                  <p class="muted">
+                    Öffne die heruntergeladene <strong>Setup-Datei</strong> per Doppelklick.
+                    Falls die Anwendung bereits läuft, schließe sie vorher vollständig.
+                  </p>
+                </div>
+              </div>
+
+              <div class="step">
+                <div class="step-number">3</div>
+                <div>
+                  <h3>Warnmeldung bestätigen</h3>
+                  <p class="muted">
+                    Wenn Windows meldet, dass die App von einer nicht vertrauenswürdigen Quelle stammt
+                    oder der Herausgeber unbekannt ist, gehe nur dann weiter, wenn die Datei
+                    wirklich von dieser offiziellen Vereinsseite heruntergeladen wurde.
+                  </p>
+                </div>
+              </div>
+
+              <div class="step">
+                <div class="step-number">4</div>
+                <div>
+                  <h3>Installation abschließen</h3>
+                  <p class="muted">
+                    Folge dem Setup-Assistenten. Danach kannst du die App über die Verknüpfung
+                    oder das Startmenü starten.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div class="box warning-box">
+              <h3>Was tun bei „nicht vertrauenswürdiger Quelle“?</h3>
+              <ul>
+                <li>Prüfe zuerst, ob du die Datei wirklich von dieser offiziellen KGV-Seite geladen hast.</li>
+                <li>Bei Microsoft Defender SmartScreen klicke auf <strong>Weitere Informationen</strong>.</li>
+                <li>Danach erscheint in der Regel die Schaltfläche <strong>Trotzdem ausführen</strong>.</li>
+                <li>Nur dann fortfahren, wenn Herkunft und Dateiname plausibel sind.</li>
+              </ul>
+            </div>
+
+            <div class="box warning-box">
+              <h3>Was tun, wenn der Browser den Download blockiert?</h3>
+              <ul>
+                <li>In Microsoft Edge erscheint oft zuerst eine Warnung beim Download.</li>
+                <li>Dort kannst du in der Download-Leiste oder im Downloadfenster meist <strong>Behalten</strong> auswählen.</li>
+                <li>Auch hier gilt: nur freigeben, wenn der Download von dieser offiziellen Vereinsseite stammt.</li>
+              </ul>
+            </div>
+
+            <div class="box danger-box">
+              <h3>Falls eine Installation nicht möglich ist</h3>
+              <ul>
+                <li>Prüfe, ob die Datei vollständig heruntergeladen wurde.</li>
+                <li>Starte die Setup-Datei notfalls per Rechtsklick und dann <strong>Als Administrator ausführen</strong>.</li>
+                <li>Falls eine ältere Version geöffnet ist, diese vorher schließen.</li>
+                <li>Falls weiterhin Probleme auftreten, lade die aktuelle Version erneut herunter.</li>
+              </ul>
+            </div>
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+    </div>
   </main>
 
   <footer class="footer">
     <div class="container">
-      Kleingartenverein Oberrothenbach – gemeinsamer Einstieg für Mitglieder sowie Vorstand/Admin
+      Kleingartenverein Oberrothenbach – Windows-Verwaltungsapp und Einstieg zur Android-App
     </div>
   </footer>
+
+  <script>
+    const statusBox = document.getElementById("statusBox");
+    const latestDownloadBtn = document.getElementById("latestDownloadBtn");
+
+    const latestVersion = document.getElementById("latestVersion");
+    const latestBuild = document.getElementById("latestBuild");
+    const latestDate = document.getElementById("latestDate");
+    const latestFile = document.getElementById("latestFile");
+    const latestNotes = document.getElementById("latestNotes");
+
+    const olderVersions = document.getElementById("olderVersions");
+
+    function setStatus(message, type = "default") {
+      statusBox.textContent = message;
+      if (type === "ok") {
+        statusBox.className = "status ok";
+      } else if (type === "error") {
+        statusBox.className = "status error";
+      } else {
+        statusBox.className = "status";
+      }
+    }
+
+    function formatDate(value) {
+      if (!value) return "–";
+
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) {
+        return value;
+      }
+
+      return new Intl.DateTimeFormat("de-DE", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric"
+      }).format(date);
+    }
+
+    function renderOlderVersions(items) {
+      if (!items || items.length === 0) {
+        olderVersions.innerHTML = `
+          <div class="download-item">
+            <p class="muted">Keine älteren Versionen hinterlegt.</p>
+          </div>
+        `;
+        return;
+      }
+
+      olderVersions.innerHTML = items.map((item, index) => {
+        const version = item.version ?? "–";
+        const build = item.build ?? "–";
+        const date = formatDate(item.date);
+        const fileName = item.fileName ?? "–";
+        const notes = item.notes ?? "Keine Hinweise hinterlegt.";
+        const downloadUrl = item.downloadUrl ?? "#";
+
+        return `
+          <div class="download-item">
+            <div class="download-head">
+              <div>
+                <p class="download-title">Version ${version}</p>
+                <p class="download-sub">Build ${build} · ${date} · ${fileName}</p>
+              </div>
+              <span class="tag">Vorherige Version ${index + 1}</span>
+            </div>
+
+            <p class="muted" style="margin-top: 12px;">${notes}</p>
+
+            <div class="button-row">
+              <a class="btn btn-secondary btn-sm" href="${downloadUrl}">
+                Diese Version herunterladen
+              </a>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    async function loadWindowsVersions() {
+      try {
+        const response = await fetch("./windows/versions.json", { cache: "no-store" });
+
+        if (!response.ok) {
+          throw new Error("windows/versions.json konnte nicht geladen werden.");
+        }
+
+        const data = await response.json();
+        const versions = Array.isArray(data.versions) ? data.versions : [];
+
+        if (versions.length === 0) {
+          throw new Error("Es wurden keine Versionen gefunden.");
+        }
+
+        const current = versions[0];
+        const previous = versions.slice(1, 4);
+
+        latestVersion.textContent = current.version ?? "–";
+        latestBuild.textContent = current.build ?? "–";
+        latestDate.textContent = formatDate(current.date);
+        latestFile.textContent = current.fileName ?? "–";
+        latestNotes.textContent = current.notes ?? "Keine Hinweise hinterlegt.";
+
+        if (!current.downloadUrl) {
+          throw new Error("Für die aktuelle Version fehlt die Download-URL.");
+        }
+
+        latestDownloadBtn.href = current.downloadUrl;
+        latestDownloadBtn.style.pointerEvents = "auto";
+        latestDownloadBtn.style.opacity = "1";
+
+        renderOlderVersions(previous);
+        setStatus("Aktuelle Windows-Version und vorherige Versionen wurden geladen.", "ok");
+      } catch (error) {
+        latestVersion.textContent = "nicht verfügbar";
+        latestBuild.textContent = "nicht verfügbar";
+        latestDate.textContent = "nicht verfügbar";
+        latestFile.textContent = "nicht verfügbar";
+        latestNotes.textContent = "Versionsinformationen konnten nicht geladen werden.";
+
+        olderVersions.innerHTML = `
+          <div class="download-item">
+            <p class="muted">Ältere Versionen konnten nicht geladen werden.</p>
+          </div>
+        `;
+
+        setStatus("Versionsinformationen konnten nicht geladen werden. Bitte später erneut versuchen.", "error");
+        console.error(error);
+      }
+    }
+
+    loadWindowsVersions();
+  </script>
 </body>
 </html>
