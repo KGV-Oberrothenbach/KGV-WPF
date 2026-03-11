@@ -3,7 +3,7 @@
     "version":  "0.1.0",
     "build":  1,
     "fileName":  "KGV-android-v0.1.0.apk",
-    "downloadUrl":  "https://abraeuer20-png.github.io/KGV/android/KGV-android-v0.1.0.apk",
+    "downloadUrl":  "https://kgv-oberrothenbach.github.io/KGV-WPF/android/KGV-android-v0.1.0.apk",
     "mandatory":  false,
-    "notes":  ""
+    "notes":  "Neue Android-Version"
 }
