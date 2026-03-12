@@ -69,6 +69,17 @@ namespace KGV.Core.Interfaces
         // Arbeitsstunden
         // =========================
         Task<List<SaisonRecord>> GetSaisonRecordsAsync();
+        Task<SaisonRecord?> SaveSaisonAsync(SaisonRecord saison);
+
+        Task<List<WartungsvertragRecord>> GetWartungsvertraegeAsync();
+        Task<WartungsvertragRecord?> SaveWartungsvertragAsync(WartungsvertragRecord wartungsvertrag);
+
+        Task<List<WartungsvertragZuordnungRecord>> GetWartungsvertragZuordnungenAsync(int hauptmitgliedId);
+        Task<WartungsvertragZuordnungRecord?> SaveWartungsvertragZuordnungAsync(WartungsvertragZuordnungRecord zuordnung);
+        Task<bool> EndWartungsvertragZuordnungAsync(long zuordnungId, DateTime gueltigBis, string? bemerkung);
+
+        Task<PflichtstundenUebersichtRecord?> GetPflichtstundenUebersichtAsync(int hauptmitgliedId, int saisonId);
+        Task<List<PflichtstundenUebersichtRecord>> GetPflichtstundenUebersichtForSaisonAsync(int saisonId);
         Task<MitgliedRecord?> GetMitgliedByAuthUserIdAsync(Guid authUserId);
         Task<MitgliedRecord?> GetMitgliedByAuthUserIdAsync(string authUserId);
 
@@ -118,6 +129,13 @@ namespace KGV.Core.Interfaces
         Task<List<StartseiteBekanntmachungRecord>> GetStartseiteBekanntmachungenAsync();
         Task<List<StartseiteTerminRecord>> GetStartseiteTermineAsync();
         Task<List<StartseiteArbeitseinsatzRecord>> GetStartseiteArbeitseinsaetzeAsync();
+
+        // =========================
+        // Startseite (Verwaltung)
+        // =========================
+        Task<StartseiteBekanntmachungRecord?> SaveStartseiteBekanntmachungAsync(StartseiteBekanntmachungRecord record);
+        Task<StartseiteTerminRecord?> SaveStartseiteTerminAsync(StartseiteTerminRecord record);
+        Task<StartseiteArbeitseinsatzRecord?> SaveStartseiteArbeitseinsatzAsync(StartseiteArbeitseinsatzRecord record);
 
         Task<HashSet<long>> GetMyArbeitseinsatzAnmeldungenAsync();
         Task<bool> SignUpForArbeitseinsatzAsync(long arbeitseinsatzId);

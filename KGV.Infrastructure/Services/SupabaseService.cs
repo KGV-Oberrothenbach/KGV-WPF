@@ -68,12 +68,245 @@ namespace KGV.Infrastructure.Services
                     });
                 }
             }
+
             catch (Exception ex)
             {
                 _logger?.LogError(ex, "GetAppUsersAsync failed");
             }
 
             return list;
+        }
+
+        // =========================
+        // Saison / Wartungsverträge / Pflichtstunden
+        // =========================
+        public async Task<SaisonRecord?> SaveSaisonAsync(SaisonRecord saison)
+        {
+            try
+            {
+                await InitializeAsync();
+                if (_client == null) return null;
+                if (saison == null) return null;
+
+                if (saison.Id > 0)
+                {
+                    var resp = await _client
+                        .From<SaisonRecord>()
+                        .Where(x => x.Id == saison.Id)
+                        .Update(saison);
+
+                    return resp?.Models?.FirstOrDefault();
+                }
+
+                var insertResp = await _client
+                    .From<SaisonRecord>()
+                    .Insert(saison);
+
+                return insertResp?.Models?.FirstOrDefault();
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "SaveSaisonAsync failed");
+                return null;
+            }
+        }
+
+        public async Task<List<WartungsvertragRecord>> GetWartungsvertraegeAsync()
+        {
+            var list = new List<WartungsvertragRecord>();
+
+            try
+            {
+                await InitializeAsync();
+                if (_client == null) return list;
+
+                var resp = await _client.From<WartungsvertragRecord>().Get();
+                if (resp?.Models != null) list.AddRange(resp.Models);
+
+                return list
+                    .OrderByDescending(x => x.Aktiv)
+                    .ThenBy(x => x.Bereich)
+                    .ThenBy(x => x.Titel)
+                    .ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "GetWartungsvertraegeAsync failed");
+                return list;
+            }
+        }
+
+        public async Task<WartungsvertragRecord?> SaveWartungsvertragAsync(WartungsvertragRecord wartungsvertrag)
+        {
+            try
+            {
+                await InitializeAsync();
+                if (_client == null) return null;
+                if (wartungsvertrag == null) return null;
+
+                if (wartungsvertrag.Id > 0)
+                {
+                    var resp = await _client
+                        .From<WartungsvertragRecord>()
+                        .Where(x => x.Id == wartungsvertrag.Id)
+                        .Update(wartungsvertrag);
+
+                    return resp?.Models?.FirstOrDefault();
+                }
+
+                var insertResp = await _client
+                    .From<WartungsvertragRecord>()
+                    .Insert(wartungsvertrag);
+
+                return insertResp?.Models?.FirstOrDefault();
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "SaveWartungsvertragAsync failed");
+                return null;
+            }
+        }
+
+        public async Task<List<WartungsvertragZuordnungRecord>> GetWartungsvertragZuordnungenAsync(int hauptmitgliedId)
+        {
+            var list = new List<WartungsvertragZuordnungRecord>();
+
+            try
+            {
+                await InitializeAsync();
+                if (_client == null) return list;
+                if (hauptmitgliedId <= 0) return list;
+
+                var resp = await _client
+                    .From<WartungsvertragZuordnungRecord>()
+                    .Where(x => x.HauptmitgliedId == hauptmitgliedId)
+                    .Get();
+
+                if (resp?.Models != null) list.AddRange(resp.Models);
+
+                return list
+                    .OrderByDescending(x => x.GueltigAb)
+                    .ThenByDescending(x => x.Id)
+                    .ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "GetWartungsvertragZuordnungenAsync failed");
+                return list;
+            }
+        }
+
+        public async Task<WartungsvertragZuordnungRecord?> SaveWartungsvertragZuordnungAsync(WartungsvertragZuordnungRecord zuordnung)
+        {
+            try
+            {
+                await InitializeAsync();
+                if (_client == null) return null;
+                if (zuordnung == null) return null;
+
+                if (zuordnung.Id > 0)
+                {
+                    var resp = await _client
+                        .From<WartungsvertragZuordnungRecord>()
+                        .Where(x => x.Id == zuordnung.Id)
+                        .Update(zuordnung);
+
+                    return resp?.Models?.FirstOrDefault();
+                }
+
+                var insertResp = await _client
+                    .From<WartungsvertragZuordnungRecord>()
+                    .Insert(zuordnung);
+
+                return insertResp?.Models?.FirstOrDefault();
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "SaveWartungsvertragZuordnungAsync failed");
+                return null;
+            }
+        }
+
+        public async Task<bool> EndWartungsvertragZuordnungAsync(long zuordnungId, DateTime gueltigBis, string? bemerkung)
+        {
+            try
+            {
+                await InitializeAsync();
+                if (_client == null) return false;
+                if (zuordnungId <= 0) return false;
+
+                var rec = await _client
+                    .From<WartungsvertragZuordnungRecord>()
+                    .Where(x => x.Id == zuordnungId)
+                    .Single();
+
+                if (rec == null) return false;
+
+                rec.GueltigBis = DateTime.SpecifyKind(gueltigBis.Date.AddHours(12), DateTimeKind.Unspecified);
+                if (!string.IsNullOrWhiteSpace(bemerkung))
+                    rec.Bemerkung = bemerkung;
+
+                await _client
+                    .From<WartungsvertragZuordnungRecord>()
+                    .Where(x => x.Id == zuordnungId)
+                    .Update(rec);
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "EndWartungsvertragZuordnungAsync failed");
+                return false;
+            }
+        }
+
+        public async Task<PflichtstundenUebersichtRecord?> GetPflichtstundenUebersichtAsync(int hauptmitgliedId, int saisonId)
+        {
+            try
+            {
+                await InitializeAsync();
+                if (_client == null) return null;
+                if (hauptmitgliedId <= 0) return null;
+                if (saisonId <= 0) return null;
+
+                var resp = await _client
+                    .From<PflichtstundenUebersichtRecord>()
+                    .Where(x => x.HauptmitgliedId == hauptmitgliedId)
+                    .Where(x => x.SaisonId == saisonId)
+                    .Get();
+
+                return resp?.Models?.FirstOrDefault();
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "GetPflichtstundenUebersichtAsync failed");
+                return null;
+            }
+        }
+
+        public async Task<List<PflichtstundenUebersichtRecord>> GetPflichtstundenUebersichtForSaisonAsync(int saisonId)
+        {
+            var list = new List<PflichtstundenUebersichtRecord>();
+
+            try
+            {
+                await InitializeAsync();
+                if (_client == null) return list;
+                if (saisonId <= 0) return list;
+
+                var resp = await _client
+                    .From<PflichtstundenUebersichtRecord>()
+                    .Where(x => x.SaisonId == saisonId)
+                    .Get();
+
+                if (resp?.Models != null) list.AddRange(resp.Models);
+                return list.OrderBy(x => x.HauptmitgliedId).ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "GetPflichtstundenUebersichtForSaisonAsync failed");
+                return list;
+            }
         }
 
         // =========================
@@ -773,6 +1006,102 @@ namespace KGV.Infrastructure.Services
             }
 
             return list;
+        }
+
+        // =========================
+        // Startseite (Verwaltung)
+        // =========================
+        public async Task<StartseiteBekanntmachungRecord?> SaveStartseiteBekanntmachungAsync(StartseiteBekanntmachungRecord record)
+        {
+            try
+            {
+                await InitializeAsync();
+                if (_client == null) return null;
+                if (record == null) return null;
+
+                if (record.Id > 0)
+                {
+                    var resp = await _client
+                        .From<StartseiteBekanntmachungRecord>()
+                        .Where(x => x.Id == record.Id)
+                        .Update(record);
+
+                    return resp?.Models?.FirstOrDefault();
+                }
+
+                var insertResp = await _client
+                    .From<StartseiteBekanntmachungRecord>()
+                    .Insert(record);
+
+                return insertResp?.Models?.FirstOrDefault();
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "SaveStartseiteBekanntmachungAsync failed");
+                return null;
+            }
+        }
+
+        public async Task<StartseiteTerminRecord?> SaveStartseiteTerminAsync(StartseiteTerminRecord record)
+        {
+            try
+            {
+                await InitializeAsync();
+                if (_client == null) return null;
+                if (record == null) return null;
+
+                if (record.Id > 0)
+                {
+                    var resp = await _client
+                        .From<StartseiteTerminRecord>()
+                        .Where(x => x.Id == record.Id)
+                        .Update(record);
+
+                    return resp?.Models?.FirstOrDefault();
+                }
+
+                var insertResp = await _client
+                    .From<StartseiteTerminRecord>()
+                    .Insert(record);
+
+                return insertResp?.Models?.FirstOrDefault();
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "SaveStartseiteTerminAsync failed");
+                return null;
+            }
+        }
+
+        public async Task<StartseiteArbeitseinsatzRecord?> SaveStartseiteArbeitseinsatzAsync(StartseiteArbeitseinsatzRecord record)
+        {
+            try
+            {
+                await InitializeAsync();
+                if (_client == null) return null;
+                if (record == null) return null;
+
+                if (record.Id > 0)
+                {
+                    var resp = await _client
+                        .From<StartseiteArbeitseinsatzRecord>()
+                        .Where(x => x.Id == record.Id)
+                        .Update(record);
+
+                    return resp?.Models?.FirstOrDefault();
+                }
+
+                var insertResp = await _client
+                    .From<StartseiteArbeitseinsatzRecord>()
+                    .Insert(record);
+
+                return insertResp?.Models?.FirstOrDefault();
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "SaveStartseiteArbeitseinsatzAsync failed");
+                return null;
+            }
         }
 
         public async Task<List<StartseiteTerminRecord>> GetStartseiteTermineAsync()
@@ -2107,6 +2436,12 @@ namespace KGV.Infrastructure.Services
                 record.Handy = dto.Mobilnummer;
                 record.Bemerkung = dto.Bemerkungen;
                 record.WhatsappEinwilligung = dto.WhatsappEinwilligung;
+
+                // Pflichtstunden-/Altersregel läuft fachlich über das Hauptmitglied.
+                // UI steuert, ob das Feld beim Nebenmitglied editierbar ist; Service mappt es nur durch.
+                record.ArbeitsstundenAltersregelTyp = string.IsNullOrWhiteSpace(dto.ArbeitsstundenAltersregelTyp)
+                    ? "keine"
+                    : dto.ArbeitsstundenAltersregelTyp;
 
                 record.MitgliedSeit = NormalizeDate(dto.MitgliedSeit);
                 record.MitgliedEnde = NormalizeDate(dto.MitgliedEnde);

@@ -17,6 +17,10 @@ public sealed class MyProfilePage : ContentPage
     private bool _isBusy;
     private Task? _loadTask;
 
+    private bool _isEditMode;
+    private bool _isDirty;
+    private OwnContactSnapshot? _snapshot;
+
     private readonly ActivityIndicator _busyIndicator;
     private readonly Label _nameLabel;
     private readonly Label _emailLabel;
@@ -28,7 +32,10 @@ public sealed class MyProfilePage : ContentPage
     private readonly Entry _ortEntry;
 
     private readonly Label _statusLabel;
+    private readonly Label _editModeHint;
+    private readonly Button _editButton;
     private readonly Button _saveButton;
+    private readonly Button _cancelButton;
     private readonly Button _checkAddressButton;
 
     public MyProfilePage(ISupabaseService supabaseService, UserContextState state)
@@ -52,6 +59,17 @@ public sealed class MyProfilePage : ContentPage
 
         _statusLabel = new Label { TextColor = Colors.Red };
 
+        _editModeHint = new Label
+        {
+            Text = "Bearbeitungsmodus aktiv",
+            TextColor = Colors.DarkOrange,
+            FontAttributes = FontAttributes.Bold,
+            IsVisible = false
+        };
+
+        _editButton = new Button { Text = "Bearbeiten" };
+        _editButton.Clicked += (_, __) => ToggleEdit();
+
         _checkAddressButton = new Button { Text = "Adresse prüfen" };
         _checkAddressButton.Clicked += OnCheckAddressClicked;
 
@@ -60,6 +78,9 @@ public sealed class MyProfilePage : ContentPage
 
         _saveButton = new Button { Text = "Speichern" };
         _saveButton.Clicked += OnSaveClicked;
+
+        _cancelButton = new Button { Text = "Abbrechen" };
+        _cancelButton.Clicked += (_, __) => CancelEdit();
 
         object? cardStyleObj = null;
         if (Application.Current?.Resources != null)
@@ -93,6 +114,7 @@ public sealed class MyProfilePage : ContentPage
             {
                 _nameLabel,
                 readOnlyStyle != null ? new Border { Style = readOnlyStyle, Content = _emailLabel } : _emailLabel,
+                _editModeHint,
                 _statusLabel
             }
         };
@@ -123,7 +145,7 @@ public sealed class MyProfilePage : ContentPage
         var actions = new HorizontalStackLayout
         {
             Spacing = 12,
-            Children = { _checkAddressButton, _saveButton }
+            Children = { _editButton, _saveButton, _cancelButton, _checkAddressButton }
         };
 
         Content = new ScrollView
@@ -145,6 +167,12 @@ public sealed class MyProfilePage : ContentPage
 
         Appearing += OnAppearing;
         Disappearing += (_, _) => _statusLabel.Text = string.Empty;
+
+        _telefonEntry.TextChanged += (_, __) => MarkDirtyIfEditing();
+        _handyEntry.TextChanged += (_, __) => MarkDirtyIfEditing();
+        _adresseEntry.TextChanged += (_, __) => MarkDirtyIfEditing();
+        _plzEntry.TextChanged += (_, __) => MarkDirtyIfEditing();
+        _ortEntry.TextChanged += (_, __) => MarkDirtyIfEditing();
 
         UpdateUiState();
     }
@@ -202,6 +230,10 @@ public sealed class MyProfilePage : ContentPage
             _ortEntry.Text = rec.Ort ?? string.Empty;
 
             _statusLabel.Text = string.Empty;
+
+            _isEditMode = false;
+            _isDirty = false;
+            _snapshot = null;
         }
         catch (Exception ex)
         {
@@ -218,6 +250,9 @@ public sealed class MyProfilePage : ContentPage
     private async void OnSaveClicked(object? sender, EventArgs e)
     {
         if (_isBusy)
+            return;
+
+        if (!_isEditMode)
             return;
 
         if (_member == null)
@@ -263,6 +298,9 @@ public sealed class MyProfilePage : ContentPage
             }
 
             await DisplayAlert("OK", "Gespeichert.", "OK");
+            _isEditMode = false;
+            _isDirty = false;
+            _snapshot = null;
             await LoadAsync();
         }
         catch (Exception ex)
@@ -277,6 +315,9 @@ public sealed class MyProfilePage : ContentPage
 
     private async void OnCheckAddressClicked(object? sender, EventArgs e)
     {
+        if (!_isEditMode)
+            return;
+
         // Stub: funktioniert auch ohne API-Key
         var adresse = (_adresseEntry.Text ?? string.Empty).Trim();
         var plz = (_plzEntry.Text ?? string.Empty).Trim();
@@ -335,16 +376,44 @@ public sealed class MyProfilePage : ContentPage
     private void UpdateUiState()
     {
         var hasMember = _member != null;
-        var canEdit = !_isBusy && hasMember;
+        var canInteract = !_isBusy && hasMember;
+        var canEditFields = canInteract && _isEditMode;
 
-        _telefonEntry.IsEnabled = canEdit;
-        _handyEntry.IsEnabled = canEdit;
-        _adresseEntry.IsEnabled = canEdit;
-        _plzEntry.IsEnabled = canEdit;
-        _ortEntry.IsEnabled = canEdit;
+        _telefonEntry.IsEnabled = canInteract;
+        _handyEntry.IsEnabled = canInteract;
+        _adresseEntry.IsEnabled = canInteract;
+        _plzEntry.IsEnabled = canInteract;
+        _ortEntry.IsEnabled = canInteract;
 
-        _saveButton.IsEnabled = canEdit;
-        _checkAddressButton.IsEnabled = canEdit;
+        _telefonEntry.IsReadOnly = !canEditFields;
+        _handyEntry.IsReadOnly = !canEditFields;
+        _adresseEntry.IsReadOnly = !canEditFields;
+        _plzEntry.IsReadOnly = !canEditFields;
+        _ortEntry.IsReadOnly = !canEditFields;
+
+        _editButton.IsEnabled = canInteract;
+        _editModeHint.IsVisible = _isEditMode;
+
+        if (_isEditMode)
+        {
+            _editButton.Text = "Bearbeiten (aktiv)";
+            _editButton.BackgroundColor = Colors.DarkOrange;
+            _editButton.TextColor = Colors.White;
+        }
+        else
+        {
+            _editButton.Text = "Bearbeiten";
+            _editButton.BackgroundColor = Colors.Transparent;
+            _editButton.TextColor = Colors.Black;
+        }
+
+        _saveButton.IsVisible = _isEditMode;
+        _cancelButton.IsVisible = _isEditMode;
+        _checkAddressButton.IsVisible = _isEditMode;
+
+        _saveButton.IsEnabled = canEditFields && _isDirty;
+        _cancelButton.IsEnabled = canEditFields;
+        _checkAddressButton.IsEnabled = canEditFields;
     }
 
     private void ClearUi(string message)
@@ -359,6 +428,69 @@ public sealed class MyProfilePage : ContentPage
         _ortEntry.Text = string.Empty;
 
         _statusLabel.Text = message;
+
+        _isEditMode = false;
+        _isDirty = false;
+        _snapshot = null;
         UpdateUiState();
     }
+
+    private void ToggleEdit()
+    {
+        if (_isBusy)
+            return;
+
+        if (_isEditMode)
+        {
+            CancelEdit();
+            return;
+        }
+
+        _snapshot = CaptureSnapshot();
+        _isEditMode = true;
+        _isDirty = false;
+        UpdateUiState();
+    }
+
+    private void CancelEdit()
+    {
+        if (!_isEditMode)
+            return;
+
+        if (_snapshot != null)
+            ApplySnapshot(_snapshot);
+
+        _isEditMode = false;
+        _isDirty = false;
+        _snapshot = null;
+        UpdateUiState();
+    }
+
+    private void MarkDirtyIfEditing()
+    {
+        if (!_isEditMode || _snapshot == null)
+            return;
+
+        _isDirty = !CaptureSnapshot().Equals(_snapshot);
+        UpdateUiState();
+    }
+
+    private OwnContactSnapshot CaptureSnapshot()
+        => new(
+            Telefon: (_telefonEntry.Text ?? string.Empty).Trim(),
+            Handy: (_handyEntry.Text ?? string.Empty).Trim(),
+            Adresse: (_adresseEntry.Text ?? string.Empty).Trim(),
+            Plz: (_plzEntry.Text ?? string.Empty).Trim(),
+            Ort: (_ortEntry.Text ?? string.Empty).Trim());
+
+    private void ApplySnapshot(OwnContactSnapshot snap)
+    {
+        _telefonEntry.Text = snap.Telefon;
+        _handyEntry.Text = snap.Handy;
+        _adresseEntry.Text = snap.Adresse;
+        _plzEntry.Text = snap.Plz;
+        _ortEntry.Text = snap.Ort;
+    }
+
+    private sealed record OwnContactSnapshot(string Telefon, string Handy, string Adresse, string Plz, string Ort);
 }

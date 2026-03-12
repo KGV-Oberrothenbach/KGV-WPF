@@ -44,10 +44,32 @@
         </Style>
 
         <Style x:Key="EditButtonStyle" TargetType="{x:Type Button}" BasedOn="{StaticResource PrimaryButton}">
-            <Setter Property="IsEnabled" Value="True"/>
             <Style.Triggers>
                 <DataTrigger Binding="{Binding IsEditMode}" Value="True">
-                    <Setter Property="IsEnabled" Value="False"/>
+                    <Setter Property="Background" Value="DarkOrange" />
+                    <Setter Property="Foreground" Value="White" />
+                    <Setter Property="Content" Value="Bearbeiten (aktiv)" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="EditModeHintTextStyle" TargetType="{x:Type TextBlock}">
+            <Setter Property="Visibility" Value="Collapsed" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="DarkOrange" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsEditMode}" Value="True">
+                    <Setter Property="Visibility" Value="Visible" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="EditModeComboBoxStyle" TargetType="{x:Type ComboBox}">
+            <Setter Property="IsEnabled" Value="False" />
+            <Setter Property="Margin" Value="0,2,0,0" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsEditMode}" Value="True">
+                    <Setter Property="IsEnabled" Value="True" />
                 </DataTrigger>
             </Style.Triggers>
         </Style>
@@ -146,15 +168,23 @@
                         </Style>
                     </TextBlock.Style>
                 </TextBlock>
+
+                <TextBlock Text="Bearbeitungsmodus aktiv"
+                           Margin="0,6,0,0"
+                           Style="{StaticResource EditModeHintTextStyle}" />
             </StackPanel>
 
             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                 <Button Content="Bearbeiten" Width="140" Height="35" Margin="0,0,10,0"
                         Style="{StaticResource EditButtonStyle}" Command="{Binding ToggleEditCommand}"/>
                 <Button Content="Speichern" Width="140" Height="35" Margin="0,0,10,0"
-                        Style="{StaticResource SaveButtonStyle}" Command="{Binding SaveCommand}"/>
+                        Style="{StaticResource SaveButtonStyle}"
+                        Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVisibility}}"
+                        Command="{Binding SaveCommand}"/>
                 <Button Content="Abbrechen" Width="140" Height="35" Margin="0,0,10,0"
-                        Style="{StaticResource CancelButtonStyle}" Command="{Binding CancelCommand}"/>
+                        Style="{StaticResource CancelButtonStyle}"
+                        Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVisibility}}"
+                        Command="{Binding CancelCommand}"/>
 
                 <Button Width="200" Height="35" Margin="0,0,10,0"
                         Content="{Binding NebenmitgliedButtonText}"
@@ -164,6 +194,10 @@
                 <Button Content="Adresse übernehmen" Width="200" Height="35" Margin="0,0,10,0"
                         Visibility="{Binding ShowAdresseUebernehmenButton, Converter={StaticResource BoolToVisibility}}"
                         Command="{Binding CopyAddressFromHauptmitgliedCommand}" />
+
+                <Button Content="Zum Hauptmitglied" Width="200" Height="35" Margin="0,0,10,0"
+                        Visibility="{Binding ShowGoToHauptmitgliedButton, Converter={StaticResource BoolToVisibility}}"
+                        Command="{Binding GoToHauptmitgliedCommand}" />
             </StackPanel>
         </Grid>
 
@@ -176,6 +210,7 @@
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="2*"/>
                             <ColumnDefinition Width="2*"/>
+                            <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
 
@@ -192,6 +227,14 @@
                         <StackPanel Grid.Column="2" Margin="5">
                             <TextBlock Text="Geburtsdatum"/>
                             <DatePicker SelectedDate="{Binding SelectedMember.Geburtsdatum, UpdateSourceTrigger=PropertyChanged}"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="3" Margin="5"
+                                    Visibility="{Binding IsHauptmitglied, Converter={StaticResource BoolToVisibility}}">
+                            <TextBlock Text="Altersregel"/>
+                            <ComboBox Style="{StaticResource EditModeComboBoxStyle}"
+                                      ItemsSource="{Binding ArbeitsstundenAltersregelTypOptions}"
+                                      SelectedItem="{Binding SelectedMember.ArbeitsstundenAltersregelTyp, UpdateSourceTrigger=PropertyChanged}" />
                         </StackPanel>
                     </Grid>
                 </GroupBox>

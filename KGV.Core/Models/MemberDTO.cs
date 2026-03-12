@@ -161,6 +161,13 @@ namespace KGV.Core.Models
             set => SetField(ref _role, value ?? "", nameof(Role));
         }
 
+        private string _arbeitsstundenAltersregelTyp = "keine";
+        public string ArbeitsstundenAltersregelTyp
+        {
+            get => _arbeitsstundenAltersregelTyp;
+            set => SetField(ref _arbeitsstundenAltersregelTyp, (value ?? "keine").Trim().ToLowerInvariant(), nameof(ArbeitsstundenAltersregelTyp));
+        }
+
         private Guid? _authUserId;
         public Guid? AuthUserId
         {
@@ -224,6 +231,8 @@ namespace KGV.Core.Models
                 Role = other.Role;
                 AuthUserId = other.AuthUserId;
 
+                ArbeitsstundenAltersregelTyp = other.ArbeitsstundenAltersregelTyp;
+
                 Gärten = other.Gärten != null ? new List<GartenDTO>(other.Gärten) : new List<GartenDTO>();
             }
             finally
@@ -252,7 +261,8 @@ namespace KGV.Core.Models
                 MitgliedSeit == other.MitgliedSeit &&
                 MitgliedEnde == other.MitgliedEnde &&
                 string.Equals(Role ?? "", other.Role ?? "", StringComparison.Ordinal) &&
-                AuthUserId == other.AuthUserId;
+                AuthUserId == other.AuthUserId &&
+                string.Equals(ArbeitsstundenAltersregelTyp ?? "", other.ArbeitsstundenAltersregelTyp ?? "", StringComparison.Ordinal);
         }
     }
 }

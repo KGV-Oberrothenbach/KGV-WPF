@@ -1,7 +1,9 @@
+using CommunityToolkit.Mvvm.Messaging;
 using KGV.Core.Interfaces;
 using KGV.Core.Models;
 using KGV.Core.Security;
 using KGV.Wpf.Helpers;
+using KGV.Wpf.Messages;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
@@ -67,9 +69,30 @@ namespace KGV.Wpf.ViewModels
 
         public ICommand ArbeitseinsatzActionCommand { get; }
 
+        public ICommand EditBekanntmachungenCommand { get; }
+        public ICommand EditTermineCommand { get; }
+        public ICommand EditArbeitseinsaetzeCommand { get; }
+
+        public bool CanEditStartseite => _userContext.Role == UserRole.Admin || _userContext.Role == UserRole.Vorstand;
+
         public ObservableCollection<BekanntmachungItem> Bekanntmachungen { get; } = new();
         public ObservableCollection<TerminItem> Termine { get; } = new();
         public ObservableCollection<ArbeitseinsatzItem> Arbeitseinsaetze { get; } = new();
+
+        private PflichtstundenTile? _pflichtstunden;
+        public PflichtstundenTile? Pflichtstunden
+        {
+            get => _pflichtstunden;
+            private set
+            {
+                if (SetProperty(ref _pflichtstunden, value))
+                {
+                    OnPropertyChanged(nameof(ShowPflichtstunden));
+                }
+            }
+        }
+
+        public bool ShowPflichtstunden => Pflichtstunden != null;
 
         private string _statusText = string.Empty;
         public string StatusText
@@ -105,6 +128,22 @@ namespace KGV.Wpf.ViewModels
             _userContext = userContext ?? throw new ArgumentNullException(nameof(userContext));
 
             ArbeitseinsatzActionCommand = new RelayCommand<ArbeitseinsatzItem>(item => _ = ExecuteArbeitseinsatzActionAsync(item));
+
+            EditBekanntmachungenCommand = new RelayCommand<object?>(_ =>
+                WeakReferenceMessenger.Default.Send(new NavigateToViewModelMessage(typeof(BekanntmachungenVerwaltungViewModel))));
+
+            EditTermineCommand = new RelayCommand<object?>(_ =>
+                WeakReferenceMessenger.Default.Send(new NavigateToViewModelMessage(typeof(TermineVerwaltungViewModel))));
+
+            EditArbeitseinsaetzeCommand = new RelayCommand<object?>(_ =>
+                WeakReferenceMessenger.Default.Send(new NavigateToViewModelMessage(typeof(ArbeitseinsaetzeVerwaltungViewModel))));
+
+            WeakReferenceMessenger.Default.Register<SeasonChangedMessage>(this, (_, msg) =>
+            {
+                // Pflichtstunden sollen zur aktuell gewählten Saison passen.
+                _selectedJahr = msg.Jahr;
+                _ = LoadPflichtstundenAsync();
+            });
         }
 
         public Task OnNavigatedFromAsync() => Task.CompletedTask;
@@ -141,6 +180,8 @@ namespace KGV.Wpf.ViewModels
                 UpdateBekanntmachungen(bekTask.Result ?? new List<StartseiteBekanntmachungRecord>());
                 UpdateTermine(terTask.Result ?? new List<StartseiteTerminRecord>());
                 UpdateArbeitseinsaetze(arbTask.Result ?? new List<StartseiteArbeitseinsatzRecord>(), mySignups);
+
+                await LoadPflichtstundenAsync();
             }
             catch (Exception ex)
             {
@@ -148,11 +189,63 @@ namespace KGV.Wpf.ViewModels
                 UpdateBekanntmachungen(new List<StartseiteBekanntmachungRecord>());
                 UpdateTermine(new List<StartseiteTerminRecord>());
                 UpdateArbeitseinsaetze(new List<StartseiteArbeitseinsatzRecord>(), new HashSet<long>());
+
+                Pflichtstunden = null;
             }
             finally
             {
                 IsBusy = false;
                 _opLock.Release();
+            }
+        }
+
+        private int _selectedJahr = DateTime.Today.Year;
+
+        private async Task LoadPflichtstundenAsync()
+        {
+            try
+            {
+                if (!_userContext.MitgliedId.HasValue || _userContext.MitgliedId.Value <= 0 || _userContext.MitgliedId.Value > int.MaxValue)
+                {
+                    Pflichtstunden = null;
+                    return;
+                }
+
+                var myMitgliedId = (int)_userContext.MitgliedId.Value;
+                var member = await _supabaseService.GetMitgliedByIdAsync(myMitgliedId);
+                if (member == null)
+                {
+                    Pflichtstunden = null;
+                    return;
+                }
+
+                var hauptmitgliedId = member.HauptmitgliedId ?? member.Id;
+                if (hauptmitgliedId <= 0)
+                {
+                    Pflichtstunden = null;
+                    return;
+                }
+
+                var saisonen = await _supabaseService.GetSaisonRecordsAsync();
+                var saison = saisonen?.FirstOrDefault(x => x.Jahr == _selectedJahr);
+                if (saison == null)
+                {
+                    Pflichtstunden = null;
+                    return;
+                }
+
+                var rec = await _supabaseService.GetPflichtstundenUebersichtAsync(hauptmitgliedId, saison.Id);
+                if (rec == null)
+                {
+                    Pflichtstunden = null;
+                    return;
+                }
+
+                Pflichtstunden = new PflichtstundenTile(rec);
+            }
+            catch
+            {
+                Pflichtstunden = null;
             }
         }
 
@@ -253,6 +346,23 @@ namespace KGV.Wpf.ViewModels
                     return $"{d} • {t}";
                 }
             }
+        }
+
+        public sealed class PflichtstundenTile
+        {
+            public PflichtstundenTile(PflichtstundenUebersichtRecord rec)
+            {
+                Rec = rec;
+            }
+
+            public PflichtstundenUebersichtRecord Rec { get; }
+
+            public string SaisonText => Rec.Jahr.ToString(DeCulture);
+            public string SollText => Rec.Sollstunden.ToString("0.##", DeCulture);
+            public string GeleistetText => Rec.Geleistet.ToString("0.##", DeCulture);
+            public string OffenText => Rec.Offen.ToString("0.##", DeCulture);
+            public string BefreiungsgrundText => (Rec.Befreiungsgrund ?? string.Empty).Trim();
+            public bool HasBefreiungsgrund => !string.IsNullOrWhiteSpace(BefreiungsgrundText);
         }
 
         public sealed class ArbeitseinsatzItem

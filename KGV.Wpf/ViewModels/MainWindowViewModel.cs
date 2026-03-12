@@ -38,6 +38,9 @@ namespace KGV.Wpf.ViewModels
                 if (_selectedSeason == value) return;
                 _selectedSeason = value;
                 OnPropertyChanged();
+
+                if (int.TryParse(_selectedSeason, out var year))
+                    WeakReferenceMessenger.Default.Send(new SeasonChangedMessage(year));
             }
         }
 
@@ -146,7 +149,7 @@ namespace KGV.Wpf.ViewModels
 
             NavigateCommand = new RelayCommand<NavigationItem>(item => _ = NavigateByItemAsync(item));
 
-            SeedSeasons();
+            _ = LoadSeasonsAsync();
             BuildNavigation();
             BuildMemberNavigation();
             UpdateNavigationVisibility();
@@ -224,6 +227,11 @@ namespace KGV.Wpf.ViewModels
 
             try
             {
+                // Wenn explizit ein MemberDTO als Parameter mitkommt (z.B. "Zum Hauptmitglied"),
+                // dann muss der globale Kontext (Sidebar/Member-Menü) mitgezogen werden.
+                if (msg.ViewModelType == typeof(MemberDetailViewModel) && msg.Parameter is MemberDTO md)
+                    SelectedMember = md;
+
                 var created = _navigationService.CreateViewModel(msg.ViewModelType, this, msg.Parameter);
                 if (created is BaseViewModel vm)
                     await NavigateToAsync(vm);
@@ -247,12 +255,42 @@ namespace KGV.Wpf.ViewModels
 
         private void SeedSeasons()
         {
+            // Legacy fallback: keeps UI usable if DB is offline during startup.
             if (Seasons.Count > 0) return;
 
-            Seasons.Add("2024");
-            Seasons.Add("2025");
-            Seasons.Add("2026");
-            SelectedSeason = "2026";
+            var year = DateTime.Today.Year;
+            Seasons.Add(year.ToString());
+            SelectedSeason = year.ToString();
+        }
+
+        private async Task LoadSeasonsAsync()
+        {
+            try
+            {
+                var saisonen = await _supabaseService.GetSaisonRecordsAsync();
+                if (saisonen == null || saisonen.Count == 0)
+                {
+                    SeedSeasons();
+                    return;
+                }
+
+                var years = saisonen
+                    .Select(x => x.Jahr)
+                    .Distinct()
+                    .OrderByDescending(x => x)
+                    .ToList();
+
+                Seasons.Clear();
+                foreach (var y in years)
+                    Seasons.Add(y.ToString());
+
+                var todayYear = DateTime.Today.Year;
+                SelectedSeason = years.Contains(todayYear) ? todayYear.ToString() : years.First().ToString();
+            }
+            catch
+            {
+                SeedSeasons();
+            }
         }
 
         private void BuildNavigation()
@@ -293,6 +331,16 @@ namespace KGV.Wpf.ViewModels
                 {
                     Title = "Ablesen",
                     ViewModelType = typeof(AblesenViewModel),
+                    IsVisible = true
+                });
+            }
+
+            if (UserContext.Has(PermissionFlags.CanManageWorkHours))
+            {
+                NavigationItems.Add(new NavigationItem
+                {
+                    Title = "Saison",
+                    ViewModelType = typeof(SaisonViewModel),
                     IsVisible = true
                 });
             }
@@ -392,7 +440,8 @@ namespace KGV.Wpf.ViewModels
                 Nachname = m.Name ?? string.Empty,
                 Email = m.Email ?? string.Empty,
                 Role = m.Role ?? string.Empty,
-                AuthUserId = m.AuthUserId
+                AuthUserId = m.AuthUserId,
+                ArbeitsstundenAltersregelTyp = m.ArbeitsstundenAltersregelTyp ?? "keine"
             };
         }
 

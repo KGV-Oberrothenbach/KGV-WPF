@@ -11,7 +11,10 @@ public sealed class MemberSearchViewModel : INotifyPropertyChanged
     private readonly ISupabaseService _supabaseService;
 
     private readonly List<MemberDTO> _allMembers = new();
+    private readonly Dictionary<int, MemberDTO> _memberById = new();
+    private readonly Dictionary<int, int?> _hauptmitgliedIdByMemberId = new();
     private readonly List<ParzelleRecord> _allParzellen = new();
+    private readonly Dictionary<int, ParzellenBelegungRecord> _activeBelegungByParzelleId = new();
 
     public ObservableCollection<MemberSearchResultItem> Results { get; } = new();
     public ObservableCollection<string> DebugMessages { get; } = new();
@@ -44,6 +47,21 @@ public sealed class MemberSearchViewModel : INotifyPropertyChanged
             OnPropertyChanged();
 
             _ = EnsureDataLoadedAsync();
+            UpdateFilter();
+        }
+    }
+
+    private bool _includeNebenmitglieder;
+    public bool IncludeNebenmitglieder
+    {
+        get => _includeNebenmitglieder;
+        set
+        {
+            if (_includeNebenmitglieder == value)
+                return;
+
+            _includeNebenmitglieder = value;
+            OnPropertyChanged();
             UpdateFilter();
         }
     }
@@ -121,7 +139,10 @@ public sealed class MemberSearchViewModel : INotifyPropertyChanged
             await EnsureMembersLoadedAsync();
 
             if (SearchByParzelle)
+            {
                 await EnsureParzellenLoadedAsync();
+                await EnsureActiveBelegungenLoadedAsync();
+            }
         }
         catch (Exception ex)
         {
@@ -130,6 +151,7 @@ public sealed class MemberSearchViewModel : INotifyPropertyChanged
         finally
         {
             IsBusy = false;
+            UpdateFilter();
         }
     }
 
@@ -145,7 +167,10 @@ public sealed class MemberSearchViewModel : INotifyPropertyChanged
         var members = await _supabaseService.GetMitgliederAsync();
         foreach (var m in members)
         {
-            _allMembers.Add(MapToDTO(m));
+            var dto = MapToDTO(m);
+            _allMembers.Add(dto);
+            _memberById[dto.Id] = dto;
+            _hauptmitgliedIdByMemberId[dto.Id] = m.HauptmitgliedId;
         }
 
         DebugMessages.Add($"✅ {_allMembers.Count} Mitglieder geladen.");
@@ -163,6 +188,33 @@ public sealed class MemberSearchViewModel : INotifyPropertyChanged
         _allParzellen.AddRange(pars);
 
         DebugMessages.Add($"✅ {_allParzellen.Count} Parzellen geladen.");
+    }
+
+    private async Task EnsureActiveBelegungenLoadedAsync()
+    {
+        if (_activeBelegungByParzelleId.Count > 0)
+            return;
+
+        IsBusy = true;
+        DebugMessages.Add("⚡ Lade Belegungen von Supabase...");
+
+        var allBelegungen = await _supabaseService.GetAllParzellenBelegungenAsync();
+        var today = DateTime.Today;
+
+        _activeBelegungByParzelleId.Clear();
+
+        foreach (var grp in allBelegungen.GroupBy(b => b.ParzelleId))
+        {
+            var active = grp
+                .Where(x => (x.VonDatum ?? DateTime.MinValue).Date <= today && (x.BisDatum == null || x.BisDatum.Value.Date >= today))
+                .OrderByDescending(x => x.VonDatum ?? DateTime.MinValue)
+                .FirstOrDefault();
+
+            if (active != null)
+                _activeBelegungByParzelleId[active.ParzelleId] = active;
+        }
+
+        DebugMessages.Add($"✅ {_activeBelegungByParzelleId.Count} aktive Belegungen geladen.");
     }
 
     private void UpdateFilter()
@@ -183,15 +235,39 @@ public sealed class MemberSearchViewModel : INotifyPropertyChanged
                          .OrderBy(p => GetGartenNrSortKey(p.GartenNr))
                          .ThenBy(p => p.GartenNr, StringComparer.CurrentCultureIgnoreCase))
             {
-                Results.Add(new MemberSearchResultItem($"Garten {p.GartenNr}", p.Anlage, p));
+                var pachterText = "(frei)";
+                int? pachtHauptmitgliedId = null;
+
+                if (_activeBelegungByParzelleId.TryGetValue(p.Id, out var beleg))
+                {
+                    var hmId = _hauptmitgliedIdByMemberId.TryGetValue(beleg.MitgliedId, out var tmp) ? tmp : null;
+                    pachtHauptmitgliedId = hmId ?? beleg.MitgliedId;
+
+                    if (pachtHauptmitgliedId.HasValue && _memberById.TryGetValue(pachtHauptmitgliedId.Value, out var pachter))
+                        pachterText = FormatMemberTitle(pachter);
+                    else
+                        pachterText = $"#{pachtHauptmitgliedId}";
+                }
+
+                var subtitle = string.IsNullOrWhiteSpace(p.Anlage)
+                    ? $"Pächter: {pachterText}"
+                    : $"{p.Anlage} – Pächter: {pachterText}";
+
+                Results.Add(new MemberSearchResultItem($"Garten {p.GartenNr}", subtitle, new ParzelleSearchResult(p, pachtHauptmitgliedId)));
             }
 
             return;
         }
 
         var memberMatches = string.IsNullOrEmpty(text)
-            ? _allMembers
+            ? _allMembers.AsEnumerable()
             : _allMembers.Where(m => MatchesMemberSearch(m, text));
+
+        if (!IncludeNebenmitglieder)
+        {
+            memberMatches = memberMatches.Where(m =>
+                !_hauptmitgliedIdByMemberId.TryGetValue(m.Id, out var hmId) || hmId == null);
+        }
 
         foreach (var m in memberMatches
                      .OrderBy(m => m.Nachname, StringComparer.CurrentCultureIgnoreCase)
@@ -201,7 +277,11 @@ public sealed class MemberSearchViewModel : INotifyPropertyChanged
             var subtitle = string.IsNullOrWhiteSpace(m.Email) ? null : m.Email;
             Results.Add(new MemberSearchResultItem(FormatMemberTitle(m), subtitle, m));
         }
+
+        return;
     }
+
+    public sealed record ParzelleSearchResult(ParzelleRecord Parzelle, int? PachtHauptmitgliedId);
 
     private static string FormatMemberTitle(MemberDTO m)
     {

@@ -21,6 +21,9 @@
             <CheckBox Content="nach Gartennummer suchen"
                       Margin="12,0,0,0"
                       IsChecked="{Binding SearchByParzelle}" />
+            <CheckBox Content="auch Nebenmitglieder"
+                      Margin="12,0,0,0"
+                      IsChecked="{Binding IncludeNebenmitglieder}" />
         </StackPanel>
 
         <StackPanel Grid.Row="2">
@@ -34,10 +37,21 @@
                 <!-- Wir zeigen Name/Nachname robust an – ohne Converter -->
                 <ListView.View>
                     <GridView>
-                        <GridViewColumn Header="Name"
-                                        DisplayMemberBinding="{Binding Nachname}" />
-                        <GridViewColumn Header="Vorname"
-                                        DisplayMemberBinding="{Binding Vorname}" />
+                        <GridViewColumn DisplayMemberBinding="{Binding Col1}">
+                            <GridViewColumn.Header>
+                                <GridViewColumnHeader Content="{Binding Column1Header}" />
+                            </GridViewColumn.Header>
+                        </GridViewColumn>
+                        <GridViewColumn DisplayMemberBinding="{Binding Col2}">
+                            <GridViewColumn.Header>
+                                <GridViewColumnHeader Content="{Binding Column2Header}" />
+                            </GridViewColumn.Header>
+                        </GridViewColumn>
+                        <GridViewColumn DisplayMemberBinding="{Binding Col3}">
+                            <GridViewColumn.Header>
+                                <GridViewColumnHeader Content="{Binding Column3Header}" />
+                            </GridViewColumn.Header>
+                        </GridViewColumn>
                     </GridView>
                 </ListView.View>
             </ListView>

@@ -23,6 +23,23 @@ namespace KGV.Wpf.ViewModels
 
         public MemberDTO SelectedMember { get; }
 
+        public ObservableCollection<string> ArbeitsstundenAltersregelTypOptions { get; } = new()
+        {
+            "keine",
+            "frau75",
+            "mann80"
+        };
+
+        private bool _isHauptmitglied;
+        public bool IsHauptmitglied
+        {
+            get => _isHauptmitglied;
+            private set => SetProperty(ref _isHauptmitglied, value);
+        }
+
+        public bool ShowGoToHauptmitgliedButton => false;
+        public RelayCommand<object?> GoToHauptmitgliedCommand { get; } = new RelayCommand<object?>(_ => { }, _ => false);
+
         public bool ShowParzellenSection => true;
 
         private MitgliedRecord? _nebenmitgliedRecord;
@@ -333,6 +350,9 @@ namespace KGV.Wpf.ViewModels
             SelectedMember.MitgliedEnde = rec.MitgliedEnde;
 
             SelectedMember.Role = rec.Role ?? "";
+                SelectedMember.ArbeitsstundenAltersregelTyp = rec.ArbeitsstundenAltersregelTyp ?? "keine";
+
+            IsHauptmitglied = rec.HauptmitgliedId == null;
 
             _originalSnapshot = SelectedMember.Clone();
         }

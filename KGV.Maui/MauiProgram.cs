@@ -67,8 +67,12 @@ public static class MauiProgram
         builder.Services.AddTransient<ArbeitsstundenReviewPage>();
         builder.Services.AddTransient<AdminRolePage>();
         builder.Services.AddTransient<UserManagementPage>();
+        builder.Services.AddTransient<BekanntmachungenAdminPage>();
+        builder.Services.AddTransient<TermineAdminPage>();
+        builder.Services.AddTransient<ArbeitseinsaetzeAdminPage>();
         builder.Services.AddTransient<MemberArbeitsstundenPage>();
         builder.Services.AddTransient<MemberDokumentePage>();
+        builder.Services.AddTransient<SaisonPage>();
         builder.Services.AddTransient<ExitPage>();
 
         builder.Services.AddSingleton<AdminShell>();

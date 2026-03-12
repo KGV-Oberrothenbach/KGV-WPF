@@ -84,6 +84,26 @@ namespace KGV.Wpf.Infrastructure.Services
                 return new HomeViewModel(_supabaseService, mainVm.UserContext);
             }
 
+            if (viewModelType == typeof(BekanntmachungenVerwaltungViewModel))
+            {
+                return new BekanntmachungenVerwaltungViewModel(_supabaseService, mainVm.UserContext);
+            }
+
+            if (viewModelType == typeof(TermineVerwaltungViewModel))
+            {
+                return new TermineVerwaltungViewModel(_supabaseService, mainVm.UserContext);
+            }
+
+            if (viewModelType == typeof(ArbeitseinsaetzeVerwaltungViewModel))
+            {
+                return new ArbeitseinsaetzeVerwaltungViewModel(_supabaseService, mainVm.UserContext);
+            }
+
+            if (viewModelType == typeof(SaisonViewModel))
+            {
+                return new SaisonViewModel(_supabaseService);
+            }
+
             if (viewModelType == typeof(AblesungErfassenViewModel))
             {
                 return new AblesungErfassenViewModel(_supabaseService);

@@ -22,6 +22,45 @@
                        Visibility="{Binding StatusText, Converter={StaticResource StringNotEmptyToVisibility}}"
                        TextWrapping="Wrap" />
 
+            <!-- Pflichtstunden (optional) -->
+            <Border Margin="0,18,0,0"
+                    Padding="12"
+                    Background="{StaticResource KgvSurfaceBrush}"
+                    BorderBrush="{StaticResource KgvBorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Visibility="{Binding ShowPflichtstunden, Converter={StaticResource BoolToVis}}">
+                <StackPanel>
+                    <TextBlock Text="Pflichtstunden" FontSize="18" FontWeight="Bold" Foreground="{StaticResource KgvTextBrush}" />
+
+                    <UniformGrid Columns="4" Margin="0,10,0,0">
+                        <StackPanel>
+                            <TextBlock Text="Saison" Opacity="0.8" Foreground="{StaticResource KgvMutedBrush}" />
+                            <TextBlock Text="{Binding Pflichtstunden.SaisonText}" FontWeight="SemiBold" />
+                        </StackPanel>
+                        <StackPanel>
+                            <TextBlock Text="Soll" Opacity="0.8" Foreground="{StaticResource KgvMutedBrush}" />
+                            <TextBlock Text="{Binding Pflichtstunden.SollText}" FontWeight="SemiBold" />
+                        </StackPanel>
+                        <StackPanel>
+                            <TextBlock Text="Geleistet" Opacity="0.8" Foreground="{StaticResource KgvMutedBrush}" />
+                            <TextBlock Text="{Binding Pflichtstunden.GeleistetText}" FontWeight="SemiBold" />
+                        </StackPanel>
+                        <StackPanel>
+                            <TextBlock Text="Offen" Opacity="0.8" Foreground="{StaticResource KgvMutedBrush}" />
+                            <TextBlock Text="{Binding Pflichtstunden.OffenText}" FontWeight="SemiBold" />
+                        </StackPanel>
+                    </UniformGrid>
+
+                    <TextBlock Margin="0,10,0,0"
+                               Text="{Binding Pflichtstunden.BefreiungsgrundText}"
+                               Opacity="0.8"
+                               Foreground="{StaticResource KgvMutedBrush}"
+                               Visibility="{Binding Pflichtstunden.HasBefreiungsgrund, Converter={StaticResource BoolToVis}}"
+                               TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
+
             <!-- Bekanntmachungen -->
             <Grid Margin="0,18,0,6">
                 <Grid.ColumnDefinitions>
@@ -31,8 +70,13 @@
 
                 <TextBlock Grid.Column="0" Text="Bekanntmachungen" FontSize="18" FontWeight="Bold" Foreground="{StaticResource KgvTextBrush}" />
 
-                <!-- Platzhalter für spätere Admin-Aktionen (bewusst noch ohne UI) -->
-                <StackPanel Grid.Column="1" Orientation="Horizontal" Visibility="Collapsed" />
+                <Button Grid.Column="1"
+                        Content="Bearbeiten"
+                        Style="{StaticResource PrimaryButton}"
+                        Width="140"
+                        Height="35"
+                        Command="{Binding EditBekanntmachungenCommand}"
+                        Visibility="{Binding CanEditStartseite, Converter={StaticResource BoolToVis}}" />
             </Grid>
 
             <TextBlock Text="{Binding BekanntmachungenEmptyText}"
@@ -65,7 +109,13 @@
                 </Grid.ColumnDefinitions>
 
                 <TextBlock Grid.Column="0" Text="Termine" FontSize="18" FontWeight="Bold" Foreground="{StaticResource KgvTextBrush}" />
-                <StackPanel Grid.Column="1" Orientation="Horizontal" Visibility="Collapsed" />
+                <Button Grid.Column="1"
+                        Content="Bearbeiten"
+                        Style="{StaticResource PrimaryButton}"
+                        Width="140"
+                        Height="35"
+                        Command="{Binding EditTermineCommand}"
+                        Visibility="{Binding CanEditStartseite, Converter={StaticResource BoolToVis}}" />
             </Grid>
 
             <TextBlock Text="{Binding TermineEmptyText}"
@@ -98,7 +148,13 @@
                 </Grid.ColumnDefinitions>
 
                 <TextBlock Grid.Column="0" Text="Arbeitseinsätze" FontSize="18" FontWeight="Bold" Foreground="{StaticResource KgvTextBrush}" />
-                <StackPanel Grid.Column="1" Orientation="Horizontal" Visibility="Collapsed" />
+                <Button Grid.Column="1"
+                        Content="Bearbeiten"
+                        Style="{StaticResource PrimaryButton}"
+                        Width="140"
+                        Height="35"
+                        Command="{Binding EditArbeitseinsaetzeCommand}"
+                        Visibility="{Binding CanEditStartseite, Converter={StaticResource BoolToVis}}" />
             </Grid>
 
             <TextBlock Text="{Binding ArbeitseinsaetzeEmptyText}"

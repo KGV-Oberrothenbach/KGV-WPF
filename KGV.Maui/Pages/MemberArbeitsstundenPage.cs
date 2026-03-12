@@ -1,3 +1,4 @@
+using System.Globalization;
 using KGV.Core.Interfaces;
 using KGV.Core.Models;
 using KGV.Maui.State;
@@ -17,6 +18,13 @@ public sealed class MemberArbeitsstundenPage : ContentPage
 
     private readonly Label _header;
     private readonly Label _subHeader;
+
+    private readonly Label _pflichtHeader;
+    private readonly Label _pflichtSoll;
+    private readonly Label _pflichtIst;
+    private readonly Label _pflichtOffen;
+    private readonly Label _pflichtFehlbetrag;
+    private readonly Label _pflichtGrund;
 
     private readonly DatePicker _datePicker;
     private readonly Entry _hoursEntry;
@@ -39,6 +47,13 @@ public sealed class MemberArbeitsstundenPage : ContentPage
 
         _header = new Label { Text = "Arbeitsstunden", FontSize = 24, FontAttributes = FontAttributes.Bold };
         _subHeader = new Label { Text = string.Empty, Opacity = 0.8 };
+
+        _pflichtHeader = new Label { Text = "Pflichtstunden (Saison)", FontAttributes = FontAttributes.Bold };
+        _pflichtSoll = new Label();
+        _pflichtIst = new Label();
+        _pflichtOffen = new Label();
+        _pflichtFehlbetrag = new Label();
+        _pflichtGrund = new Label { FontSize = 12, TextColor = Colors.Gray };
 
         _datePicker = new DatePicker { Date = DateTime.Today };
         _hoursEntry = new Entry { Placeholder = "Stunden (z.B. 2,5)", Keyboard = Keyboard.Numeric };
@@ -78,6 +93,9 @@ public sealed class MemberArbeitsstundenPage : ContentPage
                 {
                     _header,
                     _subHeader,
+                    _pflichtHeader,
+                    BuildPflichtstundenGrid(),
+                    _pflichtGrund,
                     _busy,
                     _datePicker,
                     _hoursEntry,
@@ -131,6 +149,7 @@ public sealed class MemberArbeitsstundenPage : ContentPage
             _subHeader.Text = $"Mitglied #{memberId.Value}";
 
             await EnsureSeasonAsync();
+            await LoadPflichtstundenAsync(memberId.Value);
             await LoadListAsync(memberId.Value);
 
             if (_items.Count == 0)
@@ -158,6 +177,75 @@ public sealed class MemberArbeitsstundenPage : ContentPage
         var year = DateTime.Today.Year;
         var selected = saisonen.FirstOrDefault(s => s.Jahr == year) ?? saisonen.OrderByDescending(s => s.Jahr).First();
         _currentSaisonId = selected.Id;
+    }
+
+    private async Task LoadPflichtstundenAsync(int selectedMitgliedId)
+    {
+        try
+        {
+            if (!_currentSaisonId.HasValue)
+                return;
+
+            if (selectedMitgliedId <= 0)
+                return;
+
+            var member = await _supabaseService.GetMitgliedByIdAsync(selectedMitgliedId);
+            var hauptmitgliedId = member?.HauptmitgliedId ?? selectedMitgliedId;
+
+            var rec = await _supabaseService.GetPflichtstundenUebersichtAsync(hauptmitgliedId, _currentSaisonId.Value);
+
+            _pflichtSoll.Text = (rec?.Sollstunden).GetValueOrDefault().ToString(CultureInfo.CurrentCulture);
+            _pflichtIst.Text = (rec?.Geleistet).GetValueOrDefault().ToString(CultureInfo.CurrentCulture);
+            _pflichtOffen.Text = (rec?.Offen).GetValueOrDefault().ToString(CultureInfo.CurrentCulture);
+            _pflichtFehlbetrag.Text = (rec?.Fehlbetrag).GetValueOrDefault().ToString(CultureInfo.CurrentCulture);
+            _pflichtGrund.Text = string.IsNullOrWhiteSpace(rec?.Befreiungsgrund) ? (rec?.Regelgrund ?? string.Empty) : rec!.Befreiungsgrund!;
+        }
+        catch
+        {
+            _pflichtSoll.Text = string.Empty;
+            _pflichtIst.Text = string.Empty;
+            _pflichtOffen.Text = string.Empty;
+            _pflichtFehlbetrag.Text = string.Empty;
+            _pflichtGrund.Text = string.Empty;
+        }
+    }
+
+    private Grid BuildPflichtstundenGrid()
+    {
+        static T Place<T>(T view, int row, int col) where T : View
+        {
+            Grid.SetRow(view, row);
+            Grid.SetColumn(view, col);
+            return view;
+        }
+
+        var grid = new Grid
+        {
+            ColumnDefinitions =
+            {
+                new ColumnDefinition(GridLength.Auto),
+                new ColumnDefinition(GridLength.Star),
+                new ColumnDefinition(GridLength.Auto),
+                new ColumnDefinition(GridLength.Star)
+            },
+            RowDefinitions =
+            {
+                new RowDefinition(GridLength.Auto),
+                new RowDefinition(GridLength.Auto)
+            }
+        };
+
+        grid.Children.Add(Place(new Label { Text = "Soll" }, 0, 0));
+        grid.Children.Add(Place(_pflichtSoll, 0, 1));
+        grid.Children.Add(Place(new Label { Text = "Ist" }, 0, 2));
+        grid.Children.Add(Place(_pflichtIst, 0, 3));
+
+        grid.Children.Add(Place(new Label { Text = "Offen" }, 1, 0));
+        grid.Children.Add(Place(_pflichtOffen, 1, 1));
+        grid.Children.Add(Place(new Label { Text = "Fehlbetrag" }, 1, 2));
+        grid.Children.Add(Place(_pflichtFehlbetrag, 1, 3));
+
+        return grid;
     }
 
     private async Task LoadListAsync(int mitgliedId)

@@ -19,6 +19,8 @@ namespace KGV.Wpf.ViewModels
         private readonly ISupabaseService _supabaseService;
         private readonly IAuthService _authService;
 
+        private int _selectedSeasonYear = DateTime.Today.Year;
+
         public MemberDTO Hauptmitglied { get; }
 
         private MemberDTO? _nebenmitglied;
@@ -43,6 +45,13 @@ namespace KGV.Wpf.ViewModels
 
         public ObservableCollection<SaisonRecord> Saisons { get; } = new();
 
+        private PflichtstundenUebersichtRecord? _pflichtstunden;
+        public PflichtstundenUebersichtRecord? Pflichtstunden
+        {
+            get => _pflichtstunden;
+            private set => SetProperty(ref _pflichtstunden, value);
+        }
+
         public RelayCommand<object?> NeueArbeitsstundeCommand { get; }
         public RelayCommand<object?> BearbeitenCommand { get; }
 
@@ -56,11 +65,18 @@ namespace KGV.Wpf.ViewModels
 
             NeueArbeitsstundeCommand = new RelayCommand<object?>(_ => _ = NeueArbeitsstundeAsync());
             BearbeitenCommand = new RelayCommand<object?>(_ => _ = BearbeitenAsync(), _ => SelectedArbeitsstunde != null);
+
+            WeakReferenceMessenger.Default.Register<SeasonChangedMessage>(this, (_, msg) =>
+            {
+                _selectedSeasonYear = msg.Jahr;
+                _ = LoadPflichtstundenAsync();
+            });
         }
 
         public async Task OnNavigatedToAsync()
         {
             await LoadAsync();
+            await LoadPflichtstundenAsync();
         }
 
         public Task OnNavigatedFromAsync() => Task.CompletedTask;
@@ -84,6 +100,33 @@ namespace KGV.Wpf.ViewModels
                 Arbeitsstunden.Add(i);
 
             await EnsureCurrentUserMitgliedIdAsync();
+        }
+
+        private async Task LoadPflichtstundenAsync()
+        {
+            try
+            {
+                if (Saisons.Count == 0)
+                {
+                    Pflichtstunden = null;
+                    return;
+                }
+
+                var saison = Saisons.FirstOrDefault(s => s.Jahr == _selectedSeasonYear)
+                             ?? Saisons.OrderByDescending(s => s.Jahr).FirstOrDefault();
+
+                if (saison == null)
+                {
+                    Pflichtstunden = null;
+                    return;
+                }
+
+                Pflichtstunden = await _supabaseService.GetPflichtstundenUebersichtAsync(Hauptmitglied.Id, saison.Id);
+            }
+            catch
+            {
+                Pflichtstunden = null;
+            }
         }
 
         private async Task EnsureCurrentUserMitgliedIdAsync()

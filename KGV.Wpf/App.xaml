@@ -17,6 +17,18 @@
                 <views:HomeView />
             </DataTemplate>
 
+            <DataTemplate DataType="{x:Type vm:BekanntmachungenVerwaltungViewModel}">
+                <views:BekanntmachungenVerwaltungView />
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type vm:TermineVerwaltungViewModel}">
+                <views:TermineVerwaltungView />
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type vm:ArbeitseinsaetzeVerwaltungViewModel}">
+                <views:ArbeitseinsaetzeVerwaltungView />
+            </DataTemplate>
+
             <DataTemplate DataType="{x:Type vm:MemberSearchViewModel}">
                 <views:MemberSearchView />
             </DataTemplate>
@@ -59,6 +71,10 @@
 
             <DataTemplate DataType="{x:Type vm:ExportViewModel}">
                 <views:ExportView />
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type vm:SaisonViewModel}">
+                <views:SaisonView />
             </DataTemplate>
 
             <DataTemplate DataType="{x:Type vm:AblesenViewModel}">

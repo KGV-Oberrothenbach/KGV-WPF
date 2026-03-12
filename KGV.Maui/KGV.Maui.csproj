@@ -1,4 +1,5 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
 		<RootNamespace>KGV.Maui</RootNamespace>
@@ -20,8 +21,8 @@
 		<AndroidTargetSdkVersion>35</AndroidTargetSdkVersion>
 		<SupportedOSPlatformVersion>21</SupportedOSPlatformVersion>
 
-		<ApplicationDisplayVersion>0.1.3</ApplicationDisplayVersion>
-		<ApplicationVersion>1</ApplicationVersion>
+		<ApplicationDisplayVersion>0.1.4</ApplicationDisplayVersion>
+		<ApplicationVersion>2</ApplicationVersion>
 	</PropertyGroup>
 
 	<!-- Debug stability settings -->
@@ -63,7 +64,8 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#2E7D32" />
+		<!-- AppIcon: Vereinslogo (Dateiname muss lowercase sein, damit Android/Resizetizer akzeptiert) -->
+		<MauiIcon Include="Resources\AppIcon\appicon.png" />
 		<MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#2E7D32" BaseSize="128,128" />
 	</ItemGroup>
 

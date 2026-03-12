@@ -27,6 +27,9 @@ public sealed class AdminShell : Shell, IAppShellInitializer
         {
             Routing.RegisterRoute("ablesen_rfid_einrichten", typeof(RfidEinrichtenPlaceholderPage));
             Routing.RegisterRoute("ablesen_faellige_zaehler", typeof(FaelligeZaehlerPlaceholderPage));
+            Routing.RegisterRoute("bekanntmachungen_admin", typeof(BekanntmachungenAdminPage));
+            Routing.RegisterRoute("termine_admin", typeof(TermineAdminPage));
+            Routing.RegisterRoute("arbeitseinsaetze_admin", typeof(ArbeitseinsaetzeAdminPage));
             _routesRegistered = true;
         }
 
@@ -54,6 +57,20 @@ public sealed class AdminShell : Shell, IAppShellInitializer
                     Title = "Ablesen",
                     Route = "ablesen",
                     ContentTemplate = new DataTemplate(() => _services.GetRequiredService<AblesenPage>())
+                }
+            }
+        });
+
+        Items.Add(new FlyoutItem
+        {
+            Title = "Saison",
+            Items =
+            {
+                new ShellContent
+                {
+                    Title = "Saison",
+                    Route = "saison",
+                    ContentTemplate = new DataTemplate(() => _services.GetRequiredService<SaisonPage>())
                 }
             }
         });

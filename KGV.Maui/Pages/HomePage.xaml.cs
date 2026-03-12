@@ -28,6 +28,26 @@ public sealed class HomePage : ContentPage
     private readonly Label _termineEmpty;
     private readonly Label _arbeitseinsaetzeEmpty;
 
+    private readonly Button _editBekanntmachungen;
+    private readonly Button _editTermine;
+    private readonly Button _editArbeitseinsaetze;
+
+    private readonly Border _pflichtstundenCard;
+    private readonly Label _pfSaison;
+    private readonly Label _pfSoll;
+    private readonly Label _pfGeleistet;
+    private readonly Label _pfOffen;
+    private readonly Label _pfBefreiung;
+
+    private bool CanEditStartseite
+    {
+        get
+        {
+            var role = _userContextAccessor.CurrentUserContext?.Role;
+            return role == UserRole.Admin || role == UserRole.Vorstand;
+        }
+    }
+
     public HomePage(ISupabaseService supabaseService, IUserContextAccessor userContextAccessor, KGV.Maui.Services.IAndroidUpdateService androidUpdateService)
     {
         _supabaseService = supabaseService ?? throw new ArgumentNullException(nameof(supabaseService));
@@ -145,6 +165,81 @@ public sealed class HomePage : ContentPage
             });
         }));
 
+        _editBekanntmachungen = new Button { Text = "Bearbeiten", IsVisible = CanEditStartseite };
+        _editBekanntmachungen.Clicked += async (_, __) => await Shell.Current.GoToAsync("bekanntmachungen_admin");
+
+        _editTermine = new Button { Text = "Bearbeiten", IsVisible = CanEditStartseite };
+        _editTermine.Clicked += async (_, __) => await Shell.Current.GoToAsync("termine_admin");
+
+        _editArbeitseinsaetze = new Button { Text = "Bearbeiten", IsVisible = CanEditStartseite };
+        _editArbeitseinsaetze.Clicked += async (_, __) => await Shell.Current.GoToAsync("arbeitseinsaetze_admin");
+
+        var bekanntHeader = new Grid
+        {
+            ColumnDefinitions = { new ColumnDefinition { Width = GridLength.Star }, new ColumnDefinition { Width = GridLength.Auto } }
+        };
+        bekanntHeader.Add(new Label { Text = "Bekanntmachungen", FontSize = 18, FontAttributes = FontAttributes.Bold }, 0, 0);
+        bekanntHeader.Add(_editBekanntmachungen, 1, 0);
+
+        var termineHeader = new Grid
+        {
+            ColumnDefinitions = { new ColumnDefinition { Width = GridLength.Star }, new ColumnDefinition { Width = GridLength.Auto } }
+        };
+        termineHeader.Add(new Label { Text = "Termine", FontSize = 18, FontAttributes = FontAttributes.Bold }, 0, 0);
+        termineHeader.Add(_editTermine, 1, 0);
+
+        var arbeitHeader = new Grid
+        {
+            ColumnDefinitions = { new ColumnDefinition { Width = GridLength.Star }, new ColumnDefinition { Width = GridLength.Auto } }
+        };
+        arbeitHeader.Add(new Label { Text = "Arbeitseinsätze", FontSize = 18, FontAttributes = FontAttributes.Bold }, 0, 0);
+        arbeitHeader.Add(_editArbeitseinsaetze, 1, 0);
+
+        _pfSaison = new Label { FontAttributes = FontAttributes.Bold };
+        _pfSoll = new Label { FontAttributes = FontAttributes.Bold };
+        _pfGeleistet = new Label { FontAttributes = FontAttributes.Bold };
+        _pfOffen = new Label { FontAttributes = FontAttributes.Bold };
+        _pfBefreiung = new Label { Opacity = 0.8, TextColor = Colors.Gray, IsVisible = false };
+
+        var pfGrid = new Grid
+        {
+            ColumnDefinitions =
+            {
+                new ColumnDefinition { Width = GridLength.Star },
+                new ColumnDefinition { Width = GridLength.Star },
+                new ColumnDefinition { Width = GridLength.Star },
+                new ColumnDefinition { Width = GridLength.Star }
+            },
+            RowDefinitions =
+            {
+                new RowDefinition { Height = GridLength.Auto },
+                new RowDefinition { Height = GridLength.Auto }
+            }
+        };
+
+        pfGrid.Add(new Label { Text = "Saison", Opacity = 0.8, TextColor = Colors.Gray }, 0, 0);
+        pfGrid.Add(new Label { Text = "Soll", Opacity = 0.8, TextColor = Colors.Gray }, 1, 0);
+        pfGrid.Add(new Label { Text = "Geleistet", Opacity = 0.8, TextColor = Colors.Gray }, 2, 0);
+        pfGrid.Add(new Label { Text = "Offen", Opacity = 0.8, TextColor = Colors.Gray }, 3, 0);
+
+        pfGrid.Add(_pfSaison, 0, 1);
+        pfGrid.Add(_pfSoll, 1, 1);
+        pfGrid.Add(_pfGeleistet, 2, 1);
+        pfGrid.Add(_pfOffen, 3, 1);
+
+        _pflichtstundenCard = WrapCard(new VerticalStackLayout
+        {
+            Spacing = 6,
+            Children =
+            {
+                new Label { Text = "Pflichtstunden", FontSize = 18, FontAttributes = FontAttributes.Bold },
+                pfGrid,
+                _pfBefreiung
+            }
+        });
+
+        _pflichtstundenCard.IsVisible = false;
+
         Content = new ScrollView
         {
             Content = new VerticalStackLayout
@@ -163,15 +258,17 @@ public sealed class HomePage : ContentPage
                     _busy,
                     _status,
 
-                    new Label { Text = "Bekanntmachungen", FontSize = 18, FontAttributes = FontAttributes.Bold },
+                    _pflichtstundenCard,
+
+                    bekanntHeader,
                     _bekanntmachungenEmpty,
                     bekanntmachungenList,
 
-                    new Label { Text = "Termine", FontSize = 18, FontAttributes = FontAttributes.Bold },
+                    termineHeader,
                     _termineEmpty,
                     termineList,
 
-                    new Label { Text = "Arbeitseinsätze", FontSize = 18, FontAttributes = FontAttributes.Bold },
+                    arbeitHeader,
                     _arbeitseinsaetzeEmpty,
                     arbeitList
                 }
@@ -244,6 +341,8 @@ public sealed class HomePage : ContentPage
             UpdateBekanntmachungen(bekTask.Result ?? new List<StartseiteBekanntmachungRecord>());
             UpdateTermine(terTask.Result ?? new List<StartseiteTerminRecord>());
             UpdateArbeitseinsaetze(arbTask.Result ?? new List<StartseiteArbeitseinsatzRecord>(), mySignups, hasMitglied);
+
+            await LoadPflichtstundenAsync();
         }
         catch (Exception ex)
         {
@@ -251,6 +350,8 @@ public sealed class HomePage : ContentPage
             _termine.Clear();
             _arbeitseinsaetze.Clear();
             _status.Text = ex.Message;
+
+            _pflichtstundenCard.IsVisible = false;
         }
         finally
         {
@@ -358,7 +459,69 @@ public sealed class HomePage : ContentPage
 
     private void UpdateUiState()
     {
-        // aktuell read-only, nur Sperre gegen paralleles Öffnen/Reload
+        var canEdit = CanEditStartseite;
+        _editBekanntmachungen.IsVisible = canEdit;
+        _editTermine.IsVisible = canEdit;
+        _editArbeitseinsaetze.IsVisible = canEdit;
+    }
+
+    private async Task LoadPflichtstundenAsync()
+    {
+        try
+        {
+            var ctx = _userContextAccessor.CurrentUserContext;
+            if (ctx?.MitgliedId == null || ctx.MitgliedId.Value <= 0 || ctx.MitgliedId.Value > int.MaxValue)
+            {
+                _pflichtstundenCard.IsVisible = false;
+                return;
+            }
+
+            var myMitgliedId = (int)ctx.MitgliedId.Value;
+            var member = await _supabaseService.GetMitgliedByIdAsync(myMitgliedId);
+            if (member == null)
+            {
+                _pflichtstundenCard.IsVisible = false;
+                return;
+            }
+
+            var hauptmitgliedId = member.HauptmitgliedId ?? member.Id;
+            if (hauptmitgliedId <= 0)
+            {
+                _pflichtstundenCard.IsVisible = false;
+                return;
+            }
+
+            var jahr = DateTime.Today.Year;
+            var saisonen = await _supabaseService.GetSaisonRecordsAsync();
+            var saison = saisonen?.FirstOrDefault(x => x.Jahr == jahr);
+            if (saison == null)
+            {
+                _pflichtstundenCard.IsVisible = false;
+                return;
+            }
+
+            var rec = await _supabaseService.GetPflichtstundenUebersichtAsync(hauptmitgliedId, saison.Id);
+            if (rec == null)
+            {
+                _pflichtstundenCard.IsVisible = false;
+                return;
+            }
+
+            _pfSaison.Text = rec.Jahr.ToString(DeCulture);
+            _pfSoll.Text = rec.Sollstunden.ToString("0.##", DeCulture);
+            _pfGeleistet.Text = rec.Geleistet.ToString("0.##", DeCulture);
+            _pfOffen.Text = rec.Offen.ToString("0.##", DeCulture);
+
+            var befreiung = (rec.Befreiungsgrund ?? string.Empty).Trim();
+            _pfBefreiung.Text = befreiung;
+            _pfBefreiung.IsVisible = !string.IsNullOrWhiteSpace(befreiung);
+
+            _pflichtstundenCard.IsVisible = true;
+        }
+        catch
+        {
+            _pflichtstundenCard.IsVisible = false;
+        }
     }
 
     private static readonly CultureInfo DeCulture = CultureInfo.GetCultureInfo("de-DE");

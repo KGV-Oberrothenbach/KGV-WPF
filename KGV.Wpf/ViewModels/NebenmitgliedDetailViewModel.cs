@@ -5,6 +5,7 @@ using CommunityToolkit.Mvvm.Messaging;
 using KGV.Core.Interfaces;
 using KGV.Core.Models;
 using KGV.Wpf.Helpers;
+using KGV.Wpf.Messages;
 
 namespace KGV.Wpf.ViewModels
 {
@@ -17,6 +18,18 @@ namespace KGV.Wpf.ViewModels
 
         public MemberDTO SelectedMember { get; }
         public MemberDTO Hauptmitglied { get; }
+
+        public bool IsHauptmitglied => false;
+
+        public System.Collections.ObjectModel.ObservableCollection<string> ArbeitsstundenAltersregelTypOptions { get; } = new()
+        {
+            "keine",
+            "frau75",
+            "mann80"
+        };
+
+        public bool ShowGoToHauptmitgliedButton => true;
+        public RelayCommand<object?> GoToHauptmitgliedCommand { get; }
 
         private MemberDTO _originalSnapshot;
 
@@ -72,6 +85,11 @@ namespace KGV.Wpf.ViewModels
             CancelCommand = new RelayCommand<object?>(_ => _ = CancelAsync(), _ => CanCancel());
             CopyAddressFromHauptmitgliedCommand = new RelayCommand<object?>(_ => CopyAddressFromHauptmitglied(), _ => IsEditMode);
 
+            GoToHauptmitgliedCommand = new RelayCommand<object?>(_ =>
+            {
+                WeakReferenceMessenger.Default.Send(new NavigateToViewModelMessage(typeof(MemberDetailViewModel), Hauptmitglied.Clone()));
+            });
+
             NebenmitgliedCommand = new RelayCommand<object?>(_ => { }, _ => false);
         }
 
@@ -120,6 +138,7 @@ namespace KGV.Wpf.ViewModels
             SelectedMember.MitgliedEnde = rec.MitgliedEnde;
 
             SelectedMember.Role = rec.Role ?? "";
+            SelectedMember.ArbeitsstundenAltersregelTyp = rec.ArbeitsstundenAltersregelTyp ?? "keine";
             _originalSnapshot = SelectedMember.Clone();
         }
 

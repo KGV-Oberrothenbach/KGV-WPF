@@ -66,6 +66,9 @@ namespace KGV.Core.Models
         [Column("hauptmitglied_id")]
         public int? HauptmitgliedId { get; set; }
 
+        [Column("arbeitsstunden_altersregel_typ")]
+        public string? ArbeitsstundenAltersregelTyp { get; set; }
+
         // ===== Locking (WICHTIG: Spaltennamen aus DB) =====
         // DB: lockedbyuserid / lockat
         [Column("lockedbyuserid")]

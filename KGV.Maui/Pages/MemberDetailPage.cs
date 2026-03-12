@@ -28,13 +28,18 @@ public sealed class MemberDetailPage : ContentPage
     private string? _lockUserId;
     private bool _eventsWired;
 
+    private bool _isHauptmitglied;
+    private int? _hauptmitgliedId;
+
     private readonly ActivityIndicator _busy;
     private readonly Label _title;
     private readonly Label _status;
+    private readonly Label _editModeHint;
 
     private readonly Entry _nachname;
     private readonly Entry _vorname;
     private readonly DatePicker _geburtsdatum;
+    private readonly Picker _altersregel;
 
     private readonly Entry _strasse;
     private readonly Entry _plz;
@@ -52,6 +57,7 @@ public sealed class MemberDetailPage : ContentPage
     private readonly Button _editButton;
     private readonly Button _saveButton;
     private readonly Button _cancelButton;
+    private readonly Button _goToHauptmitgliedButton;
 
     private readonly FlexLayout _parzellenButtons;
     private readonly List<Button> _parzellenButtonsCreated = new();
@@ -83,10 +89,15 @@ public sealed class MemberDetailPage : ContentPage
         _busy = new ActivityIndicator { IsRunning = false, IsVisible = false };
         _status = new Label { TextColor = Colors.Red };
         _title = new Label { FontSize = 22, FontAttributes = FontAttributes.Bold };
+        _editModeHint = new Label { Text = "Bearbeitungsmodus aktiv", TextColor = Colors.DarkOrange, FontAttributes = FontAttributes.Bold, IsVisible = false };
 
         _nachname = new Entry { Placeholder = "Nachname" };
         _vorname = new Entry { Placeholder = "Vorname" };
         _geburtsdatum = new DatePicker { Date = DateTime.Today };
+
+        _altersregel = new Picker { Title = "Altersregel" };
+        _altersregel.ItemsSource = new List<string> { "keine", "frau75", "mann80" };
+        _altersregel.SelectedIndexChanged += (_, __) => MarkDirtyIfEditing();
 
         _strasse = new Entry { Placeholder = "Straße / Hausnummer" };
         _plz = new Entry { Placeholder = "PLZ", Keyboard = Keyboard.Numeric };
@@ -102,13 +113,16 @@ public sealed class MemberDetailPage : ContentPage
         _mitgliedEnde = new DatePicker { Date = DateTime.Today };
 
         _editButton = new Button { Text = "Bearbeiten" };
-        _editButton.Clicked += async (_, __) => await EnterEditModeAsync();
+        _editButton.Clicked += async (_, __) => await ToggleEditAsync();
 
         _saveButton = new Button { Text = "Speichern" };
         _saveButton.Clicked += async (_, __) => await SaveAsync();
 
         _cancelButton = new Button { Text = "Abbrechen" };
         _cancelButton.Clicked += async (_, __) => await CancelAsync();
+
+        _goToHauptmitgliedButton = new Button { Text = "Zum Hauptmitglied", IsVisible = false };
+        _goToHauptmitgliedButton.Clicked += async (_, __) => await GoToHauptmitgliedAsync();
 
         _parzellenButtons = new FlexLayout
         {
@@ -145,12 +159,12 @@ public sealed class MemberDetailPage : ContentPage
                     WrapCard(new VerticalStackLayout
                     {
                         Spacing = 8,
-                        Children = { _title, _status }
+                        Children = { _title, _editModeHint, _status }
                     }),
                     new HorizontalStackLayout
                     {
                         Spacing = 12,
-                        Children = { _editButton, _saveButton, _cancelButton }
+                        Children = { _editButton, _saveButton, _cancelButton, _goToHauptmitgliedButton }
                     },
                     WrapCard(new VerticalStackLayout
                     {
@@ -160,7 +174,8 @@ public sealed class MemberDetailPage : ContentPage
                             new Label { Text = "Persönliche Daten", FontAttributes = FontAttributes.Bold },
                             WrapEntry(_nachname),
                             WrapEntry(_vorname),
-                            _geburtsdatum
+                            _geburtsdatum,
+                            _altersregel
                         }
                     }),
                     WrapCard(new VerticalStackLayout
@@ -400,8 +415,15 @@ public sealed class MemberDetailPage : ContentPage
                 WhatsappEinwilligung = rec.WhatsappEinwilligung,
                 MitgliedSeit = rec.MitgliedSeit,
                 MitgliedEnde = rec.MitgliedEnde,
-                Role = rec.Role ?? string.Empty
+                Role = rec.Role ?? string.Empty,
+                ArbeitsstundenAltersregelTyp = rec.ArbeitsstundenAltersregelTyp ?? "keine"
             };
+
+            _isHauptmitglied = rec.HauptmitgliedId == null;
+            _hauptmitgliedId = rec.HauptmitgliedId;
+            _altersregel.IsVisible = _isHauptmitglied;
+
+            _goToHauptmitgliedButton.IsVisible = _hauptmitgliedId.HasValue;
 
             _originalSnapshot = _member.Clone();
 
@@ -421,6 +443,17 @@ public sealed class MemberDetailPage : ContentPage
         {
             SetBusy(false);
         }
+    }
+    private async Task GoToHauptmitgliedAsync()
+    {
+        if (_hauptmitgliedId == null)
+            return;
+
+        if (_isEditMode)
+            await CancelAsync();
+
+        _memberSelection.SelectedMitgliedId = _hauptmitgliedId.Value;
+        await LoadMemberAsync(_hauptmitgliedId.Value);
     }
 
     private void ApplyDtoToUi(MemberDTO dto)
@@ -442,6 +475,21 @@ public sealed class MemberDetailPage : ContentPage
         _aktiv.IsChecked = dto.Aktiv;
         _mitgliedEnde.Date = (dto.MitgliedEnde ?? DateTime.Today).Date;
         _mitgliedEnde.IsEnabled = _isEditMode && !_aktiv.IsChecked;
+
+        if (_isHauptmitglied)
+        {
+            var value = (dto.ArbeitsstundenAltersregelTyp ?? "keine").Trim().ToLowerInvariant();
+            var idx = -1;
+            for (var i = 0; i < _altersregel.Items.Count; i++)
+            {
+                if (string.Equals(_altersregel.Items[i], value, StringComparison.OrdinalIgnoreCase))
+                {
+                    idx = i;
+                    break;
+                }
+            }
+            _altersregel.SelectedIndex = idx;
+        }
     }
 
     private void ApplyUiToDto(MemberDTO dto)
@@ -461,6 +509,22 @@ public sealed class MemberDetailPage : ContentPage
 
         dto.MitgliedSeit = _mitgliedSeit.Date;
         dto.MitgliedEnde = _aktiv.IsChecked ? null : _mitgliedEnde.Date;
+
+        if (_isHauptmitglied)
+        {
+            dto.ArbeitsstundenAltersregelTyp = _altersregel.SelectedItem as string ?? "keine";
+        }
+    }
+
+    private async Task ToggleEditAsync()
+    {
+        if (_isEditMode)
+        {
+            await CancelAsync();
+            return;
+        }
+
+        await EnterEditModeAsync();
     }
 
     private void MarkDirtyIfEditing()
@@ -859,12 +923,26 @@ public sealed class MemberDetailPage : ContentPage
             _aktiv.IsEnabled = false;
             _mitgliedEnde.IsEnabled = false;
 
+            _altersregel.IsEnabled = false;
+
             _editButton.IsEnabled = false;
             _saveButton.IsEnabled = false;
             _cancelButton.IsEnabled = false;
+            _goToHauptmitgliedButton.IsEnabled = false;
+
+            _saveButton.IsVisible = _isEditMode;
+            _cancelButton.IsVisible = _isEditMode;
 
             _assignParzelleButton.IsEnabled = false;
             _endBelegungButton.IsEnabled = false;
+
+            _freeParzellePicker.IsEnabled = false;
+            _assignVonDate.IsEnabled = false;
+
+            _freeParzellePicker.IsVisible = _isEditMode;
+            _assignVonDate.IsVisible = _isEditMode;
+            _assignParzelleButton.IsVisible = _isEditMode;
+            _endBelegungButton.IsVisible = _isEditMode;
 
             foreach (var btn in _parzellenButtonsCreated)
                 btn.IsEnabled = false;
@@ -889,14 +967,42 @@ public sealed class MemberDetailPage : ContentPage
         _aktiv.IsEnabled = _isEditMode;
         _mitgliedEnde.IsEnabled = _isEditMode && !_aktiv.IsChecked;
 
-        _editButton.IsEnabled = !_isEditMode;
+        _altersregel.IsEnabled = _isEditMode && _isHauptmitglied;
+
+        _editButton.IsEnabled = _loadedMitgliedId != null;
         _saveButton.IsEnabled = _isEditMode && _isDirty;
         _cancelButton.IsEnabled = _isEditMode;
+        _goToHauptmitgliedButton.IsEnabled = !_isEditMode && _hauptmitgliedId.HasValue;
+
+        _saveButton.IsVisible = _isEditMode;
+        _cancelButton.IsVisible = _isEditMode;
+
+        _editModeHint.IsVisible = _isEditMode;
+        if (_isEditMode)
+        {
+            _editButton.Text = "Bearbeiten (aktiv)";
+            _editButton.BackgroundColor = Colors.DarkOrange;
+            _editButton.TextColor = Colors.White;
+        }
+        else
+        {
+            _editButton.Text = "Bearbeiten";
+            _editButton.BackgroundColor = Colors.Transparent;
+            _editButton.TextColor = Colors.Black;
+        }
 
         _assignParzelleButton.IsEnabled = _isEditMode
             && _availableParzellen.Count > 0
             && _freeParzellePicker.SelectedItem is ParzelleOption;
         _endBelegungButton.IsEnabled = _isEditMode && _selectedBelegung != null && _selectedBelegung.BisDatum == null;
+
+        _freeParzellePicker.IsEnabled = _isEditMode && _availableParzellen.Count > 0;
+        _assignVonDate.IsEnabled = _isEditMode;
+
+        _freeParzellePicker.IsVisible = _isEditMode;
+        _assignVonDate.IsVisible = _isEditMode;
+        _assignParzelleButton.IsVisible = _isEditMode;
+        _endBelegungButton.IsVisible = _isEditMode;
 
         foreach (var btn in _parzellenButtonsCreated)
             btn.IsEnabled = true;

@@ -12,5 +12,14 @@ namespace KGV.Core.Models
 
         [Column("jahr")]
         public int Jahr { get; set; }
+
+        [Column("pflichtstunden_soll")]
+        public decimal PflichtstundenSoll { get; set; }
+
+        [Column("euro_pro_fehlstunde")]
+        public decimal EuroProFehlstunde { get; set; }
+
+        [Column("bemerkung")]
+        public string? Bemerkung { get; set; }
     }
 }
