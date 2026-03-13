@@ -59,17 +59,41 @@ public sealed class AndroidUpdateService : IAndroidUpdateService
     {
         try
         {
-            var json = await Http.GetStringAsync(VersionJsonUrl, cancellationToken).ConfigureAwait(false);
+            if (string.IsNullOrWhiteSpace(VersionJsonUrl))
+            {
+                _result = new UpdateCheckResult(UpdateCheckStatus.NotAvailable, null, "Updatekonfiguration fehlt.");
+                return;
+            }
+
+            using var response = await Http.GetAsync(VersionJsonUrl, cancellationToken).ConfigureAwait(false);
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogDebug("Android update check: HTTP {StatusCode} for {Url}", (int)response.StatusCode, VersionJsonUrl);
+                _result = new UpdateCheckResult(UpdateCheckStatus.NotAvailable, null, "Updatequelle nicht erreichbar.");
+                return;
+            }
+
+            var json = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
             if (string.IsNullOrWhiteSpace(json))
             {
                 _result = new UpdateCheckResult(UpdateCheckStatus.NotAvailable, null, "Updateinformationen nicht verfügbar.");
                 return;
             }
 
-            var info = JsonSerializer.Deserialize<AndroidUpdateInfo>(json, new JsonSerializerOptions
+            AndroidUpdateInfo? info;
+            try
             {
-                PropertyNameCaseInsensitive = true
-            });
+                info = JsonSerializer.Deserialize<AndroidUpdateInfo>(json, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+            }
+            catch (JsonException ex)
+            {
+                _logger.LogDebug(ex, "Android update check failed: invalid JSON");
+                _result = new UpdateCheckResult(UpdateCheckStatus.NotAvailable, null, "Updateinformationen ungültig.");
+                return;
+            }
 
             if (info == null)
             {
@@ -132,15 +156,20 @@ public sealed class AndroidUpdateService : IAndroidUpdateService
                     info.Notes),
                 null);
         }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogDebug(ex, "Android update check failed: HTTP request");
+            _result = new UpdateCheckResult(UpdateCheckStatus.NotAvailable, null, "Updatequelle nicht erreichbar.");
+        }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             // Network/JSON errors must not break the app.
             _logger.LogDebug(ex, "Android update check failed");
-            _result = new UpdateCheckResult(UpdateCheckStatus.NotAvailable, null, "Updateprüfung nicht verfügbar.");
+            _result = new UpdateCheckResult(UpdateCheckStatus.NotAvailable, null, "Updateprüfung fehlgeschlagen.");
         }
         catch (OperationCanceledException)
         {
-            _result = new UpdateCheckResult(UpdateCheckStatus.NotAvailable, null, "Updateprüfung nicht verfügbar.");
+            _result = new UpdateCheckResult(UpdateCheckStatus.NotAvailable, null, "Updatequelle nicht erreichbar.");
         }
     }
 

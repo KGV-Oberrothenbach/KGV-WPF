@@ -201,3 +201,14 @@
 
 ### Hinweise
 - ReleaseManager greift weiterhin ausschließlich auf `Documentation/CHANGELOG.md` zu; `DEV_LOG.md` wird in diesem Workflow nicht geschrieben.
+
+---
+
+## 2026-03-13 – Restfix: Android Launcher-Icon & Updateprüfung (Footer)
+
+### Erledigt
+- Android Launcher-Icon: In der generierten Android-Manifest-Ausgabe fehlten `android:icon`/`android:roundIcon` am `<application>`-Element; Manifest-Vorlage wurde so ergänzt, dass explizit `@mipmap/appicon` / `@mipmap/appicon_round` verwendet wird.
+- Updateprüfung (WPF + MAUI): Fehlerpfad liefert jetzt differenzierte, benutzerfreundliche Ursachen (z.B. Updatequelle nicht erreichbar / JSON ungültig / Konfiguration fehlt) statt nur „Updateprüfung nicht verfügbar“.
+
+### Hinweise
+- Die Update-Diagnose-Details werden intern weiterhin protokolliert (WPF: `Debug.WriteLine`, MAUI: `ILogger` im `AndroidUpdateService`).

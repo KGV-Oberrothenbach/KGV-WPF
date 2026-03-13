@@ -44,13 +44,15 @@ public static class UpdateStartupCoordinator
                     break;
 
                 default:
-                    viewModel.UpdateStatusText = "Updateprüfung nicht verfügbar";
+                    viewModel.UpdateStatusText = string.IsNullOrWhiteSpace(result.ErrorMessage)
+                        ? "Updateprüfung nicht verfügbar"
+                        : result.ErrorMessage!;
                     break;
             }
         }
         catch
         {
-            viewModel.UpdateStatusText = "Updateprüfung nicht verfügbar";
+            viewModel.UpdateStatusText = "Updateprüfung fehlgeschlagen";
         }
     }
 

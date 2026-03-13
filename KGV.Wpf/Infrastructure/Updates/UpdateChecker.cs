@@ -25,17 +25,36 @@ namespace KGV.Wpf.Infrastructure.Updates
         {
             try
             {
+                if (string.IsNullOrWhiteSpace(VersionJsonUrl))
+                    return new UpdateCheckResult(UpdateCheckStatus.NotAvailable, null, "Updatekonfiguration fehlt.");
+
                 using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 cts.CancelAfter(TimeSpan.FromSeconds(6));
 
-                var json = await Http.GetStringAsync(VersionJsonUrl, cts.Token).ConfigureAwait(false);
+                using var response = await Http.GetAsync(VersionJsonUrl, cts.Token).ConfigureAwait(false);
+                if (!response.IsSuccessStatusCode)
+                {
+                    Debug.WriteLine($"Update check failed: HTTP {(int)response.StatusCode} for {VersionJsonUrl}");
+                    return new UpdateCheckResult(UpdateCheckStatus.NotAvailable, null, "Updatequelle nicht erreichbar.");
+                }
+
+                var json = await response.Content.ReadAsStringAsync(cts.Token).ConfigureAwait(false);
                 if (string.IsNullOrWhiteSpace(json))
                     return new UpdateCheckResult(UpdateCheckStatus.NotAvailable, null, "Updateinformationen nicht verfügbar.");
 
-                var info = JsonSerializer.Deserialize<UpdateInfo>(json, new JsonSerializerOptions
+                UpdateInfo? info;
+                try
                 {
-                    PropertyNameCaseInsensitive = true
-                });
+                    info = JsonSerializer.Deserialize<UpdateInfo>(json, new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+                }
+                catch (JsonException ex)
+                {
+                    Debug.WriteLine($"Update check failed: invalid JSON: {ex}");
+                    return new UpdateCheckResult(UpdateCheckStatus.NotAvailable, null, "Updateinformationen ungültig.");
+                }
 
                 if (info == null)
                     return new UpdateCheckResult(UpdateCheckStatus.NotAvailable, null, "Updateinformationen nicht verfügbar.");
@@ -60,14 +79,19 @@ namespace KGV.Wpf.Infrastructure.Updates
 
                 return new UpdateCheckResult(UpdateCheckStatus.UpdateAvailable, prompt, null);
             }
+            catch (HttpRequestException ex)
+            {
+                Debug.WriteLine($"Update check failed: HTTP request: {ex}");
+                return new UpdateCheckResult(UpdateCheckStatus.NotAvailable, null, "Updatequelle nicht erreichbar.");
+            }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 Debug.WriteLine($"Update check failed: {ex}");
-                return new UpdateCheckResult(UpdateCheckStatus.NotAvailable, null, "Updateprüfung nicht verfügbar.");
+                return new UpdateCheckResult(UpdateCheckStatus.NotAvailable, null, "Updateprüfung fehlgeschlagen.");
             }
             catch (OperationCanceledException)
             {
-                return new UpdateCheckResult(UpdateCheckStatus.NotAvailable, null, "Updateprüfung nicht verfügbar.");
+                return new UpdateCheckResult(UpdateCheckStatus.NotAvailable, null, "Updatequelle nicht erreichbar.");
             }
         }
 

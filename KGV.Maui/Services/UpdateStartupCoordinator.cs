@@ -47,13 +47,15 @@ public static class UpdateStartupCoordinator
                     break;
 
                 default:
-                    status.UpdateStatusText = "Updateprüfung nicht verfügbar";
+                    status.UpdateStatusText = string.IsNullOrWhiteSpace(result.ErrorMessage)
+                        ? "Updateprüfung nicht verfügbar"
+                        : result.ErrorMessage!;
                     break;
             }
         }
         catch
         {
-            status.UpdateStatusText = "Updateprüfung nicht verfügbar";
+            status.UpdateStatusText = "Updateprüfung fehlgeschlagen";
         }
     }
 

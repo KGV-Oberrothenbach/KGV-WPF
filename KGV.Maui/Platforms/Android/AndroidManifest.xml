@@ -1,6 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+          xmlns:tools="http://schemas.android.com/tools"
           package="de.kgv.oberrothenbach">
+
+  <!-- Ensure launcher icon uses MAUI-generated mipmap resources (appicon / appicon_round). -->
+  <application
+    android:icon="@mipmap/appicon"
+    android:roundIcon="@mipmap/appicon_round"
+    tools:replace="android:icon,android:roundIcon" />
 
   <!-- Netzwerkzugriff für Supabase/Auth/API Calls -->
   <uses-permission android:name="android.permission.INTERNET" />
