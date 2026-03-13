@@ -7,6 +7,7 @@ using KGV.Wpf.Helpers;
 using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -25,6 +26,20 @@ namespace KGV.Wpf.ViewModels
         public UserContext UserContext { get; }
 
         private readonly SemaphoreSlim _navLock = new(1, 1);
+
+        private string _updateStatusText = string.Empty;
+        public string UpdateStatusText
+        {
+            get => _updateStatusText;
+            set
+            {
+                if (_updateStatusText == value) return;
+                _updateStatusText = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public string AppVersionText { get; }
 
         // ======= Saison =======
         public ObservableCollection<string> Seasons { get; } = new();
@@ -147,6 +162,8 @@ namespace KGV.Wpf.ViewModels
             _supabaseService = supabaseService ?? throw new ArgumentNullException(nameof(supabaseService));
             UserContext = userContext ?? throw new ArgumentNullException(nameof(userContext));
 
+            AppVersionText = BuildVersionText();
+
             NavigateCommand = new RelayCommand<NavigationItem>(item => _ = NavigateByItemAsync(item));
 
             _ = LoadSeasonsAsync();
@@ -180,6 +197,23 @@ namespace KGV.Wpf.ViewModels
             }
 
             _ = NavigateToAsync(new HomeViewModel(_supabaseService, UserContext));
+        }
+
+        private static string BuildVersionText()
+        {
+            try
+            {
+                var v = Assembly.GetEntryAssembly()?.GetName().Version
+                        ?? Assembly.GetExecutingAssembly().GetName().Version
+                        ?? new Version(0, 0, 0, 0);
+
+                var build = v.Build >= 0 ? v.Build : 0;
+                return $"Version {v.Major}.{v.Minor}.{build}";
+            }
+            catch
+            {
+                return "Version ?";
+            }
         }
 
         private async Task InitializeMyDataAsync()
@@ -350,6 +384,13 @@ namespace KGV.Wpf.ViewModels
             {
                 Title = "Export",
                 ViewModelType = typeof(ExportViewModel),
+                IsVisible = true
+            });
+
+            NavigationItems.Add(new NavigationItem
+            {
+                Title = "Info / Impressum",
+                ViewModelType = typeof(ImpressumViewModel),
                 IsVisible = true
             });
         }

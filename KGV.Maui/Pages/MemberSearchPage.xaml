@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:viewmodels="clr-namespace:KGV.Maui.ViewModels"
-             xmlns:sys="clr-namespace:System;assembly=System.Runtime"
-             x:Class="KGV.Maui.Pages.MemberSearchPage"
-             x:DataType="viewmodels:MemberSearchViewModel"
-             Title="Mitgliedersuche">
+<views:FooterContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+                         xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+                         xmlns:viewmodels="clr-namespace:KGV.Maui.ViewModels"
+                         xmlns:sys="clr-namespace:System;assembly=System.Runtime"
+                         xmlns:views="clr-namespace:KGV.Maui.Views"
+                         x:Class="KGV.Maui.Pages.MemberSearchPage"
+                         x:DataType="viewmodels:MemberSearchViewModel"
+                         Title="Mitgliedersuche">
 
     <Grid Padding="24" RowDefinitions="Auto,Auto,*,Auto" RowSpacing="12">
         <Label Text="Mitgliedersuche" FontSize="24" FontAttributes="Bold" />
@@ -52,4 +53,4 @@
             </CollectionView.ItemTemplate>
         </CollectionView>
     </Grid>
-</ContentPage>
+</views:FooterContentPage>

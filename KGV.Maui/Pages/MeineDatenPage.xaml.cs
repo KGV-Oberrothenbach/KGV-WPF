@@ -1,6 +1,6 @@
 namespace KGV.Maui.Pages;
 
-public class MeineDatenPage : ContentPage
+public class MeineDatenPage : FooterContentPage
 {
     public MeineDatenPage()
     {

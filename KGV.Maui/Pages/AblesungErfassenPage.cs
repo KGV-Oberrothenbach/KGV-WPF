@@ -4,7 +4,7 @@ using KGV.Maui.Services;
 
 namespace KGV.Maui.Pages;
 
-public sealed class AblesungErfassenPage : ContentPage
+public sealed class AblesungErfassenPage : FooterContentPage
 {
     private readonly ISupabaseService _supabaseService;
     private readonly IRfidScanService _rfidScanService;

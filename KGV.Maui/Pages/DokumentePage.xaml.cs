@@ -4,7 +4,7 @@ using KGV.Maui.State;
 
 namespace KGV.Maui.Pages;
 
-public sealed class DokumentePage : ContentPage
+public sealed class DokumentePage : FooterContentPage
 {
     private readonly ISupabaseService _supabaseService;
     private readonly UserContextState _state;

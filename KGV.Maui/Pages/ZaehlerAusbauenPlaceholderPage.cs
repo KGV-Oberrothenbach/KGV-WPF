@@ -1,6 +1,6 @@
 namespace KGV.Maui.Pages;
 
-public sealed class ZaehlerAusbauenPlaceholderPage : ContentPage
+public sealed class ZaehlerAusbauenPlaceholderPage : FooterContentPage
 {
     public ZaehlerAusbauenPlaceholderPage()
     {

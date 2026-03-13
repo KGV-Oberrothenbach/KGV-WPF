@@ -2,7 +2,7 @@ using KGV.Maui;
 
 namespace KGV.Maui.Pages;
 
-public sealed class ExitPage : ContentPage
+public sealed class ExitPage : FooterContentPage
 {
     private readonly IServiceProvider _services;
 

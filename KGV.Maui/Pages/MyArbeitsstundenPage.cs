@@ -5,7 +5,7 @@ using KGV.Maui.State;
 
 namespace KGV.Maui.Pages;
 
-public sealed class MyArbeitsstundenPage : ContentPage
+public sealed class MyArbeitsstundenPage : FooterContentPage
 {
     private readonly ISupabaseService _supabaseService;
     private readonly UserContextState _state;

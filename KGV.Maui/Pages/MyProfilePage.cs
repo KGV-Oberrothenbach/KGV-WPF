@@ -6,7 +6,7 @@ using System.Text.RegularExpressions;
 
 namespace KGV.Maui.Pages;
 
-public sealed class MyProfilePage : ContentPage
+public sealed class MyProfilePage : FooterContentPage
 {
     private static readonly Regex PlzRegex = new("^\\d{5}$", RegexOptions.Compiled);
 

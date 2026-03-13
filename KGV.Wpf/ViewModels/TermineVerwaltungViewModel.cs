@@ -135,6 +135,24 @@ namespace KGV.Wpf.ViewModels
             if (!CanEdit) return;
             if (SelectedItem == null) return;
 
+            if (string.IsNullOrWhiteSpace((SelectedItem.Titel ?? string.Empty).Trim()))
+            {
+                StatusText = "Bitte Titel ausfüllen.";
+                return;
+            }
+
+            if (!SelectedItem.Datum.HasValue)
+            {
+                StatusText = "Bitte Datum auswählen.";
+                return;
+            }
+
+            if (!SelectedItem.SichtbarAb.HasValue)
+            {
+                StatusText = "Bitte 'Sichtbar ab' auswählen.";
+                return;
+            }
+
             if (!await _opLock.WaitAsync(0))
                 return;
 

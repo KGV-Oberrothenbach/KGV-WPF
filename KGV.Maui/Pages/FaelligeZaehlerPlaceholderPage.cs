@@ -1,6 +1,6 @@
 namespace KGV.Maui.Pages;
 
-public sealed class FaelligeZaehlerPlaceholderPage : ContentPage
+public sealed class FaelligeZaehlerPlaceholderPage : FooterContentPage
 {
     public FaelligeZaehlerPlaceholderPage()
     {

@@ -4,6 +4,7 @@
   <Project Path="KGV.Maui/KGV.Maui.csproj">
     <Deploy />
   </Project>
+  <Project Path="KGV.ReleaseManager/KGV.ReleaseManager/KGV.ReleaseManager.csproj" />
   <Project Path="KGV.Wpf/KGV.Wpf.csproj" />
 </Solution>
 

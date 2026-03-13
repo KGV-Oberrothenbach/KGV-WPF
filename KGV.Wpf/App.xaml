@@ -113,6 +113,10 @@
                 <views:FaelligeZaehlerView />
             </DataTemplate>
 
+            <DataTemplate DataType="{x:Type vm:ImpressumViewModel}">
+                <views:ImpressumView />
+            </DataTemplate>
+
         </ResourceDictionary>
     </Application.Resources>
 </Application>

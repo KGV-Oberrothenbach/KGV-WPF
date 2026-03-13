@@ -76,8 +76,31 @@ public sealed class WpfReleaseService
         _jsonManifestService.WriteWindowsVersionJson(localJsonPath, version.DisplayVersion, downloadUrl);
         _jsonManifestService.WriteWindowsVersionJson(gitJsonPath, version.DisplayVersion, downloadUrl);
 
+        TryCopyReleasesJson(context, log);
+
         CleanupOldVersionDirectories(localWpfRoot, context.KeepCount);
         CleanupOldGitInstallers(context.GitHubRoot, context.KeepCount);
+    }
+
+    private static void TryCopyReleasesJson(ReleaseContext context, Action<string> log)
+    {
+        try
+        {
+            var source = Path.Combine(context.RepoRoot, "Documentation", "releases.json");
+            if (!File.Exists(source))
+            {
+                log("Hinweis: releases.json nicht gefunden – wird nicht in den GitHub-Ordner kopiert.");
+                return;
+            }
+
+            var destination = Path.Combine(context.GitHubRoot, "releases.json");
+            File.Copy(source, destination, overwrite: true);
+            log("releases.json nach GitHub-Ordner kopiert.");
+        }
+        catch (Exception ex)
+        {
+            log("Hinweis: releases.json konnte nicht kopiert werden: " + ex.Message);
+        }
     }
 
     private async Task RunDotnetAsync(string workingDirectory, string args, Action<string> log, CancellationToken cancellationToken)

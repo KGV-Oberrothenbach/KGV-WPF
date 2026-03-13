@@ -141,6 +141,42 @@ namespace KGV.Wpf.ViewModels
             if (!CanEdit) return;
             if (SelectedItem == null) return;
 
+            if (string.IsNullOrWhiteSpace((SelectedItem.Titel ?? string.Empty).Trim()))
+            {
+                StatusText = "Bitte Titel ausfüllen.";
+                return;
+            }
+
+            if (!SelectedItem.Datum.HasValue)
+            {
+                StatusText = "Bitte Datum auswählen.";
+                return;
+            }
+
+            if (!SelectedItem.SichtbarAb.HasValue)
+            {
+                StatusText = "Bitte 'Sichtbar ab' auswählen.";
+                return;
+            }
+
+            var deCulture = CultureInfo.GetCultureInfo("de-DE");
+
+            var stundenText = (SelectedItem.StundenWertText ?? string.Empty).Trim();
+            if (!string.IsNullOrWhiteSpace(stundenText)
+                && !decimal.TryParse(stundenText, NumberStyles.Number, deCulture, out _))
+            {
+                StatusText = "Stundenwert muss eine Zahl sein (z.B. 2 oder 2,5).";
+                return;
+            }
+
+            var maxTeilnehmerText = (SelectedItem.MaxTeilnehmerText ?? string.Empty).Trim();
+            if (!string.IsNullOrWhiteSpace(maxTeilnehmerText)
+                && !int.TryParse(maxTeilnehmerText, NumberStyles.Integer, deCulture, out _))
+            {
+                StatusText = "Max. Teilnehmer muss eine ganze Zahl sein.";
+                return;
+            }
+
             if (!await _opLock.WaitAsync(0))
                 return;
 

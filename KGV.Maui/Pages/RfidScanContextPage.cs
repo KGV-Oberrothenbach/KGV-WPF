@@ -5,7 +5,7 @@ using System.Globalization;
 
 namespace KGV.Maui.Pages;
 
-public sealed class RfidScanContextPage : ContentPage
+public sealed class RfidScanContextPage : FooterContentPage
 {
     private readonly ISupabaseService _supabaseService;
     private readonly RfidScanContextRecord _ctx;

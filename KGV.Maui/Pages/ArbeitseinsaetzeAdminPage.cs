@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace KGV.Maui.Pages;
 
-public sealed class ArbeitseinsaetzeAdminPage : ContentPage
+public sealed class ArbeitseinsaetzeAdminPage : FooterContentPage
 {
     private readonly ISupabaseService _supabaseService;
     private readonly IUserContextAccessor _userContextAccessor;
@@ -112,7 +112,7 @@ public sealed class ArbeitseinsaetzeAdminPage : ContentPage
                     header,
                     _status,
                     _list,
-                    new Label { Text = "Titel", FontAttributes = FontAttributes.Bold },
+                    new Label { Text = "Titel *", FontAttributes = FontAttributes.Bold },
                     _titel,
                     new Label { Text = "Beschreibung", FontAttributes = FontAttributes.Bold },
                     _beschreibung,
@@ -269,17 +269,41 @@ public sealed class ArbeitseinsaetzeAdminPage : ContentPage
         try
         {
             _selected.Titel = (_titel.Text ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(_selected.Titel))
+            {
+                _status.Text = "Bitte Titel ausfüllen.";
+                return;
+            }
+
             _selected.Beschreibung = _beschreibung.Text ?? string.Empty;
             _selected.Datum = _datum.Date;
             _selected.StartUhrzeit = (_start.Text ?? string.Empty).Trim();
             _selected.EndUhrzeit = (_ende.Text ?? string.Empty).Trim();
             _selected.Treffpunkt = (_treffpunkt.Text ?? string.Empty).Trim();
 
-            if (decimal.TryParse((_stundenWert.Text ?? string.Empty).Trim(), NumberStyles.Number, DeCulture, out var st))
-                _selected.StundenWert = st;
+            var stundenText = (_stundenWert.Text ?? string.Empty).Trim();
+            if (!string.IsNullOrWhiteSpace(stundenText))
+            {
+                if (!decimal.TryParse(stundenText, NumberStyles.Number, DeCulture, out var st))
+                {
+                    _status.Text = "Stundenwert muss eine Zahl sein (z.B. 2 oder 2,5).";
+                    return;
+                }
 
-            if (int.TryParse((_maxTeilnehmer.Text ?? string.Empty).Trim(), NumberStyles.Integer, DeCulture, out var mt))
+                _selected.StundenWert = st;
+            }
+
+            var maxTeilnehmerText = (_maxTeilnehmer.Text ?? string.Empty).Trim();
+            if (!string.IsNullOrWhiteSpace(maxTeilnehmerText))
+            {
+                if (!int.TryParse(maxTeilnehmerText, NumberStyles.Integer, DeCulture, out var mt))
+                {
+                    _status.Text = "Max. Teilnehmer muss eine ganze Zahl sein.";
+                    return;
+                }
+
                 _selected.MaxTeilnehmer = mt;
+            }
 
             _selected.AnmeldungBis = _anmeldungBis.Date;
             _selected.SichtbarAb = _sichtbarAb.Date;
@@ -325,7 +349,7 @@ public sealed class ArbeitseinsaetzeAdminPage : ContentPage
             }
         };
 
-        grid.Add(new VerticalStackLayout { Spacing = 4, Children = { new Label { Text = "Datum", FontAttributes = FontAttributes.Bold }, _datum } }, 0, 0);
+        grid.Add(new VerticalStackLayout { Spacing = 4, Children = { new Label { Text = "Datum *", FontAttributes = FontAttributes.Bold }, _datum } }, 0, 0);
         grid.Add(new VerticalStackLayout { Spacing = 4, Children = { new Label { Text = "Start", FontAttributes = FontAttributes.Bold }, _start } }, 1, 0);
         grid.Add(new VerticalStackLayout { Spacing = 4, Children = { new Label { Text = "Ende", FontAttributes = FontAttributes.Bold }, _ende } }, 2, 0);
         return grid;
@@ -360,7 +384,7 @@ public sealed class ArbeitseinsaetzeAdminPage : ContentPage
             }
         };
 
-        grid.Add(new VerticalStackLayout { Spacing = 4, Children = { new Label { Text = "Sichtbar ab", FontAttributes = FontAttributes.Bold }, _sichtbarAb } }, 0, 0);
+        grid.Add(new VerticalStackLayout { Spacing = 4, Children = { new Label { Text = "Sichtbar ab *", FontAttributes = FontAttributes.Bold }, _sichtbarAb } }, 0, 0);
         grid.Add(new VerticalStackLayout { Spacing = 4, Children = { new Label { Text = "Sichtbar bis", FontAttributes = FontAttributes.Bold }, _sichtbarBis } }, 1, 0);
         return grid;
     }

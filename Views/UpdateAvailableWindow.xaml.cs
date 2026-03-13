@@ -5,6 +5,22 @@ namespace KGV.Views
 {
     public partial class UpdateAvailableWindow : Window
     {
+        public UpdateAvailableWindow(string currentVersion, string onlineVersion, string? notes)
+        {
+            InitializeComponent();
+
+            CurrentVersionRun.Text = currentVersion;
+            OnlineVersionRun.Text = onlineVersion;
+
+            NotesText.Text = string.IsNullOrWhiteSpace(notes)
+                ? ""
+                : notes;
+
+            NotesText.Visibility = string.IsNullOrWhiteSpace(NotesText.Text)
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+        }
+
         public UpdateAvailableWindow(Version currentVersion, Version onlineVersion, string? notes)
         {
             InitializeComponent();

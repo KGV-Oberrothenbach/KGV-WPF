@@ -1,6 +1,6 @@
 namespace KGV.Maui.Pages;
 
-public sealed class ZaehlerwechselPlaceholderPage : ContentPage
+public sealed class ZaehlerwechselPlaceholderPage : FooterContentPage
 {
     public ZaehlerwechselPlaceholderPage()
     {

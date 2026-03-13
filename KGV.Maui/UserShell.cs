@@ -106,6 +106,20 @@ public sealed class UserShell : Shell, IAppShellInitializer
 
         Items.Add(new FlyoutItem
         {
+            Title = "Info / Impressum",
+            Items =
+            {
+                new ShellContent
+                {
+                    Title = "Impressum",
+                    Route = "impressum",
+                    ContentTemplate = new DataTemplate(() => _services.GetRequiredService<ImpressumPage>())
+                }
+            }
+        });
+
+        Items.Add(new FlyoutItem
+        {
             Title = "Abmelden",
             Items =
             {

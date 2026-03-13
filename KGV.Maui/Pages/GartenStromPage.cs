@@ -5,7 +5,7 @@ using Microsoft.Maui.Layouts;
 
 namespace KGV.Maui.Pages;
 
-public sealed class GartenStromPage : ContentPage
+public sealed class GartenStromPage : FooterContentPage
 {
     private readonly ISupabaseService _supabaseService;
     private readonly MemberSelectionState _memberSelection;

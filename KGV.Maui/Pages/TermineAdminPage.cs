@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace KGV.Maui.Pages;
 
-public sealed class TermineAdminPage : ContentPage
+public sealed class TermineAdminPage : FooterContentPage
 {
     private readonly ISupabaseService _supabaseService;
     private readonly IUserContextAccessor _userContextAccessor;
@@ -109,7 +109,7 @@ public sealed class TermineAdminPage : ContentPage
                     header,
                     _status,
                     _list,
-                    new Label { Text = "Titel", FontAttributes = FontAttributes.Bold },
+                    new Label { Text = "Titel *", FontAttributes = FontAttributes.Bold },
                     _titel,
                     new Label { Text = "Beschreibung", FontAttributes = FontAttributes.Bold },
                     _beschreibung,
@@ -238,6 +238,12 @@ public sealed class TermineAdminPage : ContentPage
         try
         {
             _selected.Titel = (_titel.Text ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(_selected.Titel))
+            {
+                _status.Text = "Bitte Titel ausfüllen.";
+                return;
+            }
+
             _selected.Beschreibung = _beschreibung.Text ?? string.Empty;
             _selected.Datum = _datum.Date;
             _selected.StartUhrzeit = (_start.Text ?? string.Empty).Trim();
@@ -285,7 +291,7 @@ public sealed class TermineAdminPage : ContentPage
             }
         };
 
-        grid.Add(new VerticalStackLayout { Spacing = 4, Children = { new Label { Text = "Datum", FontAttributes = FontAttributes.Bold }, _datum } }, 0, 0);
+        grid.Add(new VerticalStackLayout { Spacing = 4, Children = { new Label { Text = "Datum *", FontAttributes = FontAttributes.Bold }, _datum } }, 0, 0);
         grid.Add(new VerticalStackLayout { Spacing = 4, Children = { new Label { Text = "Start", FontAttributes = FontAttributes.Bold }, _start } }, 1, 0);
         grid.Add(new VerticalStackLayout { Spacing = 4, Children = { new Label { Text = "Ende", FontAttributes = FontAttributes.Bold }, _ende } }, 2, 0);
         return grid;
@@ -302,7 +308,7 @@ public sealed class TermineAdminPage : ContentPage
             }
         };
 
-        grid.Add(new VerticalStackLayout { Spacing = 4, Children = { new Label { Text = "Sichtbar ab", FontAttributes = FontAttributes.Bold }, _sichtbarAb } }, 0, 0);
+        grid.Add(new VerticalStackLayout { Spacing = 4, Children = { new Label { Text = "Sichtbar ab *", FontAttributes = FontAttributes.Bold }, _sichtbarAb } }, 0, 0);
         grid.Add(new VerticalStackLayout { Spacing = 4, Children = { new Label { Text = "Sichtbar bis", FontAttributes = FontAttributes.Bold }, _sichtbarBis } }, 1, 0);
         return grid;
     }

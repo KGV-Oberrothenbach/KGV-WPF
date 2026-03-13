@@ -4,7 +4,7 @@ using KGV.Core.Models;
 
 namespace KGV.Maui.Pages;
 
-public sealed class SaisonPage : ContentPage
+public sealed class SaisonPage : FooterContentPage
 {
     private readonly ISupabaseService _supabaseService;
 

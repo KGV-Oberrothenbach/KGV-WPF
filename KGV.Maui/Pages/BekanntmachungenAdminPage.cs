@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace KGV.Maui.Pages;
 
-public sealed class BekanntmachungenAdminPage : ContentPage
+public sealed class BekanntmachungenAdminPage : FooterContentPage
 {
     private readonly ISupabaseService _supabaseService;
     private readonly IUserContextAccessor _userContextAccessor;
@@ -96,12 +96,12 @@ public sealed class BekanntmachungenAdminPage : ContentPage
                     header,
                     _status,
                     _list,
-                    new Label { Text = "Titel", FontAttributes = FontAttributes.Bold },
+                    new Label { Text = "Titel *", FontAttributes = FontAttributes.Bold },
                     _titel,
-                    new Label { Text = "Inhalt (HTML)", FontAttributes = FontAttributes.Bold },
+                    new Label { Text = "Inhalt (HTML) *", FontAttributes = FontAttributes.Bold },
                     _inhaltHtml,
                     BuildDatesGrid(),
-                    new Label { Text = "Sortierung", FontAttributes = FontAttributes.Bold },
+                    new Label { Text = "Sortierung *", FontAttributes = FontAttributes.Bold },
                     _sortOrder
                 }
             }
@@ -229,12 +229,29 @@ public sealed class BekanntmachungenAdminPage : ContentPage
         try
         {
             _selected.Titel = (_titel.Text ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(_selected.Titel))
+            {
+                _status.Text = "Bitte Titel ausfüllen.";
+                return;
+            }
+
             _selected.InhaltHtml = _inhaltHtml.Text ?? string.Empty;
+            if (string.IsNullOrWhiteSpace((_selected.InhaltHtml ?? string.Empty).Trim()))
+            {
+                _status.Text = "Bitte Inhalt ausfüllen.";
+                return;
+            }
+
             _selected.SichtbarAb = _sichtbarAb.Date;
 
             var sortText = (_sortOrder.Text ?? string.Empty).Trim();
-            if (int.TryParse(sortText, out var so))
-                _selected.SortOrder = so;
+            if (string.IsNullOrWhiteSpace(sortText) || !int.TryParse(sortText, out var so))
+            {
+                _status.Text = "Sortierung muss eine ganze Zahl sein.";
+                return;
+            }
+
+            _selected.SortOrder = so;
 
             // Sichtbar bis ist optional: leere Eingabe lässt null
             _selected.SichtbarBis = _sichtbarBis.Date;
@@ -281,7 +298,7 @@ public sealed class BekanntmachungenAdminPage : ContentPage
         var ab = new VerticalStackLayout
         {
             Spacing = 4,
-            Children = { new Label { Text = "Sichtbar ab", FontAttributes = FontAttributes.Bold }, _sichtbarAb }
+            Children = { new Label { Text = "Sichtbar ab *", FontAttributes = FontAttributes.Bold }, _sichtbarAb }
         };
 
         var bis = new VerticalStackLayout

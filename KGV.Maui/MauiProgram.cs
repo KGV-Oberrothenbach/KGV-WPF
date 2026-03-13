@@ -34,6 +34,8 @@ public static class MauiProgram
         builder.Services.AddSingleton<UserContextState>();
         builder.Services.AddSingleton<IUserContextAccessor>(sp => sp.GetRequiredService<UserContextState>());
 
+        builder.Services.AddSingleton<AppStatusState>();
+
         builder.Services.AddSingleton<MemberSelectionState>();
         builder.Services.AddSingleton<ParzelleSelectionState>();
 
@@ -74,6 +76,7 @@ public static class MauiProgram
         builder.Services.AddTransient<MemberDokumentePage>();
         builder.Services.AddTransient<SaisonPage>();
         builder.Services.AddTransient<ExitPage>();
+        builder.Services.AddTransient<ImpressumPage>();
 
         builder.Services.AddSingleton<AdminShell>();
         builder.Services.AddSingleton<UserShell>();

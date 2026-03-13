@@ -170,6 +170,11 @@ namespace KGV.Wpf
             Current.MainWindow = mainWindow;
             ShutdownMode = ShutdownMode.OnMainWindowClose;
             mainWindow.Show();
+
+            if (mainWindow.DataContext is MainWindowViewModel mainVm)
+            {
+                UpdateStartupCoordinator.Start(mainVm, mainWindow);
+            }
         }
 
         protected override void OnExit(ExitEventArgs e)

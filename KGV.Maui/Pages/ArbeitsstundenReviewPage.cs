@@ -4,7 +4,7 @@ using KGV.Maui.State;
 
 namespace KGV.Maui.Pages;
 
-public sealed class ArbeitsstundenReviewPage : ContentPage
+public sealed class ArbeitsstundenReviewPage : FooterContentPage
 {
     private readonly ISupabaseService _supabaseService;
     private readonly UserContextState _state;

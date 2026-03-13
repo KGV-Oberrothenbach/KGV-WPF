@@ -3,7 +3,7 @@ using KGV.Core.Models;
 
 namespace KGV.Maui.Pages;
 
-public sealed class FaelligeZaehlerPage : ContentPage
+public sealed class FaelligeZaehlerPage : FooterContentPage
 {
     private readonly ISupabaseService _supabaseService;
 

@@ -6,7 +6,7 @@ using System.Linq;
 
 namespace KGV.Maui.Pages;
 
-public sealed class AdminRolePage : ContentPage
+public sealed class AdminRolePage : FooterContentPage
 {
     private readonly ISupabaseService _supabaseService;
     private readonly IAuthService _authService;

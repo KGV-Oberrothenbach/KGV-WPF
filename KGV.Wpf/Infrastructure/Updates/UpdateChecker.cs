@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using KGV.Views;
+using KGV.Core.Updates;
 
 namespace KGV.Wpf.Infrastructure.Updates
 {
@@ -20,15 +21,16 @@ namespace KGV.Wpf.Infrastructure.Updates
             Timeout = TimeSpan.FromSeconds(4)
         };
 
-        public static async Task CheckForUpdatesAsync(Window? owner)
+        public static async Task<UpdateCheckResult> CheckAsync(CancellationToken cancellationToken = default)
         {
             try
             {
-                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(6));
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                cts.CancelAfter(TimeSpan.FromSeconds(6));
 
                 var json = await Http.GetStringAsync(VersionJsonUrl, cts.Token).ConfigureAwait(false);
                 if (string.IsNullOrWhiteSpace(json))
-                    return;
+                    return new UpdateCheckResult(UpdateCheckStatus.NotAvailable, null, "Updateinformationen nicht verfügbar.");
 
                 var info = JsonSerializer.Deserialize<UpdateInfo>(json, new JsonSerializerOptions
                 {
@@ -36,52 +38,73 @@ namespace KGV.Wpf.Infrastructure.Updates
                 });
 
                 if (info == null)
-                    return;
+                    return new UpdateCheckResult(UpdateCheckStatus.NotAvailable, null, "Updateinformationen nicht verfügbar.");
 
                 if (string.IsNullOrWhiteSpace(info.Version) || string.IsNullOrWhiteSpace(info.DownloadUrl))
-                    return;
+                    return new UpdateCheckResult(UpdateCheckStatus.NotAvailable, null, "Updateinformationen nicht verfügbar.");
 
                 if (!Version.TryParse(info.Version, out var onlineVersion))
-                    return;
+                    return new UpdateCheckResult(UpdateCheckStatus.NotAvailable, null, "Updateinformationen nicht verfügbar.");
 
                 var currentVersion = GetCurrentVersion();
                 if (onlineVersion <= currentVersion)
-                    return;
+                    return new UpdateCheckResult(UpdateCheckStatus.NoUpdates, null, null);
 
-                // UI dialog must run on the UI thread.
-                var dispatcher = Application.Current?.Dispatcher;
-                if (dispatcher == null)
-                    return;
+                var prompt = new UpdatePromptInfo(
+                    CurrentVersion: ToVersionText(currentVersion),
+                    CurrentBuild: null,
+                    OnlineVersion: ToVersionText(onlineVersion),
+                    OnlineBuild: null,
+                    DownloadUrl: info.DownloadUrl!,
+                    Notes: info.Notes);
 
-                await dispatcher.InvokeAsync(() =>
-                {
-                    var dlg = new UpdateAvailableWindow(currentVersion, onlineVersion, info.Notes)
-                    {
-                        Owner = owner,
-                        WindowStartupLocation = owner != null
-                            ? WindowStartupLocation.CenterOwner
-                            : WindowStartupLocation.CenterScreen
-                    };
-
-                    var result = dlg.ShowDialog();
-                    if (result == true)
-                    {
-                        try
-                        {
-                            Process.Start(new ProcessStartInfo(info.DownloadUrl) { UseShellExecute = true });
-                        }
-                        catch
-                        {
-                            // Intentionally ignore.
-                        }
-                    }
-                });
+                return new UpdateCheckResult(UpdateCheckStatus.UpdateAvailable, prompt, null);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 Debug.WriteLine($"Update check failed: {ex}");
-                // No user-facing error, app continues normally.
+                return new UpdateCheckResult(UpdateCheckStatus.NotAvailable, null, "Updateprüfung nicht verfügbar.");
             }
+            catch (OperationCanceledException)
+            {
+                return new UpdateCheckResult(UpdateCheckStatus.NotAvailable, null, "Updateprüfung nicht verfügbar.");
+            }
+        }
+
+        // Legacy helper: still available for old call-sites.
+        public static async Task CheckForUpdatesAsync(Window? owner)
+        {
+            var result = await CheckAsync().ConfigureAwait(false);
+            if (result.Status != UpdateCheckStatus.UpdateAvailable || result.Prompt == null)
+                return;
+
+            var dispatcher = Application.Current?.Dispatcher;
+            if (dispatcher == null)
+                return;
+
+            await dispatcher.InvokeAsync(() =>
+            {
+                var dlg = new UpdateAvailableWindow(result.Prompt.CurrentVersion, result.Prompt.OnlineVersion, result.Prompt.Notes)
+                {
+                    Owner = owner,
+                    WindowStartupLocation = owner != null
+                        ? WindowStartupLocation.CenterOwner
+                        : WindowStartupLocation.CenterScreen
+                };
+
+                var dlgResult = dlg.ShowDialog();
+                if (dlgResult == true)
+                {
+                    try
+                    {
+                        Process.Start(new ProcessStartInfo(result.Prompt.DownloadUrl) { UseShellExecute = true });
+                    }
+                    catch
+                    {
+                        // Intentionally ignore.
+                    }
+                }
+            });
         }
 
         private static Version GetCurrentVersion()
@@ -103,6 +126,12 @@ namespace KGV.Wpf.Infrastructure.Updates
             public string? Version { get; set; }
             public string? DownloadUrl { get; set; }
             public string? Notes { get; set; }
+        }
+
+        private static string ToVersionText(Version v)
+        {
+            var build = v.Build >= 0 ? v.Build : 0;
+            return $"{v.Major}.{v.Minor}.{build}";
         }
     }
 }

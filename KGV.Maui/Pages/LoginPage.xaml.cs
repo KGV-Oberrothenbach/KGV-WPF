@@ -10,7 +10,7 @@ using System.Linq;
 
 namespace KGV.Maui.Pages;
 
-public class LoginPage : ContentPage
+public class LoginPage : FooterContentPage
 {
     private readonly IAuthService _authService;
     private readonly ISupabaseService _supabaseService;

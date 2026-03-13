@@ -21,6 +21,21 @@
                     VerticalAlignment="Center">
         </StackPanel>
 
+        <!-- Untere Statusleiste -->
+        <StatusBar DockPanel.Dock="Bottom" Background="{StaticResource KgvSurfaceBrush}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                    <TextBlock Text="{Binding UpdateStatusText}" Margin="0,0,14,0" />
+                    <TextBlock Text="{Binding AppVersionText}" />
+                </StackPanel>
+            </Grid>
+        </StatusBar>
+
         <Grid>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="250"/>

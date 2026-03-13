@@ -2,7 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace KGV.Maui.Pages;
 
-public sealed class AblesenPage : ContentPage
+public sealed class AblesenPage : FooterContentPage
 {
     private readonly IServiceProvider _services;
 

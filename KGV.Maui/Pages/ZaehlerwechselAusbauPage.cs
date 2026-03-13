@@ -5,7 +5,7 @@ using System.Globalization;
 
 namespace KGV.Maui.Pages;
 
-public sealed class ZaehlerwechselAusbauPage : ContentPage
+public sealed class ZaehlerwechselAusbauPage : FooterContentPage
 {
     private readonly ISupabaseService _supabaseService;
     private readonly RfidScanContextRecord _ctx;

@@ -9,7 +9,7 @@ using Microsoft.Maui.Layouts;
 
 namespace KGV.Maui.Pages;
 
-public sealed class MemberDetailPage : ContentPage
+public sealed class MemberDetailPage : FooterContentPage
 {
     private readonly ISupabaseService _supabaseService;
     private readonly IAuthService _authService;

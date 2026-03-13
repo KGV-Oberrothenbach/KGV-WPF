@@ -1,9 +1,10 @@
 using KGV.Maui.ViewModels;
+using KGV.Maui.Views;
 using KGV.Maui.State;
 
 namespace KGV.Maui.Pages;
 
-public partial class MemberSearchPage : ContentPage
+public partial class MemberSearchPage : FooterContentPage
 {
     private readonly MemberSearchViewModel _vm;
     private readonly MemberSelectionState _memberSelection;

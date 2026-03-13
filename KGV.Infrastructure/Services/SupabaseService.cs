@@ -1013,12 +1013,12 @@ namespace KGV.Infrastructure.Services
         // =========================
         public async Task<StartseiteBekanntmachungRecord?> SaveStartseiteBekanntmachungAsync(StartseiteBekanntmachungRecord record)
         {
+            await InitializeAsync();
+            if (_client == null) return null;
+            if (record == null) return null;
+
             try
             {
-                await InitializeAsync();
-                if (_client == null) return null;
-                if (record == null) return null;
-
                 if (record.Id > 0)
                 {
                     var resp = await _client
@@ -1026,30 +1026,38 @@ namespace KGV.Infrastructure.Services
                         .Where(x => x.Id == record.Id)
                         .Update(record);
 
-                    return resp?.Models?.FirstOrDefault();
+                    var updated = resp?.Models?.FirstOrDefault();
+                    if (updated == null)
+                        throw new InvalidOperationException("Speichern fehlgeschlagen (kein Datensatz zurückgegeben).");
+
+                    return updated;
                 }
 
                 var insertResp = await _client
                     .From<StartseiteBekanntmachungRecord>()
                     .Insert(record);
 
-                return insertResp?.Models?.FirstOrDefault();
+                var inserted = insertResp?.Models?.FirstOrDefault();
+                if (inserted == null)
+                    throw new InvalidOperationException("Speichern fehlgeschlagen (kein Datensatz zurückgegeben).");
+
+                return inserted;
             }
             catch (Exception ex)
             {
                 _logger?.LogError(ex, "SaveStartseiteBekanntmachungAsync failed");
-                return null;
+                throw new InvalidOperationException(BuildUserFacingSaveError(ex), ex);
             }
         }
 
         public async Task<StartseiteTerminRecord?> SaveStartseiteTerminAsync(StartseiteTerminRecord record)
         {
+            await InitializeAsync();
+            if (_client == null) return null;
+            if (record == null) return null;
+
             try
             {
-                await InitializeAsync();
-                if (_client == null) return null;
-                if (record == null) return null;
-
                 if (record.Id > 0)
                 {
                     var resp = await _client
@@ -1057,50 +1065,117 @@ namespace KGV.Infrastructure.Services
                         .Where(x => x.Id == record.Id)
                         .Update(record);
 
-                    return resp?.Models?.FirstOrDefault();
+                    var updated = resp?.Models?.FirstOrDefault();
+                    if (updated == null)
+                        throw new InvalidOperationException("Speichern fehlgeschlagen (kein Datensatz zurückgegeben).");
+
+                    return updated;
                 }
 
                 var insertResp = await _client
                     .From<StartseiteTerminRecord>()
                     .Insert(record);
 
-                return insertResp?.Models?.FirstOrDefault();
+                var inserted = insertResp?.Models?.FirstOrDefault();
+                if (inserted == null)
+                    throw new InvalidOperationException("Speichern fehlgeschlagen (kein Datensatz zurückgegeben).");
+
+                return inserted;
             }
             catch (Exception ex)
             {
                 _logger?.LogError(ex, "SaveStartseiteTerminAsync failed");
-                return null;
+                throw new InvalidOperationException(BuildUserFacingSaveError(ex), ex);
             }
         }
 
         public async Task<StartseiteArbeitseinsatzRecord?> SaveStartseiteArbeitseinsatzAsync(StartseiteArbeitseinsatzRecord record)
         {
+            await InitializeAsync();
+            if (_client == null) return null;
+            if (record == null) return null;
+
             try
             {
-                await InitializeAsync();
-                if (_client == null) return null;
-                if (record == null) return null;
+                var write = new StartseiteArbeitseinsatzWriteRecord
+                {
+                    Id = record.Id,
+                    Titel = record.Titel,
+                    Beschreibung = record.Beschreibung,
+                    Datum = record.Datum,
+                    StartUhrzeit = record.StartUhrzeit,
+                    EndUhrzeit = record.EndUhrzeit,
+                    Treffpunkt = record.Treffpunkt,
+                    MaxTeilnehmer = record.MaxTeilnehmer,
+                    StundenWert = record.StundenWert,
+                    SichtbarAb = record.SichtbarAb,
+                    SichtbarBis = record.SichtbarBis,
+                    AnmeldungBis = record.AnmeldungBis
+                };
+
+                long id;
 
                 if (record.Id > 0)
                 {
                     var resp = await _client
-                        .From<StartseiteArbeitseinsatzRecord>()
+                        .From<StartseiteArbeitseinsatzWriteRecord>()
                         .Where(x => x.Id == record.Id)
-                        .Update(record);
+                        .Update(write);
 
-                    return resp?.Models?.FirstOrDefault();
+                    var updated = resp?.Models?.FirstOrDefault();
+                    if (updated == null)
+                        throw new InvalidOperationException("Speichern fehlgeschlagen (kein Datensatz zurückgegeben).");
+
+                    id = updated.Id;
+                }
+                else
+                {
+                    var insertResp = await _client
+                        .From<StartseiteArbeitseinsatzWriteRecord>()
+                        .Insert(write);
+
+                    var inserted = insertResp?.Models?.FirstOrDefault();
+                    if (inserted == null)
+                        throw new InvalidOperationException("Speichern fehlgeschlagen (kein Datensatz zurückgegeben).");
+
+                    id = inserted.Id;
                 }
 
-                var insertResp = await _client
+                // Re-load from the view, so computed/read-only columns (z.B. angemeldet_count) are correct.
+                return await _client
                     .From<StartseiteArbeitseinsatzRecord>()
-                    .Insert(record);
-
-                return insertResp?.Models?.FirstOrDefault();
+                    .Where(x => x.Id == id)
+                    .Single();
             }
             catch (Exception ex)
             {
                 _logger?.LogError(ex, "SaveStartseiteArbeitseinsatzAsync failed");
-                return null;
+                throw new InvalidOperationException(BuildUserFacingSaveError(ex), ex);
+            }
+        }
+
+        private static string BuildUserFacingSaveError(Exception ex)
+        {
+            // Ziel: echte Ursache sichtbar machen (statt nur "Speichern fehlgeschlagen").
+            // PostgrestException enthält oft ein JSON-Error-Payload. Das holen wir defensiv via Reflection.
+            try
+            {
+                var msg = (ex.Message ?? string.Empty).Trim();
+
+                var contentProp = ex.GetType().GetProperty("Content");
+                var content = contentProp?.GetValue(ex) as string;
+                content = (content ?? string.Empty).Trim();
+
+                if (!string.IsNullOrWhiteSpace(content) && !msg.Contains(content, StringComparison.Ordinal))
+                    msg = string.IsNullOrWhiteSpace(msg) ? content : msg + "\n" + content;
+
+                return string.IsNullOrWhiteSpace(msg)
+                    ? "Speichern fehlgeschlagen."
+                    : msg;
+            }
+            catch
+            {
+                return "Speichern fehlgeschlagen.";
             }
         }
 

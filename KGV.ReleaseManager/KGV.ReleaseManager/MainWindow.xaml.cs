@@ -13,6 +13,7 @@ public partial class MainWindow : Window
     private readonly WpfReleaseService _wpfReleaseService = new();
     private readonly AndroidReleaseService _androidReleaseService = new();
     private readonly FolderPickerService _folderPickerService = new();
+    private readonly ReleaseNotesService _releaseNotesService = new();
 
     private VersionInfo? _currentWpfVersion;
     private VersionInfo? _currentAndroidVersion;
@@ -74,6 +75,26 @@ public partial class MainWindow : Window
 
     private string AndroidCsprojPath => Path.Combine(RepoRootTextBox.Text.Trim(), "KGV.Maui", "KGV.Maui.csproj");
 
+    private string GetReleaseNotesTargetVersion()
+    {
+        var includesWpf = WpfOnlyRadioButton.IsChecked == true || BothRadioButton.IsChecked == true;
+        var includesAndroid = AndroidOnlyRadioButton.IsChecked == true || BothRadioButton.IsChecked == true;
+
+        if (includesWpf)
+        {
+            var v = ReadTargetVersion(WpfMajorTextBox.Text, WpfMinorTextBox.Text, WpfPatchTextBox.Text);
+            return v.DisplayVersion;
+        }
+
+        if (includesAndroid)
+        {
+            var v = ReadTargetVersion(AndroidMajorTextBox.Text, AndroidMinorTextBox.Text, AndroidPatchTextBox.Text);
+            return v.DisplayVersion;
+        }
+
+        throw new InvalidOperationException("Bitte eine Release-Variante auswählen.");
+    }
+
     private void AppendLog(string message)
     {
         Dispatcher.Invoke(() =>
@@ -113,6 +134,100 @@ public partial class MainWindow : Window
     private void LoadVersions_Click(object sender, RoutedEventArgs e)
     {
         LoadVersionsSafe();
+    }
+
+    private void CopyReleaseData_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var repoRoot = RepoRootTextBox.Text.Trim();
+            if (string.IsNullOrWhiteSpace(repoRoot) || !Directory.Exists(repoRoot))
+                throw new InvalidOperationException("Der KGV-Projektordner ist ungültig.");
+
+            var version = GetReleaseNotesTargetVersion();
+            var changelogText = _releaseNotesService.ReadChangelogOrEmpty(repoRoot);
+            var unreleased = _releaseNotesService.ExtractUnreleasedBlock(changelogText);
+
+            if (string.IsNullOrWhiteSpace(unreleased))
+                unreleased = "(Kein [Unreleased]-Block gefunden oder leer.)";
+
+            var context = _releaseNotesService.TryReadLatestReleaseNotesSummary(repoRoot);
+            var prompt = _releaseNotesService.BuildClipboardPrompt(version, DateTime.Today, unreleased, context);
+
+            Clipboard.SetText(prompt);
+            System.Windows.MessageBox.Show(this, "Daten kopiert.", "Release-Daten kopieren", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            System.Windows.MessageBox.Show(this, ex.Message, "Release-Daten kopieren", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void OpenChangelog_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var repoRoot = RepoRootTextBox.Text.Trim();
+            if (string.IsNullOrWhiteSpace(repoRoot) || !Directory.Exists(repoRoot))
+                throw new InvalidOperationException("Der KGV-Projektordner ist ungültig.");
+
+            _releaseNotesService.OpenChangelogInEditor(repoRoot);
+        }
+        catch (Exception ex)
+        {
+            System.Windows.MessageBox.Show(this, ex.Message, "Changelog öffnen", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void PasteReleaseText_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            if (Clipboard.ContainsText())
+                ReleaseNotesTextBox.Text = Clipboard.GetText();
+        }
+        catch (Exception ex)
+        {
+            System.Windows.MessageBox.Show(this, ex.Message, "Einfügen", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void SaveReleaseText_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var repoRoot = RepoRootTextBox.Text.Trim();
+            if (string.IsNullOrWhiteSpace(repoRoot) || !Directory.Exists(repoRoot))
+                throw new InvalidOperationException("Der KGV-Projektordner ist ungültig.");
+
+            var version = GetReleaseNotesTargetVersion();
+            var fullText = (ReleaseNotesTextBox.Text ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(fullText))
+                throw new InvalidOperationException("Release-Text ist leer.");
+
+            var exists = _releaseNotesService.ReleaseEntryExists(repoRoot, version);
+            if (exists)
+            {
+                var decision = System.Windows.MessageBox.Show(
+                    this,
+                    $"Für Version {version} existiert bereits ein Eintrag. Soll er aktualisiert werden?",
+                    "Release-Text speichern",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question);
+
+                if (decision != MessageBoxResult.Yes)
+                    return;
+            }
+
+            var (entry, _) = _releaseNotesService.ParseReleaseNotesText(version, DateTime.Today, fullText);
+            _releaseNotesService.SaveReleaseNotes(repoRoot, entry);
+
+            System.Windows.MessageBox.Show(this, "Release-Text gespeichert.", "Release-Text speichern", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            System.Windows.MessageBox.Show(this, ex.Message, "Release-Text speichern", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 
     private void LoadVersionsSafe()
@@ -334,5 +449,11 @@ public partial class MainWindow : Window
         AndroidPatchTextBox.IsEnabled = enabled;
         AndroidBuildTextBox.IsEnabled = enabled;
         CommitProjectCheckBox.IsEnabled = enabled;
+
+        CopyReleaseDataButton.IsEnabled = enabled;
+        OpenChangelogButton.IsEnabled = enabled;
+        ReleaseNotesTextBox.IsEnabled = enabled;
+        PasteReleaseTextButton.IsEnabled = enabled;
+        SaveReleaseTextButton.IsEnabled = enabled;
     }
 }

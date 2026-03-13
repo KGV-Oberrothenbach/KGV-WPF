@@ -1,3 +1,4 @@
+using KGV.Maui.Services;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 
@@ -17,6 +18,8 @@ public partial class App : Application
     {
         var loginPage = _services.GetRequiredService<Pages.LoginPage>();
         var root = new NavigationPage(loginPage);
+
+        UpdateStartupCoordinator.Start(_services);
         return new Window(root);
     }
 }

@@ -44,7 +44,7 @@
 
             <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
                 <StackPanel IsEnabled="{Binding CanEdit}">
-                    <TextBlock Text="Titel" FontWeight="SemiBold" />
+                    <TextBlock Text="Titel *" FontWeight="SemiBold" />
                     <TextBox Text="{Binding SelectedItem.Titel, UpdateSourceTrigger=PropertyChanged}" />
 
                     <TextBlock Text="Beschreibung" FontWeight="SemiBold" Margin="0,12,0,0" />
@@ -59,7 +59,7 @@
                         </Grid.ColumnDefinitions>
 
                         <StackPanel Grid.Column="0" Margin="0,0,10,0">
-                            <TextBlock Text="Datum" FontWeight="SemiBold" />
+                            <TextBlock Text="Datum *" FontWeight="SemiBold" />
                             <DatePicker SelectedDate="{Binding SelectedItem.Datum, UpdateSourceTrigger=PropertyChanged}" />
                         </StackPanel>
 
@@ -121,7 +121,7 @@
                         </Grid.ColumnDefinitions>
 
                         <StackPanel Grid.Column="0" Margin="0,0,10,0">
-                            <TextBlock Text="Sichtbar ab" FontWeight="SemiBold" />
+                            <TextBlock Text="Sichtbar ab *" FontWeight="SemiBold" />
                             <DatePicker SelectedDate="{Binding SelectedItem.SichtbarAb, UpdateSourceTrigger=PropertyChanged}" />
                         </StackPanel>
 
@@ -135,3 +135,4 @@
         </Grid>
     </Grid>
 </UserControl>
+

@@ -116,3 +116,15 @@
 6. Warnung CS8618 in App.xaml.cs überprüfen / ggf. `required` verwenden  
 7. PLZ-Fix in allen ViewModels konsistent anwenden  
 8. Unit Tests für ViewModels vorbereiten
+
+---
+
+## 2026-03-13 – Release Notes / Changelog Workflow
+
+### Erledigt
+- Zentrale Changelog-Datei und Release-Notes-Historie eingeführt (menschen- und maschinenlesbar).
+- ReleaseManager um manuellen Flow erweitert: Daten aus Changelog kopieren, finalen Text einfügen und versionsbezogen speichern.
+- `releases.json` wird beim Release in den GitHub-Ordner kopiert (Basis für spätere Web-Anzeige).
+
+### Hinweise
+- Altstände sind nur begrenzt rekonstruierbar; ältere Versionen bleiben daher bewusst knapp dokumentiert.

@@ -3,7 +3,7 @@ using KGV.Core.Models;
 
 namespace KGV.Maui.Pages;
 
-public sealed class ZaehlerwechselScanPage : ContentPage
+public sealed class ZaehlerwechselScanPage : FooterContentPage
 {
     private readonly ISupabaseService _supabaseService;
 

@@ -1,6 +1,6 @@
 namespace KGV.Maui.Pages;
 
-public sealed class RfidEinrichtenPlaceholderPage : ContentPage
+public sealed class RfidEinrichtenPlaceholderPage : FooterContentPage
 {
     public RfidEinrichtenPlaceholderPage()
     {

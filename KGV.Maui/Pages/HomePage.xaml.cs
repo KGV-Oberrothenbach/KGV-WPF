@@ -8,11 +8,10 @@ using System.Linq;
 
 namespace KGV.Maui.Pages;
 
-public sealed class HomePage : ContentPage
+public sealed class HomePage : FooterContentPage
 {
     private readonly ISupabaseService _supabaseService;
     private readonly IUserContextAccessor _userContextAccessor;
-    private readonly KGV.Maui.Services.IAndroidUpdateService _androidUpdateService;
 
     private bool _isBusy;
     private Task? _loadTask;
@@ -48,11 +47,10 @@ public sealed class HomePage : ContentPage
         }
     }
 
-    public HomePage(ISupabaseService supabaseService, IUserContextAccessor userContextAccessor, KGV.Maui.Services.IAndroidUpdateService androidUpdateService)
+    public HomePage(ISupabaseService supabaseService, IUserContextAccessor userContextAccessor)
     {
         _supabaseService = supabaseService ?? throw new ArgumentNullException(nameof(supabaseService));
         _userContextAccessor = userContextAccessor ?? throw new ArgumentNullException(nameof(userContextAccessor));
-        _androidUpdateService = androidUpdateService ?? throw new ArgumentNullException(nameof(androidUpdateService));
 
         Title = "Start";
 
@@ -283,30 +281,7 @@ public sealed class HomePage : ContentPage
 
     private async void OnAppearing(object? sender, EventArgs e)
     {
-        _ = PromptAndroidUpdateIfNeededAsync();
         await EnsureLoadedAsync();
-    }
-
-    private async Task PromptAndroidUpdateIfNeededAsync()
-    {
-        try
-        {
-            var info = await _androidUpdateService.TryGetUpdatePromptAsync();
-            if (info == null)
-                return;
-
-            var download = await MainThread.InvokeOnMainThreadAsync(()
-                => DisplayAlert("Update verfügbar", info.BuildMessage(), "Herunterladen", "Später"));
-
-            if (!download)
-                return;
-
-            await Browser.OpenAsync(info.DownloadUrl, BrowserLaunchMode.SystemPreferred);
-        }
-        catch
-        {
-            // Update check/prompt must never break navigation or the start page.
-        }
     }
 
     private Task EnsureLoadedAsync()
