@@ -126,6 +126,8 @@ namespace KGV.Wpf.ViewModels
             private set => SetProperty(ref _isDirty, value);
         }
 
+        private bool _parzellenChanged;
+
         // ✅ FIX: MemberDetailViewModel wurde beim Navigieren immer neu geladen (oder in einem ungünstigen Moment),
         // aber manchmal NICHT initialisiert, wenn Supabase noch nicht ready war oder wenn exceptions geschluckt wurden.
         // Daher: (1) initialisieren nur einmal pro VM-Instanz, (2) Fehler sichtbar machen, (3) Loading-State für UI.
@@ -439,6 +441,7 @@ namespace KGV.Wpf.ViewModels
                 IsEditMode = true;
                 _originalSnapshot = SelectedMember.Clone();
                 IsDirty = false;
+                _parzellenChanged = false;
 
                 OnPropertyChanged(nameof(ShowNebenmitgliedButton));
                 NebenmitgliedCommand.RaiseCanExecuteChanged();
@@ -451,7 +454,7 @@ namespace KGV.Wpf.ViewModels
             InvalidateCommands();
         }
 
-        private bool CanSave() => IsEditMode && IsDirty;
+        private bool CanSave() => IsEditMode && (IsDirty || _parzellenChanged);
         private bool CanCancel() => IsEditMode;
 
         private async Task SaveAsync()
@@ -465,16 +468,23 @@ namespace KGV.Wpf.ViewModels
                     return;
                 }
 
-                var ok = await _supabaseService.UpdateMitgliedAsync(SelectedMember, _lockUserId);
-                if (!ok)
+                if (IsDirty)
                 {
-                    MessageBox.Show("Speichern fehlgeschlagen (ggf. Lock verloren oder keine Berechtigung).", "Fehler",
-                        MessageBoxButton.OK, MessageBoxImage.Error);
-                    return;
+                    var ok = await _supabaseService.UpdateMitgliedAsync(SelectedMember, _lockUserId);
+                    if (!ok)
+                    {
+                        MessageBox.Show("Speichern fehlgeschlagen (ggf. Lock verloren oder keine Berechtigung).", "Fehler",
+                            MessageBoxButton.OK, MessageBoxImage.Error);
+                        return;
+                    }
+
+                    _originalSnapshot = SelectedMember.Clone();
+                    IsDirty = false;
+
+                    WeakReferenceMessenger.Default.Send(new MemberSavedMessage(SelectedMember.Clone()));
                 }
 
-                _originalSnapshot = SelectedMember.Clone();
-                IsDirty = false;
+                _parzellenChanged = false;
 
                 if (!string.IsNullOrEmpty(_lockUserId))
                 {
@@ -485,9 +495,7 @@ namespace KGV.Wpf.ViewModels
                 IsEditMode = false;
                 InvalidateCommands();
 
-                WeakReferenceMessenger.Default.Send(new MemberSavedMessage(SelectedMember.Clone()));
-
-                MessageBox.Show("Mitglied gespeichert.", "OK", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show("Änderungen gespeichert.", "OK", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
@@ -499,6 +507,29 @@ namespace KGV.Wpf.ViewModels
         {
             try
             {
+                if (IsDirty)
+                {
+                    var decision = MessageBox.Show(
+                        "Ungespeicherte Änderungen verwerfen?",
+                        "Abbrechen",
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Question);
+
+                    if (decision != MessageBoxResult.Yes)
+                        return;
+                }
+                else if (_parzellenChanged)
+                {
+                    var decision = MessageBox.Show(
+                        "Parzellen-Zuordnungen wurden bereits gespeichert. Bearbeiten wirklich beenden?",
+                        "Abbrechen",
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Question);
+
+                    if (decision != MessageBoxResult.Yes)
+                        return;
+                }
+
                 SelectedMember.CopyFrom(_originalSnapshot);
 
                 if (!string.IsNullOrEmpty(_lockUserId))
@@ -509,6 +540,7 @@ namespace KGV.Wpf.ViewModels
 
                 IsEditMode = false;
                 IsDirty = false;
+                _parzellenChanged = false;
                 InvalidateCommands();
 
                 OnPropertyChanged(nameof(ShowNebenmitgliedButton));
@@ -560,6 +592,9 @@ namespace KGV.Wpf.ViewModels
 
                 await LoadParzellenAsync();
 
+                _parzellenChanged = true;
+                InvalidateCommands();
+
                 MessageBox.Show("Parzelle zugewiesen.", "OK", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
@@ -599,6 +634,9 @@ namespace KGV.Wpf.ViewModels
                 }
 
                 await LoadParzellenAsync();
+
+                _parzellenChanged = true;
+                InvalidateCommands();
 
                 MessageBox.Show("Belegung beendet.", "OK", MessageBoxButton.OK, MessageBoxImage.Information);
             }

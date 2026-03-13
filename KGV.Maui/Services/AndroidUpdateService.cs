@@ -18,7 +18,8 @@ public sealed class AndroidUpdateService : IAndroidUpdateService
     // Central place to change the update endpoint.
     // GitHub Pages:
     //   https://<user>.github.io/<repo>/android/version.json
-    public const string VersionJsonUrl = "https://abraeuer20-png.github.io/KGV/android/version.json";
+    // Must match the publish location used by the ReleaseManager (BaseUrl + /android/version.json).
+    public const string VersionJsonUrl = "https://kgv-oberrothenbach.github.io/KGV-WPF/android/version.json";
 
     private static readonly HttpClient Http = new HttpClient
     {

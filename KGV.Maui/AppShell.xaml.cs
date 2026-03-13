@@ -80,6 +80,21 @@ public class AppShell : Shell
             });
         }
 
+        // Info / Impressum (immer sichtbar)
+        Items.Add(new FlyoutItem
+        {
+            Title = "Info / Impressum",
+            Items =
+            {
+                new ShellContent
+                {
+                    Title = "Impressum",
+                    Route = "impressum",
+                    ContentTemplate = new DataTemplate(typeof(ImpressumPage))
+                }
+            }
+        });
+
         Items.Add(new FlyoutItem
         {
             Title = "Beenden",

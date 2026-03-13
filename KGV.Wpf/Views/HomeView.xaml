@@ -31,7 +31,7 @@
                     CornerRadius="8"
                     Visibility="{Binding ShowPflichtstunden, Converter={StaticResource BoolToVis}}">
                 <StackPanel>
-                    <TextBlock Text="Pflichtstunden" FontSize="18" FontWeight="Bold" Foreground="{StaticResource KgvTextBrush}" />
+                    <TextBlock Text="Meine Arbeitsstunden" FontSize="18" FontWeight="Bold" Foreground="{StaticResource KgvTextBrush}" />
 
                     <UniformGrid Columns="4" Margin="0,10,0,0">
                         <StackPanel>
@@ -61,8 +61,134 @@
                 </StackPanel>
             </Border>
 
+            <!-- Arbeitseinsätze + Termine -->
+            <Grid Margin="0,24,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="24" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Arbeitseinsätze (links) -->
+                <StackPanel Grid.Column="0">
+                    <Grid Margin="0,0,0,6">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Column="0" Text="Arbeitseinsätze" FontSize="18" FontWeight="Bold" Foreground="{StaticResource KgvTextBrush}" />
+                        <Button Grid.Column="1"
+                                Content="Bearbeiten"
+                                Style="{StaticResource PrimaryButton}"
+                                Width="140"
+                                Height="35"
+                                Command="{Binding EditArbeitseinsaetzeCommand}"
+                                Visibility="{Binding CanEditStartseite, Converter={StaticResource BoolToVis}}" />
+                    </Grid>
+
+                    <TextBlock Text="{Binding ArbeitseinsaetzeEmptyText}"
+                               Opacity="0.8"
+                               Foreground="{StaticResource KgvMutedBrush}"
+                               Visibility="{Binding ArbeitseinsaetzeEmptyText, Converter={StaticResource StringNotEmptyToVisibility}}"
+                               TextWrapping="Wrap" />
+
+                    <ItemsControl ItemsSource="{Binding Arbeitseinsaetze}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Margin="0,10,0,0" Padding="12" Background="{StaticResource KgvSurfaceBrush}" BorderBrush="{StaticResource KgvBorderBrush}" BorderThickness="1" CornerRadius="8">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Titel}" FontWeight="Bold" TextWrapping="Wrap" />
+                                        <TextBlock Text="{Binding WhenText}" Foreground="{StaticResource KgvMutedBrush}" Margin="0,2,0,0" TextWrapping="Wrap" />
+                                        <TextBlock Text="{Binding TreffpunktText}"
+                                                   Margin="0,6,0,0"
+                                                   Visibility="{Binding HasTreffpunkt, Converter={StaticResource BoolToVis}}"
+                                                   TextWrapping="Wrap" />
+                                        <TextBlock Text="{Binding StundenWertText}"
+                                                   Foreground="{StaticResource KgvMutedBrush}"
+                                                   Margin="0,2,0,0"
+                                                   Visibility="{Binding HasStundenWert, Converter={StaticResource BoolToVis}}"
+                                                   TextWrapping="Wrap" />
+                                        <TextBlock Text="{Binding TeilnehmerText}"
+                                                   Foreground="{StaticResource KgvMutedBrush}"
+                                                   Margin="0,2,0,0"
+                                                   Visibility="{Binding HasTeilnehmerInfo, Converter={StaticResource BoolToVis}}"
+                                                   TextWrapping="Wrap" />
+                                        <TextBlock Text="{Binding Beschreibung}"
+                                                   Margin="0,6,0,0"
+                                                   Visibility="{Binding HasBeschreibung, Converter={StaticResource BoolToVis}}"
+                                                   TextWrapping="Wrap" />
+
+                                        <TextBlock Text="{Binding SignupStatusText}"
+                                                   Margin="0,10,0,0"
+                                                   Foreground="{StaticResource KgvMutedBrush}"
+                                                   Visibility="{Binding HasSignupStatus, Converter={StaticResource BoolToVis}}"
+                                                   TextWrapping="Wrap" />
+
+                                        <Button Content="{Binding ActionButtonText}"
+                                                Margin="0,8,0,0"
+                                                Style="{StaticResource PrimaryButton}"
+                                                Command="{Binding DataContext.ArbeitseinsatzActionCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                CommandParameter="{Binding}"
+                                                Visibility="{Binding ShowActionButton, Converter={StaticResource BoolToVis}}" />
+
+                                        <TextBlock Text="{Binding HintText}"
+                                                   Margin="0,8,0,0"
+                                                   Foreground="{StaticResource KgvMutedBrush}"
+                                                   Visibility="{Binding HasHint, Converter={StaticResource BoolToVis}}"
+                                                   TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+
+                <!-- Termine (rechts) -->
+                <StackPanel Grid.Column="2">
+                    <Grid Margin="0,0,0,6">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Column="0" Text="Termine" FontSize="18" FontWeight="Bold" Foreground="{StaticResource KgvTextBrush}" />
+                        <Button Grid.Column="1"
+                                Content="Bearbeiten"
+                                Style="{StaticResource PrimaryButton}"
+                                Width="140"
+                                Height="35"
+                                Command="{Binding EditTermineCommand}"
+                                Visibility="{Binding CanEditStartseite, Converter={StaticResource BoolToVis}}" />
+                    </Grid>
+
+                    <TextBlock Text="{Binding TermineEmptyText}"
+                               Opacity="0.8"
+                               Foreground="{StaticResource KgvMutedBrush}"
+                               Visibility="{Binding TermineEmptyText, Converter={StaticResource StringNotEmptyToVisibility}}"
+                               TextWrapping="Wrap" />
+
+                    <ItemsControl ItemsSource="{Binding Termine}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Margin="0,10,0,0" Padding="12" Background="{StaticResource KgvSurfaceBrush}" BorderBrush="{StaticResource KgvBorderBrush}" BorderThickness="1" CornerRadius="8">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Titel}" FontWeight="Bold" TextWrapping="Wrap" />
+                                        <TextBlock Text="{Binding WhenText}" Foreground="{StaticResource KgvMutedBrush}" Margin="0,2,0,0" TextWrapping="Wrap" />
+                                        <TextBlock Text="{Binding Beschreibung}"
+                                                   Margin="0,6,0,0"
+                                                   Visibility="{Binding HasBeschreibung, Converter={StaticResource BoolToVis}}"
+                                                   TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Grid>
+
             <!-- Bekanntmachungen -->
-            <Grid Margin="0,18,0,6">
+            <Grid Margin="0,24,0,6">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
@@ -84,133 +210,56 @@
                        Foreground="{StaticResource KgvMutedBrush}"
                        Visibility="{Binding BekanntmachungenEmptyText, Converter={StaticResource StringNotEmptyToVisibility}}"
                        TextWrapping="Wrap" />
-            <ItemsControl ItemsSource="{Binding Bekanntmachungen}">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <Border Margin="0,10,0,0" Padding="12" Background="{StaticResource KgvSurfaceBrush}" BorderBrush="{StaticResource KgvBorderBrush}" BorderThickness="1" CornerRadius="8">
-                            <StackPanel>
-                                <TextBlock Text="{Binding Titel}" FontWeight="Bold" TextWrapping="Wrap" />
-                                <WebBrowser Margin="0,8,0,0"
-                                            MinHeight="140"
-                                            MaxHeight="520"
-                                            Visibility="{Binding HasInhaltHtml, Converter={StaticResource BoolToVis}}"
-                                            helpers:HtmlWebBrowserHelper.Html="{Binding InhaltHtml}" />
-                            </StackPanel>
-                        </Border>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
 
-            <!-- Termine -->
-            <Grid Margin="0,24,0,6">
+            <Grid Margin="0,10,0,0">
                 <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="260" />
+                    <ColumnDefinition Width="18" />
                     <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
-                <TextBlock Grid.Column="0" Text="Termine" FontSize="18" FontWeight="Bold" Foreground="{StaticResource KgvTextBrush}" />
-                <Button Grid.Column="1"
-                        Content="Bearbeiten"
-                        Style="{StaticResource PrimaryButton}"
-                        Width="140"
-                        Height="35"
-                        Command="{Binding EditTermineCommand}"
-                        Visibility="{Binding CanEditStartseite, Converter={StaticResource BoolToVis}}" />
+                <ListBox Grid.Column="0"
+                         ItemsSource="{Binding Bekanntmachungen}"
+                         SelectedItem="{Binding SelectedBekanntmachung}"
+                         BorderBrush="{StaticResource KgvBorderBrush}"
+                         BorderThickness="1"
+                         Background="{StaticResource KgvSurfaceBrush}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Titel}" TextWrapping="Wrap" Margin="8,6" />
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <Border Grid.Column="2" Padding="12" Background="{StaticResource KgvSurfaceBrush}" BorderBrush="{StaticResource KgvBorderBrush}" BorderThickness="1" CornerRadius="8">
+                    <StackPanel>
+                        <TextBlock Text="{Binding SelectedBekanntmachung.Titel}" FontWeight="Bold" TextWrapping="Wrap" />
+
+                        <TextBlock Margin="0,10,0,0"
+                                   Opacity="0.8"
+                                   Foreground="{StaticResource KgvMutedBrush}"
+                                   Text="Bitte eine Bekanntmachung auswählen."
+                                   TextWrapping="Wrap">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding SelectedBekanntmachung.HasInhaltHtml}" Value="True">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+
+                        <WebBrowser Margin="0,10,0,0"
+                                    MinHeight="140"
+                                    MaxHeight="520"
+                                    Visibility="{Binding SelectedBekanntmachung.HasInhaltHtml, Converter={StaticResource BoolToVis}}"
+                                    helpers:HtmlWebBrowserHelper.Html="{Binding SelectedBekanntmachung.InhaltHtml}" />
+                    </StackPanel>
+                </Border>
             </Grid>
-
-            <TextBlock Text="{Binding TermineEmptyText}"
-                       Opacity="0.8"
-                       Foreground="{StaticResource KgvMutedBrush}"
-                       Visibility="{Binding TermineEmptyText, Converter={StaticResource StringNotEmptyToVisibility}}"
-                       TextWrapping="Wrap" />
-            <ItemsControl ItemsSource="{Binding Termine}">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <Border Margin="0,10,0,0" Padding="12" Background="{StaticResource KgvSurfaceBrush}" BorderBrush="{StaticResource KgvBorderBrush}" BorderThickness="1" CornerRadius="8">
-                            <StackPanel>
-                                <TextBlock Text="{Binding Titel}" FontWeight="Bold" TextWrapping="Wrap" />
-                                <TextBlock Text="{Binding WhenText}" Foreground="{StaticResource KgvMutedBrush}" Margin="0,2,0,0" TextWrapping="Wrap" />
-                                <TextBlock Text="{Binding Beschreibung}"
-                                           Margin="0,6,0,0"
-                                           Visibility="{Binding HasBeschreibung, Converter={StaticResource BoolToVis}}"
-                                           TextWrapping="Wrap" />
-                            </StackPanel>
-                        </Border>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-
-            <!-- Arbeitseinsätze -->
-            <Grid Margin="0,24,0,6">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-
-                <TextBlock Grid.Column="0" Text="Arbeitseinsätze" FontSize="18" FontWeight="Bold" Foreground="{StaticResource KgvTextBrush}" />
-                <Button Grid.Column="1"
-                        Content="Bearbeiten"
-                        Style="{StaticResource PrimaryButton}"
-                        Width="140"
-                        Height="35"
-                        Command="{Binding EditArbeitseinsaetzeCommand}"
-                        Visibility="{Binding CanEditStartseite, Converter={StaticResource BoolToVis}}" />
-            </Grid>
-
-            <TextBlock Text="{Binding ArbeitseinsaetzeEmptyText}"
-                       Opacity="0.8"
-                       Foreground="{StaticResource KgvMutedBrush}"
-                       Visibility="{Binding ArbeitseinsaetzeEmptyText, Converter={StaticResource StringNotEmptyToVisibility}}"
-                       TextWrapping="Wrap" />
-            <ItemsControl ItemsSource="{Binding Arbeitseinsaetze}">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <Border Margin="0,10,0,0" Padding="12" Background="{StaticResource KgvSurfaceBrush}" BorderBrush="{StaticResource KgvBorderBrush}" BorderThickness="1" CornerRadius="8">
-                            <StackPanel>
-                                <TextBlock Text="{Binding Titel}" FontWeight="Bold" TextWrapping="Wrap" />
-                                <TextBlock Text="{Binding WhenText}" Foreground="{StaticResource KgvMutedBrush}" Margin="0,2,0,0" TextWrapping="Wrap" />
-                                <TextBlock Text="{Binding TreffpunktText}"
-                                           Margin="0,6,0,0"
-                                           Visibility="{Binding HasTreffpunkt, Converter={StaticResource BoolToVis}}"
-                                           TextWrapping="Wrap" />
-                                <TextBlock Text="{Binding StundenWertText}"
-                                           Foreground="{StaticResource KgvMutedBrush}"
-                                           Margin="0,2,0,0"
-                                           Visibility="{Binding HasStundenWert, Converter={StaticResource BoolToVis}}"
-                                           TextWrapping="Wrap" />
-                                <TextBlock Text="{Binding TeilnehmerText}"
-                                           Foreground="{StaticResource KgvMutedBrush}"
-                                           Margin="0,2,0,0"
-                                           Visibility="{Binding HasTeilnehmerInfo, Converter={StaticResource BoolToVis}}"
-                                           TextWrapping="Wrap" />
-                                <TextBlock Text="{Binding Beschreibung}"
-                                           Margin="0,6,0,0"
-                                           Visibility="{Binding HasBeschreibung, Converter={StaticResource BoolToVis}}"
-                                           TextWrapping="Wrap" />
-
-                                <TextBlock Text="{Binding SignupStatusText}"
-                                           Margin="0,10,0,0"
-                                           Foreground="{StaticResource KgvMutedBrush}"
-                                           Visibility="{Binding HasSignupStatus, Converter={StaticResource BoolToVis}}"
-                                           TextWrapping="Wrap" />
-
-                                <Button Content="{Binding ActionButtonText}"
-                                        Margin="0,8,0,0"
-                                        Style="{StaticResource PrimaryButton}"
-                                        Command="{Binding DataContext.ArbeitseinsatzActionCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                        CommandParameter="{Binding}"
-                                        Visibility="{Binding ShowActionButton, Converter={StaticResource BoolToVis}}" />
-
-                                <TextBlock Text="{Binding HintText}"
-                                           Margin="0,8,0,0"
-                                           Foreground="{StaticResource KgvMutedBrush}"
-                                           Visibility="{Binding HasHint, Converter={StaticResource BoolToVis}}"
-                                           TextWrapping="Wrap" />
-                            </StackPanel>
-                        </Border>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

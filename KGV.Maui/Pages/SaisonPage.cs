@@ -83,7 +83,7 @@ public sealed class SaisonPage : FooterContentPage
                     new HorizontalStackLayout
                     {
                         Spacing = 12,
-                        Children = { _newButton, _editButton, _saveButton, _cancelButton }
+                        Children = { _newButton, _editButton }
                     },
                     _picker,
                     _status,
@@ -94,7 +94,13 @@ public sealed class SaisonPage : FooterContentPage
                     new Label { Text = "€ pro Fehlstunde", FontAttributes = FontAttributes.Bold },
                     _euro,
                     new Label { Text = "Bemerkung", FontAttributes = FontAttributes.Bold },
-                    _bemerkung
+                    _bemerkung,
+                    new HorizontalStackLayout
+                    {
+                        Spacing = 12,
+                        HorizontalOptions = LayoutOptions.End,
+                        Children = { _saveButton, _cancelButton }
+                    }
                 }
             }
         };
@@ -141,7 +147,8 @@ public sealed class SaisonPage : FooterContentPage
                 return;
             }
 
-            _selected = _items.First();
+            var currentYear = DateTime.Today.Year;
+            _selected = _items.FirstOrDefault(x => x.Jahr == currentYear) ?? _items.First();
             _picker.SelectedItem = _selected;
             ApplyRecordToUi(_selected);
         }

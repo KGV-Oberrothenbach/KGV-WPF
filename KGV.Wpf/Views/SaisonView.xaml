@@ -35,8 +35,6 @@
             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
                 <Button Content="Neu" Command="{Binding NewSaisonCommand}" />
                 <Button Content="Bearbeiten" Command="{Binding ToggleEditCommand}" />
-                <Button Content="Speichern" Command="{Binding SaveCommand}" />
-                <Button Content="Abbrechen" Command="{Binding CancelCommand}" />
             </StackPanel>
         </DockPanel>
 
@@ -88,6 +86,11 @@
                         <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding BemerkungText, UpdateSourceTrigger=PropertyChanged}" Margin="0,6,0,0" AcceptsReturn="True" Height="90" TextWrapping="Wrap" />
                     </Grid>
                 </GroupBox>
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+                    <Button Content="Speichern" Command="{Binding SaveCommand}" />
+                    <Button Content="Abbrechen" Command="{Binding CancelCommand}" />
+                </StackPanel>
 
             </StackPanel>
         </ScrollViewer>

@@ -1,14 +1,189 @@
 <UserControl x:Class="KGV.Views.ImpressumView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:helpers="clr-namespace:KGV.Wpf.Helpers"
+             Background="{StaticResource KgvBackgroundBrush}">
 
-    <Grid Margin="20">
-        <StackPanel>
-            <TextBlock Text="{Binding AppName}" FontSize="20" FontWeight="SemiBold" />
-            <TextBlock Text="{Binding Headline}" Margin="0,8,0,0" FontSize="16" FontWeight="SemiBold" />
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
+        <helpers:StringNotEmptyToVisibilityConverter x:Key="StringNotEmptyToVisibility" />
+    </UserControl.Resources>
 
-            <TextBlock Text="{Binding Developer}" Margin="0,18,0,0" />
-            <TextBlock Text="{Binding Copyright}" Margin="0,6,0,0" />
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="24" MaxWidth="900">
+
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Column="0"
+                           Text="{Binding Headline}"
+                           FontSize="28"
+                           FontWeight="Bold"
+                           TextWrapping="Wrap" />
+
+                <Button Grid.Column="1"
+                        Content="Bearbeiten"
+                        Width="140"
+                        Height="35"
+                        Command="{Binding ToggleEditCommand}"
+                        Visibility="Visible">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
+                            <Setter Property="Visibility" Value="Visible" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding CanEditImpressum}" Value="False">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding IsEditMode}" Value="True">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+            </Grid>
+
+            <TextBlock Margin="0,12,0,0"
+                       Text="{Binding StatusText}"
+                       Foreground="DarkRed"
+                       Visibility="{Binding StatusText, Converter={StaticResource StringNotEmptyToVisibility}}"
+                       TextWrapping="Wrap" />
+
+            <Border Margin="0,18,0,0"
+                    Padding="12"
+                    Background="{StaticResource KgvSurfaceBrush}"
+                    BorderBrush="{StaticResource KgvBorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8">
+                <StackPanel>
+                    <TextBlock Text="{Binding VerantwortlichHeadline}" FontSize="18" FontWeight="Bold" />
+                    <TextBlock Margin="0,8,0,0" Text="{Binding VerantwortlichText}" TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
+
+            <TextBlock Margin="0,24,0,6" Text="Vorstand" FontSize="18" FontWeight="Bold" />
+            <ItemsControl ItemsSource="{Binding VorstandSlots}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Margin="0,10,0,0" Padding="12" Background="{StaticResource KgvSurfaceBrush}" BorderBrush="{StaticResource KgvBorderBrush}" BorderThickness="1" CornerRadius="8">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="220" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock Grid.Column="0" Text="{Binding FunktionLabel}" FontWeight="SemiBold" TextWrapping="Wrap" />
+
+                                <!-- Anzeige-Modus -->
+                                <StackPanel Grid.Column="1">
+                                    <StackPanel.Style>
+                                        <Style TargetType="StackPanel">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding DataContext.IsEditMode, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="True">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </StackPanel.Style>
+
+                                    <TextBlock Text="{Binding AssignedName}" FontWeight="Bold" TextWrapping="Wrap" />
+                                    <TextBlock Margin="0,4,0,0" Text="{Binding TelefonText}" Visibility="{Binding HasTelefon, Converter={StaticResource BoolToVis}}" TextWrapping="Wrap" />
+                                    <TextBlock Margin="0,2,0,0" Text="{Binding HandyText}" Visibility="{Binding HasHandy, Converter={StaticResource BoolToVis}}" TextWrapping="Wrap" />
+                                </StackPanel>
+
+                                <!-- Bearbeiten-Modus -->
+                                <StackPanel Grid.Column="1">
+                                    <StackPanel.Style>
+                                        <Style TargetType="StackPanel">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding DataContext.IsEditMode, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="True">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </StackPanel.Style>
+
+                                    <ComboBox ItemsSource="{Binding DataContext.MemberOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                              SelectedItem="{Binding SelectedMember}"
+                                              DisplayMemberPath="DisplayName"
+                                              Margin="0,0,0,6" />
+                                    <TextBlock Text="{Binding TelefonText}" Visibility="{Binding HasTelefon, Converter={StaticResource BoolToVis}}" TextWrapping="Wrap" />
+                                    <TextBlock Margin="0,2,0,0" Text="{Binding HandyText}" Visibility="{Binding HasHandy, Converter={StaticResource BoolToVis}}" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <TextBlock Margin="0,24,0,6" Text="Bauausschuss" FontSize="18" FontWeight="Bold" />
+            <ItemsControl ItemsSource="{Binding BauausschussSlots}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Margin="0,10,0,0" Padding="12" Background="{StaticResource KgvSurfaceBrush}" BorderBrush="{StaticResource KgvBorderBrush}" BorderThickness="1" CornerRadius="8">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="220" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock Grid.Column="0" Text="{Binding FunktionLabel}" FontWeight="SemiBold" TextWrapping="Wrap" />
+
+                                <!-- Anzeige-Modus -->
+                                <StackPanel Grid.Column="1">
+                                    <StackPanel.Style>
+                                        <Style TargetType="StackPanel">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding DataContext.IsEditMode, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="True">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </StackPanel.Style>
+
+                                    <TextBlock Text="{Binding AssignedName}" FontWeight="Bold" TextWrapping="Wrap" />
+                                    <TextBlock Margin="0,4,0,0" Text="{Binding TelefonText}" Visibility="{Binding HasTelefon, Converter={StaticResource BoolToVis}}" TextWrapping="Wrap" />
+                                    <TextBlock Margin="0,2,0,0" Text="{Binding HandyText}" Visibility="{Binding HasHandy, Converter={StaticResource BoolToVis}}" TextWrapping="Wrap" />
+                                </StackPanel>
+
+                                <!-- Bearbeiten-Modus -->
+                                <StackPanel Grid.Column="1">
+                                    <StackPanel.Style>
+                                        <Style TargetType="StackPanel">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding DataContext.IsEditMode, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="True">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </StackPanel.Style>
+
+                                    <ComboBox ItemsSource="{Binding DataContext.MemberOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                              SelectedItem="{Binding SelectedMember}"
+                                              DisplayMemberPath="DisplayName"
+                                              Margin="0,0,0,6" />
+                                    <TextBlock Text="{Binding TelefonText}" Visibility="{Binding HasTelefon, Converter={StaticResource BoolToVis}}" TextWrapping="Wrap" />
+                                    <TextBlock Margin="0,2,0,0" Text="{Binding HandyText}" Visibility="{Binding HasHandy, Converter={StaticResource BoolToVis}}" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <!-- Save/Cancel am Formularende -->
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,18,0,0" Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVis}}">
+                <Button Content="Speichern" Style="{StaticResource PrimaryButton}" Width="140" Height="35" Command="{Binding SaveCommand}" Margin="0,0,10,0" />
+                <Button Content="Abbrechen" Style="{StaticResource PrimaryButton}" Width="140" Height="35" Command="{Binding CancelCommand}" />
+            </StackPanel>
+
         </StackPanel>
-    </Grid>
+    </ScrollViewer>
 </UserControl>

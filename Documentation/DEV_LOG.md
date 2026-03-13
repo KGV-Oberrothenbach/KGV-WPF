@@ -210,5 +210,21 @@
 - Android Launcher-Icon: In der generierten Android-Manifest-Ausgabe fehlten `android:icon`/`android:roundIcon` am `<application>`-Element; Manifest-Vorlage wurde so ergänzt, dass explizit `@mipmap/appicon` / `@mipmap/appicon_round` verwendet wird.
 - Updateprüfung (WPF + MAUI): Fehlerpfad liefert jetzt differenzierte, benutzerfreundliche Ursachen (z.B. Updatequelle nicht erreichbar / JSON ungültig / Konfiguration fehlt) statt nur „Updateprüfung nicht verfügbar“.
 
+## 2026-03-13 – Restarbeiten (priorisiert): Android Update-URL, Parzellen-Dirtiness, Startseite, Saison
+
+### Erledigt
+- Android Updatepfad: `AndroidUpdateService.VersionJsonUrl` auf den ReleaseManager-Publish-Ort angepasst (`https://kgv-oberrothenbach.github.io/KGV-WPF/android/version.json`).
+- WPF Mitglied-Details: Parzellen-Zuordnung/Belegungsende aktiviert jetzt `Speichern` auch ohne Stammdaten-Änderung; `Speichern` beendet Edit-Mode ohne unnötiges Mitglied-Update; `Abbrechen` fragt bei ungespeicherten Stammdaten-Änderungen nach.
+- Startseite (WPF+MAUI): „Pflichtstunden“ in „Meine Arbeitsstunden“ umbenannt; Reihenfolge gemäß Vorgabe; Bekanntmachungen zeigen zunächst nur Titelliste, Inhalt erst nach Auswahl.
+- Saison (WPF+MAUI): Vorauswahl bevorzugt aktuelles Jahr; `Speichern`/`Abbrechen` an Formularende verschoben.
+
+## 2026-03-13 – Priorität 6: Impressum (Funktionsslots, Zuordnung, Editierbarkeit)
+
+### Erledigt
+- Neue Supabase-Anbindung für Impressum-Funktionsslots über Basistabelle `impressum_funktion_slot` (SlotKey + SortOrder + optional MitgliedId).
+- WPF Impressum: Anzeige „Verantwortlich“, „Vorstand“ (4 Slots) und „Bauausschuss“ (3 Slots) in fester Reihenfolge; Bearbeiten-Modus mit Mitgliedsauswahl, Dirty-Tracking, Rückfrage bei Abbruch, Save/Cancel am Formularende.
+- MAUI Impressum: gleiche Funktionalität inkl. Menüeintrag „Info / Impressum“, Bearbeiten-Modus mit Pickern und Save/Cancel am Formularende.
+- Auswahl standardmäßig aus aktiven Mitgliedern; bereits zugeordnete inaktive Mitglieder bleiben sichtbar/auswählbar (mit Kennzeichnung).
+
 ### Hinweise
 - Die Update-Diagnose-Details werden intern weiterhin protokolliert (WPF: `Debug.WriteLine`, MAUI: `ILogger` im `AndroidUpdateService`).

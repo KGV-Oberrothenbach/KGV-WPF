@@ -79,6 +79,21 @@ namespace KGV.Wpf.ViewModels
         public ObservableCollection<TerminItem> Termine { get; } = new();
         public ObservableCollection<ArbeitseinsatzItem> Arbeitseinsaetze { get; } = new();
 
+        private BekanntmachungItem? _selectedBekanntmachung;
+        public BekanntmachungItem? SelectedBekanntmachung
+        {
+            get => _selectedBekanntmachung;
+            set
+            {
+                if (SetProperty(ref _selectedBekanntmachung, value))
+                {
+                    OnPropertyChanged(nameof(HasSelectedBekanntmachung));
+                }
+            }
+        }
+
+        public bool HasSelectedBekanntmachung => SelectedBekanntmachung != null;
+
         private PflichtstundenTile? _pflichtstunden;
         public PflichtstundenTile? Pflichtstunden
         {
@@ -191,6 +206,7 @@ namespace KGV.Wpf.ViewModels
                 UpdateArbeitseinsaetze(new List<StartseiteArbeitseinsatzRecord>(), new HashSet<long>());
 
                 Pflichtstunden = null;
+                SelectedBekanntmachung = null;
             }
             finally
             {
@@ -251,11 +267,18 @@ namespace KGV.Wpf.ViewModels
 
         private void UpdateBekanntmachungen(List<StartseiteBekanntmachungRecord> list)
         {
+            var keepSelectedId = SelectedBekanntmachung?.Dto.Id;
+
             Bekanntmachungen.Clear();
             foreach (var b in list.Where(x => x != null))
                 Bekanntmachungen.Add(new BekanntmachungItem(b));
 
             BekanntmachungenEmptyText = Bekanntmachungen.Count == 0 ? "Keine aktuellen Bekanntmachungen." : string.Empty;
+
+            if (keepSelectedId.HasValue)
+                SelectedBekanntmachung = Bekanntmachungen.FirstOrDefault(x => x.Dto.Id == keepSelectedId.Value);
+            else
+                SelectedBekanntmachung = null;
         }
 
         private void UpdateTermine(List<StartseiteTerminRecord> list)

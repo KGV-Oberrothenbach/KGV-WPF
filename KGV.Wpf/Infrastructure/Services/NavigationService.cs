@@ -248,6 +248,11 @@ namespace KGV.Wpf.Infrastructure.Services
                 return new ExportViewModel(_supabaseService, mainVm.UserContext);
             }
 
+            if (viewModelType == typeof(ImpressumViewModel))
+            {
+                return new ImpressumViewModel(_supabaseService, mainVm.UserContext);
+            }
+
             // Fallback: default ctor
             return Activator.CreateInstance(viewModelType);
         }

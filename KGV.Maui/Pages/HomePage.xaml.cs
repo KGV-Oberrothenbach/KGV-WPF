@@ -23,6 +23,8 @@ public sealed class HomePage : FooterContentPage
     private readonly ObservableCollection<TerminItem> _termine = new();
     private readonly ObservableCollection<ArbeitseinsatzItem> _arbeitseinsaetze = new();
 
+    private BekanntmachungItem? _selectedBekanntmachung;
+
     private readonly Label _bekanntmachungenEmpty;
     private readonly Label _termineEmpty;
     private readonly Label _arbeitseinsaetzeEmpty;
@@ -37,6 +39,11 @@ public sealed class HomePage : FooterContentPage
     private readonly Label _pfGeleistet;
     private readonly Label _pfOffen;
     private readonly Label _pfBefreiung;
+
+    private readonly Border _bekanntmachungDetailCard;
+    private readonly Label _bekanntmachungDetailTitle;
+    private readonly Label _bekanntmachungDetailHtml;
+    private readonly Label _bekanntmachungDetailHint;
 
     private bool CanEditStartseite
     {
@@ -85,15 +92,17 @@ public sealed class HomePage : FooterContentPage
             var title = new Label { FontAttributes = FontAttributes.Bold, FontSize = 16 };
             title.SetBinding(Label.TextProperty, nameof(BekanntmachungItem.Titel));
 
-            var html = new Label { TextType = TextType.Html, LineBreakMode = LineBreakMode.WordWrap };
-            html.SetBinding(Label.TextProperty, nameof(BekanntmachungItem.InhaltHtml));
-            html.SetBinding(IsVisibleProperty, nameof(BekanntmachungItem.HasInhaltHtml));
-
-            return WrapCard(new VerticalStackLayout
+            var card = WrapCard(new VerticalStackLayout
             {
                 Spacing = 6,
-                Children = { title, html }
+                Children = { title }
             });
+
+            var tap = new TapGestureRecognizer();
+            tap.Tapped += (_, __) => SelectBekanntmachung(card.BindingContext as BekanntmachungItem);
+            card.GestureRecognizers.Add(tap);
+
+            return card;
         }));
 
         var termineList = new VerticalStackLayout { Spacing = 12 };
@@ -230,13 +239,30 @@ public sealed class HomePage : FooterContentPage
             Spacing = 6,
             Children =
             {
-                new Label { Text = "Pflichtstunden", FontSize = 18, FontAttributes = FontAttributes.Bold },
+                new Label { Text = "Meine Arbeitsstunden", FontSize = 18, FontAttributes = FontAttributes.Bold },
                 pfGrid,
                 _pfBefreiung
             }
         });
 
         _pflichtstundenCard.IsVisible = false;
+
+        _bekanntmachungDetailTitle = new Label { FontAttributes = FontAttributes.Bold, FontSize = 16 };
+        _bekanntmachungDetailHtml = new Label { TextType = TextType.Html, LineBreakMode = LineBreakMode.WordWrap };
+        _bekanntmachungDetailHint = new Label { Text = "Bitte eine Bekanntmachung auswählen.", Opacity = 0.8, TextColor = Colors.Gray };
+
+        _bekanntmachungDetailCard = WrapCard(new VerticalStackLayout
+        {
+            Spacing = 8,
+            Children =
+            {
+                _bekanntmachungDetailTitle,
+                _bekanntmachungDetailHint,
+                _bekanntmachungDetailHtml
+            }
+        });
+
+        _bekanntmachungDetailCard.IsVisible = false;
 
         Content = new ScrollView
         {
@@ -258,17 +284,18 @@ public sealed class HomePage : FooterContentPage
 
                     _pflichtstundenCard,
 
-                    bekanntHeader,
-                    _bekanntmachungenEmpty,
-                    bekanntmachungenList,
+                    arbeitHeader,
+                    _arbeitseinsaetzeEmpty,
+                    arbeitList,
 
                     termineHeader,
                     _termineEmpty,
                     termineList,
 
-                    arbeitHeader,
-                    _arbeitseinsaetzeEmpty,
-                    arbeitList
+                    bekanntHeader,
+                    _bekanntmachungenEmpty,
+                    bekanntmachungenList,
+                    _bekanntmachungDetailCard
                 }
             }
         };
@@ -340,6 +367,34 @@ public sealed class HomePage : FooterContentPage
         _bekanntmachungen.Clear();
         foreach (var b in list.Where(x => x != null))
             _bekanntmachungen.Add(new BekanntmachungItem((b.Titel ?? string.Empty).Trim(), b.InhaltHtml ?? string.Empty));
+
+        if (_selectedBekanntmachung != null && !_bekanntmachungen.Contains(_selectedBekanntmachung))
+            _selectedBekanntmachung = null;
+
+        UpdateBekanntmachungDetail();
+    }
+
+    private void SelectBekanntmachung(BekanntmachungItem? item)
+    {
+        _selectedBekanntmachung = item;
+        UpdateBekanntmachungDetail();
+    }
+
+    private void UpdateBekanntmachungDetail()
+    {
+        if (_selectedBekanntmachung == null)
+        {
+            _bekanntmachungDetailCard.IsVisible = false;
+            _bekanntmachungDetailTitle.Text = string.Empty;
+            _bekanntmachungDetailHtml.Text = string.Empty;
+            _bekanntmachungDetailHint.IsVisible = true;
+            return;
+        }
+
+        _bekanntmachungDetailTitle.Text = _selectedBekanntmachung.Titel;
+        _bekanntmachungDetailHtml.Text = _selectedBekanntmachung.InhaltHtml;
+        _bekanntmachungDetailHint.IsVisible = string.IsNullOrWhiteSpace(_selectedBekanntmachung.InhaltHtml);
+        _bekanntmachungDetailCard.IsVisible = true;
     }
 
     private void UpdateTermine(List<StartseiteTerminRecord> list)

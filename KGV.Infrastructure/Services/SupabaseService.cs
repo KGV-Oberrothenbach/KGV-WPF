@@ -1358,6 +1358,95 @@ namespace KGV.Infrastructure.Services
         public Task<bool> SignOffFromArbeitseinsatzAsync(long arbeitseinsatzId)
             => CallArbeitseinsatzRpcAsync("sign_off_from_arbeitseinsatz", arbeitseinsatzId);
 
+        // =========================
+        // Impressum (Funktionsslots)
+        // =========================
+        public async Task<List<ImpressumFunktionSlotRecord>> GetImpressumFunktionSlotsAsync()
+        {
+            var list = new List<ImpressumFunktionSlotRecord>();
+
+            try
+            {
+                await InitializeAsync();
+                if (_client == null) return list;
+
+                var resp = await _client
+                    .From<ImpressumFunktionSlotRecord>()
+                    .Get();
+
+                if (resp?.Models != null)
+                    list.AddRange(resp.Models.Where(x => x != null));
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "GetImpressumFunktionSlotsAsync failed");
+            }
+
+            return list;
+        }
+
+        public async Task<bool> SaveImpressumFunktionSlotsAsync(IEnumerable<ImpressumFunktionSlotRecord> slots)
+        {
+            await InitializeAsync();
+            if (_client == null) return false;
+            if (slots == null) return false;
+
+            try
+            {
+                foreach (var slot in slots.Where(x => x != null))
+                {
+                    var write = new ImpressumFunktionSlotRecord
+                    {
+                        Id = slot.Id,
+                        SlotKey = slot.SlotKey,
+                        Funktion = slot.Funktion,
+                        SortOrder = slot.SortOrder,
+                        MitgliedId = slot.MitgliedId
+                    };
+
+                    long id;
+
+                    if (slot.Id > 0)
+                    {
+                        var resp = await _client
+                            .From<ImpressumFunktionSlotRecord>()
+                            .Where(x => x.Id == slot.Id)
+                            .Update(write);
+
+                        var updated = resp?.Models?.FirstOrDefault();
+                        if (updated == null)
+                            throw new InvalidOperationException("Speichern fehlgeschlagen (kein Datensatz zurückgegeben).");
+
+                        id = updated.Id;
+                    }
+                    else
+                    {
+                        var insertResp = await _client
+                            .From<ImpressumFunktionSlotRecord>()
+                            .Insert(write);
+
+                        var inserted = insertResp?.Models?.FirstOrDefault();
+                        if (inserted == null)
+                            throw new InvalidOperationException("Speichern fehlgeschlagen (kein Datensatz zurückgegeben).");
+
+                        id = inserted.Id;
+                    }
+
+                    if (id <= 0)
+                        throw new InvalidOperationException("Speichern fehlgeschlagen (keine ID zurückgegeben). Prüfe DB-ID-Erzeugung (Identity/Sequence/Trigger).");
+
+                    slot.Id = id;
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "SaveImpressumFunktionSlotsAsync failed");
+                throw new InvalidOperationException(BuildUserFacingSaveError(ex), ex);
+            }
+        }
+
         public async Task<RfidScanContextRecord?> GetRfidScanContextAsync(string rfidTagUid)
         {
             try

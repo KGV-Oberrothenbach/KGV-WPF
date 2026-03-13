@@ -119,7 +119,11 @@ public sealed class SaisonViewModel : BaseViewModel, INavigationAware
             foreach (var s in (list ?? new()).OrderByDescending(x => x.Jahr))
                 Saisons.Add(s);
 
-            SelectedSaison ??= Saisons.FirstOrDefault();
+            if (SelectedSaison == null)
+            {
+                var currentYear = DateTime.Today.Year;
+                SelectedSaison = Saisons.FirstOrDefault(x => x.Jahr == currentYear) ?? Saisons.FirstOrDefault();
+            }
             LoadFromSelected();
         }
         catch (Exception ex)

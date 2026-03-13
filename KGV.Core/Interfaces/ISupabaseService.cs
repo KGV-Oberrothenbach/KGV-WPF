@@ -141,6 +141,12 @@ namespace KGV.Core.Interfaces
         Task<bool> SignUpForArbeitseinsatzAsync(long arbeitseinsatzId);
         Task<bool> SignOffFromArbeitseinsatzAsync(long arbeitseinsatzId);
 
+        // =========================
+        // Impressum (Funktionsslots)
+        // =========================
+        Task<List<ImpressumFunktionSlotRecord>> GetImpressumFunktionSlotsAsync();
+        Task<bool> SaveImpressumFunktionSlotsAsync(IEnumerable<ImpressumFunktionSlotRecord> slots);
+
         Task<RfidScanContextRecord?> GetRfidScanContextAsync(string rfidTagUid);
     }
 }
