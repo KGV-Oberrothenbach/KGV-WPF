@@ -1,5 +1,17 @@
 ﻿[
   {
+    "Version": "0.1.7",
+    "ReleaseDate": "2026-03-13",
+    "Title": "Verbesserte Startseiten-Verwaltung und Release-Historie",
+    "ShortText": "Mit Version 0.1.7 wurde die Verwaltung von Arbeitseins\u00E4tzen, Terminen und Bekanntmachungen \u00FCbersichtlicher und robuster gestaltet. Au\u00DFerdem wurde die Ver\u00F6ffentlichung von Release-Texten erweitert und das App-Symbol der Android-App angepasst.",
+    "FullText": "Titel: Verbesserte Startseiten-Verwaltung und Release-Historie\r\n\r\nKurztext: Mit Version 0.1.7 wurde die Verwaltung von Arbeitseins\u00E4tzen, Terminen und Bekanntmachungen \u00FCbersichtlicher und robuster gestaltet. Au\u00DFerdem wurde die Ver\u00F6ffentlichung von Release-Texten erweitert und das App-Symbol der Android-App angepasst.\r\n\r\nDetails:\r\n\r\nNeu:\r\n- Finalisierte Release-Texte k\u00F6nnen nun versioniert gespeichert und in einer strukturierten Release-Historie erfasst werden.\r\n\r\nVerbessert:\r\n- Die Bearbeitung von Arbeitseins\u00E4tzen, Terminen und Bekanntmachungen wurde klarer gestaltet, mit Speichern und Abbrechen am Ende des Formulars sowie einer R\u00FCckfrage bei ungespeicherten \u00C4nderungen.\r\n- Optionale und verpflichtende Eingabefelder wurden zuverl\u00E4ssiger voneinander getrennt, sodass technische Pflichtangaben Anwender nicht mehr unn\u00F6tig einschr\u00E4nken.\r\n- Das App-Symbol der Android-App wurde auf das KGV-Logo umgestellt.\r\n\r\nBehoben:\r\n- Das Speichern von Arbeitseins\u00E4tzen, Terminen und Bekanntmachungen wurde korrigiert und arbeitet nun zuverl\u00E4ssig.",
+    "Categories": [
+      "Neu",
+      "Verbessert",
+      "Behoben"
+    ]
+  },
+  {
     "Version": "0.1.6",
     "ReleaseDate": "2026-03-13",
     "Title": "Verbesserte Startseiten-Verwaltung und Release-Historie",
