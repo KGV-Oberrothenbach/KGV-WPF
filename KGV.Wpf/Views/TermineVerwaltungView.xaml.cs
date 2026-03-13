@@ -8,5 +8,9 @@ namespace KGV.Views
         {
             InitializeComponent();
         }
+        public void NewMethod()
+        {
+            // New method implementation
+        }
     }
 }

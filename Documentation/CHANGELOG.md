@@ -1,30 +1,18 @@
-# Titel: Überarbeitete Veröffentlichungsinformationen
+# Changelog
 
-# 
+## [Unreleased]
 
-# Kurztext: Mit Version 0.1.5 wurden die Release-Hinweise im Veröffentlichungsprozess vereinheitlicht. Außerdem wurde die Versionshistorie für eine spätere Anzeige in weiteren Bereichen vorbereitet.
+### Hinzugefügt
+- Release-Workflow im ReleaseManager: finaler Release-Text kann versioniert abgelegt werden (Historie + maschinenlesbare Release-Liste).
 
-# 
+### Geändert
+- Startseite-Verwaltung (Arbeitseinsätze, Termine, Bekanntmachungen): Bearbeiten nur im Neu-/Bearbeiten-Modus, Speichern/Abbrechen am Formularende, Rückfrage bei ungespeicherten Änderungen.
+- Optionale Felder und Pflichtkennzeichnungen wurden robuster umgesetzt (z.B. Sichtbarkeitsdaten und Sortierung nicht mehr als technische Pflichtfelder erzwungen).
+- Android-App: App-Icon/Launcher-Icon auf das KGV-Logo umgestellt.
 
-# Details:
+### Behoben
+- Speichern von Arbeitseinsätzen/Terminen/Bekanntmachungen: Schreibzugriff erfolgt über Basistabellen, Lesen über Views.
 
-# 
-
-# Neu:
-
-# \- Keine neuen Funktionen in dieser Version.
-
-# 
-
-# Verbessert:
-
-# \- Die Erstellung der Release-Hinweise wurde in einen einheitlichen manuellen Ablauf überführt.
-
-# \- Die Release-Historie wurde zusätzlich in einer Form vorbereitet, die sich künftig für eine weiterführende Anzeige nutzen lässt.
-
-# 
-
-# Behoben:
-
-# \- Keine behobenen Fehler in dieser Version.
+### Entfernt
+- (keine)
 

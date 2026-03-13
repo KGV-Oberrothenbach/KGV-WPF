@@ -996,7 +996,7 @@ namespace KGV.Infrastructure.Services
                         InhaltHtml = r.InhaltHtml ?? string.Empty,
                         SichtbarAb = r.SichtbarAb,
                         SichtbarBis = r.SichtbarBis,
-                        SortOrder = r.SortOrder ?? 0
+                        SortOrder = r.SortOrder
                     });
                 }
             }
@@ -1019,29 +1019,51 @@ namespace KGV.Infrastructure.Services
 
             try
             {
+                var write = new StartseiteBekanntmachungWriteRecord
+                {
+                    Id = record.Id,
+                    Titel = record.Titel,
+                    InhaltHtml = record.InhaltHtml,
+                    SichtbarAb = record.SichtbarAb,
+                    SichtbarBis = record.SichtbarBis,
+                    SortOrder = record.SortOrder
+                };
+
+                long id;
+
                 if (record.Id > 0)
                 {
                     var resp = await _client
-                        .From<StartseiteBekanntmachungRecord>()
+                        .From<StartseiteBekanntmachungWriteRecord>()
                         .Where(x => x.Id == record.Id)
-                        .Update(record);
+                        .Update(write);
 
                     var updated = resp?.Models?.FirstOrDefault();
                     if (updated == null)
                         throw new InvalidOperationException("Speichern fehlgeschlagen (kein Datensatz zurückgegeben).");
 
-                    return updated;
+                    id = updated.Id;
+                }
+                else
+                {
+                    var insertResp = await _client
+                        .From<StartseiteBekanntmachungWriteRecord>()
+                        .Insert(write);
+
+                    var inserted = insertResp?.Models?.FirstOrDefault();
+                    if (inserted == null)
+                        throw new InvalidOperationException("Speichern fehlgeschlagen (kein Datensatz zurückgegeben).");
+
+                    id = inserted.Id;
                 }
 
-                var insertResp = await _client
+                if (id <= 0)
+                    throw new InvalidOperationException("Speichern fehlgeschlagen (keine ID zurückgegeben). Prüfe DB-ID-Erzeugung (Identity/Sequence/Trigger).");
+
+                return await _client
                     .From<StartseiteBekanntmachungRecord>()
-                    .Insert(record);
-
-                var inserted = insertResp?.Models?.FirstOrDefault();
-                if (inserted == null)
-                    throw new InvalidOperationException("Speichern fehlgeschlagen (kein Datensatz zurückgegeben).");
-
-                return inserted;
+                    .Where(x => x.Id == id)
+                    .Single();
             }
             catch (Exception ex)
             {
@@ -1058,29 +1080,53 @@ namespace KGV.Infrastructure.Services
 
             try
             {
+                var write = new StartseiteTerminWriteRecord
+                {
+                    Id = record.Id,
+                    Titel = record.Titel,
+                    Beschreibung = record.Beschreibung,
+                    Datum = record.Datum,
+                    StartUhrzeit = record.StartUhrzeit,
+                    EndUhrzeit = record.EndUhrzeit,
+                    SichtbarAb = record.SichtbarAb,
+                    SichtbarBis = record.SichtbarBis
+                };
+
+                long id;
+
                 if (record.Id > 0)
                 {
                     var resp = await _client
-                        .From<StartseiteTerminRecord>()
+                        .From<StartseiteTerminWriteRecord>()
                         .Where(x => x.Id == record.Id)
-                        .Update(record);
+                        .Update(write);
 
                     var updated = resp?.Models?.FirstOrDefault();
                     if (updated == null)
                         throw new InvalidOperationException("Speichern fehlgeschlagen (kein Datensatz zurückgegeben).");
 
-                    return updated;
+                    id = updated.Id;
+                }
+                else
+                {
+                    var insertResp = await _client
+                        .From<StartseiteTerminWriteRecord>()
+                        .Insert(write);
+
+                    var inserted = insertResp?.Models?.FirstOrDefault();
+                    if (inserted == null)
+                        throw new InvalidOperationException("Speichern fehlgeschlagen (kein Datensatz zurückgegeben).");
+
+                    id = inserted.Id;
                 }
 
-                var insertResp = await _client
+                if (id <= 0)
+                    throw new InvalidOperationException("Speichern fehlgeschlagen (keine ID zurückgegeben). Prüfe DB-ID-Erzeugung (Identity/Sequence/Trigger).");
+
+                return await _client
                     .From<StartseiteTerminRecord>()
-                    .Insert(record);
-
-                var inserted = insertResp?.Models?.FirstOrDefault();
-                if (inserted == null)
-                    throw new InvalidOperationException("Speichern fehlgeschlagen (kein Datensatz zurückgegeben).");
-
-                return inserted;
+                    .Where(x => x.Id == id)
+                    .Single();
             }
             catch (Exception ex)
             {
@@ -1107,7 +1153,7 @@ namespace KGV.Infrastructure.Services
                     EndUhrzeit = record.EndUhrzeit,
                     Treffpunkt = record.Treffpunkt,
                     MaxTeilnehmer = record.MaxTeilnehmer,
-                    StundenWert = record.StundenWert,
+                    StundenWert = record.StundenWert ?? 0m,
                     SichtbarAb = record.SichtbarAb,
                     SichtbarBis = record.SichtbarBis,
                     AnmeldungBis = record.AnmeldungBis
@@ -1140,6 +1186,9 @@ namespace KGV.Infrastructure.Services
 
                     id = inserted.Id;
                 }
+
+                if (id <= 0)
+                    throw new InvalidOperationException("Speichern fehlgeschlagen (keine ID zurückgegeben). Prüfe DB-ID-Erzeugung (Identity/Sequence/Trigger).");
 
                 // Re-load from the view, so computed/read-only columns (z.B. angemeldet_count) are correct.
                 return await _client

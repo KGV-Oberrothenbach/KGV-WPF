@@ -5,10 +5,12 @@ using KGV.Wpf.Helpers;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows;
 
 namespace KGV.Wpf.ViewModels
 {
@@ -27,7 +29,9 @@ namespace KGV.Wpf.ViewModels
                 if (SetProperty(ref _isBusy, value))
                 {
                     NewCommand.RaiseCanExecuteChanged();
+                    EditCommand.RaiseCanExecuteChanged();
                     SaveCommand.RaiseCanExecuteChanged();
+                    CancelCommand.RaiseCanExecuteChanged();
                     DeactivateCommand.RaiseCanExecuteChanged();
                 }
             }
@@ -52,14 +56,67 @@ namespace KGV.Wpf.ViewModels
             {
                 if (SetProperty(ref _selectedItem, value))
                 {
+                    EditCommand.RaiseCanExecuteChanged();
+                }
+            }
+        }
+
+        private TerminEditItem? _editItem;
+        public TerminEditItem? EditItem
+        {
+            get => _editItem;
+            private set
+            {
+                if (ReferenceEquals(_editItem, value))
+                    return;
+
+                if (_editItem != null)
+                    _editItem.PropertyChanged -= EditItem_PropertyChanged;
+
+                _editItem = value;
+
+                if (_editItem != null)
+                    _editItem.PropertyChanged += EditItem_PropertyChanged;
+
+                OnPropertyChanged();
+
+                IsEditMode = _editItem != null;
+                HasUnsavedChanges = false;
+
+                SaveCommand.RaiseCanExecuteChanged();
+                CancelCommand.RaiseCanExecuteChanged();
+                DeactivateCommand.RaiseCanExecuteChanged();
+            }
+        }
+
+        private bool _isEditMode;
+        public bool IsEditMode
+        {
+            get => _isEditMode;
+            private set
+            {
+                if (SetProperty(ref _isEditMode, value))
+                {
                     SaveCommand.RaiseCanExecuteChanged();
+                    CancelCommand.RaiseCanExecuteChanged();
                     DeactivateCommand.RaiseCanExecuteChanged();
                 }
             }
         }
 
+        private bool _hasUnsavedChanges;
+        public bool HasUnsavedChanges
+        {
+            get => _hasUnsavedChanges;
+            private set => SetProperty(ref _hasUnsavedChanges, value);
+        }
+
+        private bool _suppressDirtyTracking;
+
         public RelayCommand<object?> NewCommand { get; }
+        public RelayCommand<object?> EditCommand { get; }
         public RelayCommand<object?> SaveCommand { get; }
+        public RelayCommand<object?> CancelCommand { get; }
         public RelayCommand<object?> DeactivateCommand { get; }
 
         public TermineVerwaltungViewModel(ISupabaseService supabaseService, UserContext userContext)
@@ -68,8 +125,10 @@ namespace KGV.Wpf.ViewModels
             _userContext = userContext ?? throw new ArgumentNullException(nameof(userContext));
 
             NewCommand = new RelayCommand<object?>(_ => _ = NewAsync(), _ => CanEdit && !IsBusy);
-            SaveCommand = new RelayCommand<object?>(_ => _ = SaveAsync(), _ => CanEdit && !IsBusy && SelectedItem != null);
-            DeactivateCommand = new RelayCommand<object?>(_ => _ = DeactivateAsync(), _ => CanEdit && !IsBusy && SelectedItem != null);
+            EditCommand = new RelayCommand<object?>(_ => _ = BeginEditAsync(), _ => CanEdit && !IsBusy && SelectedItem != null);
+            SaveCommand = new RelayCommand<object?>(_ => _ = SaveAsync(), _ => CanEdit && !IsBusy && IsEditMode && EditItem != null && HasUnsavedChanges && IsSaveValid(EditItem));
+            CancelCommand = new RelayCommand<object?>(_ => _ = CancelAsync(), _ => !IsBusy && IsEditMode);
+            DeactivateCommand = new RelayCommand<object?>(_ => _ = DeactivateAsync(), _ => CanEdit && !IsBusy && IsEditMode && EditItem != null && EditItem.Id > 0);
         }
 
         public Task OnNavigatedFromAsync() => Task.CompletedTask;
@@ -93,6 +152,7 @@ namespace KGV.Wpf.ViewModels
                     Items.Add(new TerminEditItem(r));
 
                 SelectedItem = Items.FirstOrDefault();
+                EditItem = null;
 
                 if (!CanEdit)
                     StatusText = "Keine Berechtigung (Admin/Vorstand erforderlich).";
@@ -102,6 +162,7 @@ namespace KGV.Wpf.ViewModels
                 StatusText = ex.Message;
                 Items.Clear();
                 SelectedItem = null;
+                EditItem = null;
             }
             finally
             {
@@ -110,9 +171,25 @@ namespace KGV.Wpf.ViewModels
             }
         }
 
+        private static bool IsSaveValid(TerminEditItem item)
+        {
+            if (item == null) return false;
+
+            if (string.IsNullOrWhiteSpace((item.Titel ?? string.Empty).Trim()))
+                return false;
+
+            if (!item.Datum.HasValue)
+                return false;
+
+            return true;
+        }
+
         private async Task NewAsync()
         {
             if (!CanEdit) return;
+
+            if (!ConfirmDiscardChangesIfNeeded())
+                return;
 
             var rec = new StartseiteTerminRecord
             {
@@ -125,31 +202,62 @@ namespace KGV.Wpf.ViewModels
                 SichtbarBis = null
             };
 
-            var vm = new TerminEditItem(rec);
-            Items.Insert(0, vm);
-            SelectedItem = vm;
+            _suppressDirtyTracking = true;
+            try
+            {
+                EditItem = new TerminEditItem(rec);
+            }
+            finally
+            {
+                _suppressDirtyTracking = false;
+            }
+        }
+
+        private async Task BeginEditAsync()
+        {
+            if (!CanEdit) return;
+            if (SelectedItem == null) return;
+
+            if (!ConfirmDiscardChangesIfNeeded())
+                return;
+
+            _suppressDirtyTracking = true;
+            try
+            {
+                EditItem = new TerminEditItem(SelectedItem.ToRecord());
+            }
+            finally
+            {
+                _suppressDirtyTracking = false;
+            }
+
+            await Task.CompletedTask;
+        }
+
+        private Task CancelAsync()
+        {
+            if (!ConfirmDiscardChangesIfNeeded())
+                return Task.CompletedTask;
+
+            EditItem = null;
+            StatusText = string.Empty;
+            return Task.CompletedTask;
         }
 
         private async Task SaveAsync()
         {
             if (!CanEdit) return;
-            if (SelectedItem == null) return;
+            if (EditItem == null) return;
 
-            if (string.IsNullOrWhiteSpace((SelectedItem.Titel ?? string.Empty).Trim()))
+            if (string.IsNullOrWhiteSpace((EditItem.Titel ?? string.Empty).Trim()))
             {
                 StatusText = "Bitte Titel ausfüllen.";
                 return;
             }
 
-            if (!SelectedItem.Datum.HasValue)
+            if (!EditItem.Datum.HasValue)
             {
                 StatusText = "Bitte Datum auswählen.";
-                return;
-            }
-
-            if (!SelectedItem.SichtbarAb.HasValue)
-            {
-                StatusText = "Bitte 'Sichtbar ab' auswählen.";
                 return;
             }
 
@@ -161,14 +269,27 @@ namespace KGV.Wpf.ViewModels
 
             try
             {
-                var saved = await _supabaseService.SaveStartseiteTerminAsync(SelectedItem.ToRecord());
+                var saved = await _supabaseService.SaveStartseiteTerminAsync(EditItem.ToRecord());
                 if (saved == null)
                 {
                     StatusText = "Speichern fehlgeschlagen.";
                     return;
                 }
 
-                SelectedItem.ApplySaved(saved);
+                var existing = Items.FirstOrDefault(x => x.Id == saved.Id);
+                if (existing != null)
+                {
+                    existing.ApplySaved(saved);
+                    SelectedItem = existing;
+                }
+                else
+                {
+                    var inserted = new TerminEditItem(saved);
+                    Items.Insert(0, inserted);
+                    SelectedItem = inserted;
+                }
+
+                EditItem = null;
                 StatusText = "Gespeichert.";
             }
             catch (Exception ex)
@@ -185,10 +306,33 @@ namespace KGV.Wpf.ViewModels
         private async Task DeactivateAsync()
         {
             if (!CanEdit) return;
-            if (SelectedItem == null) return;
+            if (EditItem == null) return;
 
-            SelectedItem.SichtbarBis = DateTime.Today;
+            EditItem.SichtbarBis = DateTime.Today;
             await SaveAsync();
+        }
+
+        private void EditItem_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (_suppressDirtyTracking)
+                return;
+
+            HasUnsavedChanges = true;
+            SaveCommand.RaiseCanExecuteChanged();
+        }
+
+        private bool ConfirmDiscardChangesIfNeeded()
+        {
+            if (!IsEditMode || !HasUnsavedChanges)
+                return true;
+
+            var result = MessageBox.Show(
+                "Es gibt ungespeicherte Änderungen. Änderungen verwerfen?",
+                "Ungespeicherte Änderungen",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            return result == MessageBoxResult.Yes;
         }
 
         public sealed class TerminEditItem : BaseViewModel

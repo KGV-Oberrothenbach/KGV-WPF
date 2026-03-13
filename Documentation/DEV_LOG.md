@@ -128,3 +128,76 @@
 
 ### Hinweise
 - Altstände sind nur begrenzt rekonstruierbar; ältere Versionen bleiben daher bewusst knapp dokumentiert.
+
+---
+
+## 2026-03-13 – Startseite-Verwaltung: Arbeitseinsätze (Save) & Formular-UX
+
+### Erledigt
+- Persistierung für Arbeitseinsätze korrigiert: Schreibzugriff erfolgt nicht mehr über die (nicht updatable) View, sondern über ein dediziertes Write-Model auf Basistabelle; danach wird der Datensatz erneut aus der View geladen (computed/read-only Felder bleiben korrekt).
+- Formular-UX in WPF-Verwaltung vereinheitlicht (Arbeitseinsatz/Termin/Bekanntmachung): Standardzustand ohne Formular, Bearbeiten nur via `Neu` bzw. Doppelklick, `Speichern`/`Abbrechen` am Formularende, Rückfrage bei ungespeicherten Änderungen.
+- Analoges Muster in MAUI-Admin-Seiten umgesetzt: Formular standardmäßig ausgeblendet, Bearbeiten via `Neu` bzw. Listentap, `Speichern`/`Abbrechen` am Formularende, Rückfrage bei ungespeicherten Änderungen.
+
+### Hinweise
+- In MAUI gibt es kein echtes „Doppelklick“-Pattern; dort öffnet ein Tap auf einen Listeneintrag den Bearbeitungsmodus.
+
+---
+
+## 2026-03-13 – Startseite-Verwaltung: DB-Schema-Fix (Basistabellen/Views), ID-Erzeugung, Pflichtfelder
+
+### Erledigt
+- Tabellen-/View-Mapping finalisiert:
+  - Writes (Insert/Update) laufen nun ausschließlich gegen die Basistabellen `arbeitseinsatz`, `termin`, `bekanntmachung`.
+  - Reads bleiben über die Views `v_startseite_arbeitseinsatz`, `v_startseite_termine`, `v_startseite_bekanntmachungen`.
+- ID-Handling defensiver gemacht: nach Insert/Update wird geprüft, dass eine gültige ID zurückkommt (sonst klare Fehlermeldung bzgl. Identity/Sequence/Trigger).
+- Technische Pflichtfelder an DB-Lage angepasst:
+  - `sichtbar_ab` wird nicht mehr als technisches Pflichtfeld validiert/mit `*` markiert.
+  - `sort_order` wird in MAUI nicht mehr als technisches Pflichtfeld erzwungen (leere Eingabe -> NULL).
+- `stunden_wert` wird beim Schreiben nie als NULL gesendet (DB: NOT NULL, Default 0).
+
+### Hinweise
+- In WPF bleibt `SortOrder` aktuell UI-seitig als Zahl geführt (ohne Pflicht-Stern), auch wenn die DB NULL erlaubt.
+
+---
+
+## 2026-03-13 – Formulare/Validierung (nullable Felder) & Android App-Icon
+
+### Erledigt
+- WPF Bekanntmachungen: `SortOrder` im Edit-Flow auf nullable umgestellt (leere Eingabe -> NULL; nur bei Eingabe int-Validierung).
+- MAUI Admin-Formulare: optionale Datumsfelder (`SichtbarBis`, Arbeitseinsatz zusätzlich `AnmeldungBis`) via Toggle wirklich optional gemacht (Toggle aus -> Save schreibt NULL).
+- Save-Buttons: in WPF (Commands) und MAUI (Button-State) an Mindestvalidität + tatsächliche Änderungen gekoppelt.
+- Android App-Icon: `KGV.Maui/Resources/AppIcon/appicon.png` durch `Logo.png` ersetzt; ungenutzte Standard-Icon-SVGs entfernt.
+
+### Hinweise
+- ID-Erzeugung (Identity/Sequence/Trigger) ist im Repo nicht migrationsseitig belegbar; Client prüft nach Save defensiv auf eine gültige zurückgegebene ID.
+- Für Icon-Wechsel auf Android sind i.d.R. Clean/Reinstall nötig (Build/Launcher-Caches).
+
+### Betroffene Dateien (Details)
+- WPF
+  - `KGV.Wpf/ViewModels/BekanntmachungenVerwaltungViewModel.cs`
+  - `KGV.Wpf/ViewModels/TermineVerwaltungViewModel.cs`
+  - `KGV.Wpf/ViewModels/ArbeitseinsaetzeVerwaltungViewModel.cs`
+- MAUI
+  - `KGV.Maui/Pages/BekanntmachungenAdminPage.cs`
+  - `KGV.Maui/Pages/TermineAdminPage.cs`
+  - `KGV.Maui/Pages/ArbeitseinsaetzeAdminPage.cs`
+- Android Icon
+  - `KGV.Maui/Resources/AppIcon/appicon.png` (Quelle: `Logo.png`)
+  - `KGV.Maui/Resources/AppIcon/appicon.svg` (entfernt)
+  - `KGV.Maui/Resources/AppIcon/appiconfg.svg` (entfernt)
+
+### Technische Notizen
+- MAUI: optionale Datumsfelder werden über Switch gesteuert (Toggle aus -> Feld wird als `null` gespeichert, DatePicker wird verborgen/deaktiviert).
+- WPF: `SortOrder` wird als Text gehalten und erst beim Speichern/CanExecute validiert (leer -> `null`).
+
+---
+
+## 2026-03-13 – ReleaseManager: CHANGELOG als Quelle (statt DEV_LOG)
+
+### Erledigt
+- Rollen sauber getrennt: `DEV_LOG.md` bleibt technische Arbeitsdoku; `CHANGELOG.md` ist release-tauglich für den ReleaseManager.
+- `CHANGELOG.md` in eine stabile Grundstruktur überführt (`# Changelog`, `## [Unreleased]`, Kategorien).
+- ReleaseManager erweitert: eigener CHANGELOG-Block kann aus `CHANGELOG.md` geladen und dorthin zurückgeschrieben werden (Ziel: Feld ist nicht mehr leer/unbrauchbar).
+
+### Hinweise
+- ReleaseManager greift weiterhin ausschließlich auf `Documentation/CHANGELOG.md` zu; `DEV_LOG.md` wird in diesem Workflow nicht geschrieben.

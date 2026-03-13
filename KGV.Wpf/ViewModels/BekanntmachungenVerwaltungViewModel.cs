@@ -5,9 +5,11 @@ using KGV.Wpf.Helpers;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows;
 
 namespace KGV.Wpf.ViewModels
 {
@@ -26,7 +28,9 @@ namespace KGV.Wpf.ViewModels
                 if (SetProperty(ref _isBusy, value))
                 {
                     NewCommand.RaiseCanExecuteChanged();
+                    EditCommand.RaiseCanExecuteChanged();
                     SaveCommand.RaiseCanExecuteChanged();
+                    CancelCommand.RaiseCanExecuteChanged();
                     DeactivateCommand.RaiseCanExecuteChanged();
                 }
             }
@@ -51,14 +55,67 @@ namespace KGV.Wpf.ViewModels
             {
                 if (SetProperty(ref _selectedItem, value))
                 {
+                    EditCommand.RaiseCanExecuteChanged();
+                }
+            }
+        }
+
+        private BekanntmachungEditItem? _editItem;
+        public BekanntmachungEditItem? EditItem
+        {
+            get => _editItem;
+            private set
+            {
+                if (ReferenceEquals(_editItem, value))
+                    return;
+
+                if (_editItem != null)
+                    _editItem.PropertyChanged -= EditItem_PropertyChanged;
+
+                _editItem = value;
+
+                if (_editItem != null)
+                    _editItem.PropertyChanged += EditItem_PropertyChanged;
+
+                OnPropertyChanged();
+
+                IsEditMode = _editItem != null;
+                HasUnsavedChanges = false;
+
+                SaveCommand.RaiseCanExecuteChanged();
+                CancelCommand.RaiseCanExecuteChanged();
+                DeactivateCommand.RaiseCanExecuteChanged();
+            }
+        }
+
+        private bool _isEditMode;
+        public bool IsEditMode
+        {
+            get => _isEditMode;
+            private set
+            {
+                if (SetProperty(ref _isEditMode, value))
+                {
                     SaveCommand.RaiseCanExecuteChanged();
+                    CancelCommand.RaiseCanExecuteChanged();
                     DeactivateCommand.RaiseCanExecuteChanged();
                 }
             }
         }
 
+        private bool _hasUnsavedChanges;
+        public bool HasUnsavedChanges
+        {
+            get => _hasUnsavedChanges;
+            private set => SetProperty(ref _hasUnsavedChanges, value);
+        }
+
+        private bool _suppressDirtyTracking;
+
         public RelayCommand<object?> NewCommand { get; }
+        public RelayCommand<object?> EditCommand { get; }
         public RelayCommand<object?> SaveCommand { get; }
+        public RelayCommand<object?> CancelCommand { get; }
         public RelayCommand<object?> DeactivateCommand { get; }
 
         public BekanntmachungenVerwaltungViewModel(ISupabaseService supabaseService, UserContext userContext)
@@ -67,8 +124,10 @@ namespace KGV.Wpf.ViewModels
             _userContext = userContext ?? throw new ArgumentNullException(nameof(userContext));
 
             NewCommand = new RelayCommand<object?>(_ => _ = NewAsync(), _ => CanEdit && !IsBusy);
-            SaveCommand = new RelayCommand<object?>(_ => _ = SaveAsync(), _ => CanEdit && !IsBusy && SelectedItem != null);
-            DeactivateCommand = new RelayCommand<object?>(_ => _ = DeactivateAsync(), _ => CanEdit && !IsBusy && SelectedItem != null);
+            EditCommand = new RelayCommand<object?>(_ => _ = BeginEditAsync(), _ => CanEdit && !IsBusy && SelectedItem != null);
+            SaveCommand = new RelayCommand<object?>(_ => _ = SaveAsync(), _ => CanEdit && !IsBusy && IsEditMode && EditItem != null && HasUnsavedChanges && IsSaveValid(EditItem));
+            CancelCommand = new RelayCommand<object?>(_ => _ = CancelAsync(), _ => !IsBusy && IsEditMode);
+            DeactivateCommand = new RelayCommand<object?>(_ => _ = DeactivateAsync(), _ => CanEdit && !IsBusy && IsEditMode && EditItem != null && EditItem.Id > 0);
         }
 
         public Task OnNavigatedFromAsync() => Task.CompletedTask;
@@ -92,6 +151,7 @@ namespace KGV.Wpf.ViewModels
                     Items.Add(new BekanntmachungEditItem(r));
 
                 SelectedItem = Items.FirstOrDefault();
+                EditItem = null;
 
                 if (!CanEdit)
                     StatusText = "Keine Berechtigung (Admin/Vorstand erforderlich).";
@@ -101,6 +161,7 @@ namespace KGV.Wpf.ViewModels
                 StatusText = ex.Message;
                 Items.Clear();
                 SelectedItem = null;
+                EditItem = null;
             }
             finally
             {
@@ -109,9 +170,29 @@ namespace KGV.Wpf.ViewModels
             }
         }
 
+        private static bool IsSaveValid(BekanntmachungEditItem item)
+        {
+            if (item == null) return false;
+
+            if (string.IsNullOrWhiteSpace((item.Titel ?? string.Empty).Trim()))
+                return false;
+
+            if (string.IsNullOrWhiteSpace((item.InhaltHtml ?? string.Empty).Trim()))
+                return false;
+
+            var sortText = (item.SortOrderText ?? string.Empty).Trim();
+            if (!string.IsNullOrWhiteSpace(sortText) && !int.TryParse(sortText, out _))
+                return false;
+
+            return true;
+        }
+
         private async Task NewAsync()
         {
             if (!CanEdit) return;
+
+            if (!ConfirmDiscardChangesIfNeeded())
+                return;
 
             var rec = new StartseiteBekanntmachungRecord
             {
@@ -119,34 +200,72 @@ namespace KGV.Wpf.ViewModels
                 InhaltHtml = string.Empty,
                 SichtbarAb = DateTime.Today,
                 SichtbarBis = null,
-                SortOrder = Items.Count == 0 ? 0 : (Items.Max(x => x.SortOrderValue) + 1)
+                SortOrder = null
             };
 
-            var vm = new BekanntmachungEditItem(rec);
-            Items.Insert(0, vm);
-            SelectedItem = vm;
+            _suppressDirtyTracking = true;
+            try
+            {
+                EditItem = new BekanntmachungEditItem(rec);
+            }
+            finally
+            {
+                _suppressDirtyTracking = false;
+            }
+        }
+
+        private async Task BeginEditAsync()
+        {
+            if (!CanEdit) return;
+            if (SelectedItem == null) return;
+
+            if (!ConfirmDiscardChangesIfNeeded())
+                return;
+
+            _suppressDirtyTracking = true;
+            try
+            {
+                EditItem = new BekanntmachungEditItem(SelectedItem.ToRecord());
+            }
+            finally
+            {
+                _suppressDirtyTracking = false;
+            }
+
+            await Task.CompletedTask;
+        }
+
+        private Task CancelAsync()
+        {
+            if (!ConfirmDiscardChangesIfNeeded())
+                return Task.CompletedTask;
+
+            EditItem = null;
+            StatusText = string.Empty;
+            return Task.CompletedTask;
         }
 
         private async Task SaveAsync()
         {
             if (!CanEdit) return;
-            if (SelectedItem == null) return;
+            if (EditItem == null) return;
 
-            if (string.IsNullOrWhiteSpace((SelectedItem.Titel ?? string.Empty).Trim()))
+            if (string.IsNullOrWhiteSpace((EditItem.Titel ?? string.Empty).Trim()))
             {
                 StatusText = "Bitte Titel ausfüllen.";
                 return;
             }
 
-            if (string.IsNullOrWhiteSpace((SelectedItem.InhaltHtml ?? string.Empty).Trim()))
+            if (string.IsNullOrWhiteSpace((EditItem.InhaltHtml ?? string.Empty).Trim()))
             {
                 StatusText = "Bitte Inhalt ausfüllen.";
                 return;
             }
 
-            if (!SelectedItem.SichtbarAb.HasValue)
+            var sortText = (EditItem.SortOrderText ?? string.Empty).Trim();
+            if (!string.IsNullOrWhiteSpace(sortText) && !int.TryParse(sortText, out _))
             {
-                StatusText = "Bitte 'Sichtbar ab' auswählen.";
+                StatusText = "Sortierung muss eine ganze Zahl sein.";
                 return;
             }
 
@@ -158,14 +277,27 @@ namespace KGV.Wpf.ViewModels
 
             try
             {
-                var saved = await _supabaseService.SaveStartseiteBekanntmachungAsync(SelectedItem.ToRecord());
+                var saved = await _supabaseService.SaveStartseiteBekanntmachungAsync(EditItem.ToRecord());
                 if (saved == null)
                 {
                     StatusText = "Speichern fehlgeschlagen.";
                     return;
                 }
 
-                SelectedItem.ApplySaved(saved);
+                var existing = Items.FirstOrDefault(x => x.Id == saved.Id);
+                if (existing != null)
+                {
+                    existing.ApplySaved(saved);
+                    SelectedItem = existing;
+                }
+                else
+                {
+                    var inserted = new BekanntmachungEditItem(saved);
+                    Items.Insert(0, inserted);
+                    SelectedItem = inserted;
+                }
+
+                EditItem = null;
                 StatusText = "Gespeichert.";
             }
             catch (Exception ex)
@@ -182,10 +314,33 @@ namespace KGV.Wpf.ViewModels
         private async Task DeactivateAsync()
         {
             if (!CanEdit) return;
-            if (SelectedItem == null) return;
+            if (EditItem == null) return;
 
-            SelectedItem.SichtbarBis = DateTime.Today;
+            EditItem.SichtbarBis = DateTime.Today;
             await SaveAsync();
+        }
+
+        private void EditItem_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (_suppressDirtyTracking)
+                return;
+
+            HasUnsavedChanges = true;
+            SaveCommand.RaiseCanExecuteChanged();
+        }
+
+        private bool ConfirmDiscardChangesIfNeeded()
+        {
+            if (!IsEditMode || !HasUnsavedChanges)
+                return true;
+
+            var result = MessageBox.Show(
+                "Es gibt ungespeicherte Änderungen. Änderungen verwerfen?",
+                "Ungespeicherte Änderungen",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            return result == MessageBoxResult.Yes;
         }
 
         public sealed class BekanntmachungEditItem : BaseViewModel
@@ -225,21 +380,11 @@ namespace KGV.Wpf.ViewModels
                 set => SetProperty(ref _sichtbarBis, value);
             }
 
-            private int _sortOrder;
-            public int SortOrderValue
-            {
-                get => _sortOrder;
-                set => SetProperty(ref _sortOrder, value);
-            }
-
+            private string _sortOrderText = string.Empty;
             public string SortOrderText
             {
-                get => SortOrderValue.ToString();
-                set
-                {
-                    if (int.TryParse((value ?? string.Empty).Trim(), out var v))
-                        SortOrderValue = v;
-                }
+                get => _sortOrderText;
+                set => SetProperty(ref _sortOrderText, value ?? string.Empty);
             }
 
             public BekanntmachungEditItem(StartseiteBekanntmachungRecord rec)
@@ -249,6 +394,11 @@ namespace KGV.Wpf.ViewModels
 
             public StartseiteBekanntmachungRecord ToRecord()
             {
+                int? sortOrder = null;
+                var sortText = (SortOrderText ?? string.Empty).Trim();
+                if (!string.IsNullOrWhiteSpace(sortText) && int.TryParse(sortText, out var so))
+                    sortOrder = so;
+
                 return new StartseiteBekanntmachungRecord
                 {
                     Id = Id,
@@ -256,7 +406,7 @@ namespace KGV.Wpf.ViewModels
                     InhaltHtml = InhaltHtml ?? string.Empty,
                     SichtbarAb = SichtbarAb,
                     SichtbarBis = SichtbarBis,
-                    SortOrder = SortOrderValue
+                    SortOrder = sortOrder
                 };
             }
 
@@ -267,7 +417,7 @@ namespace KGV.Wpf.ViewModels
                 InhaltHtml = rec.InhaltHtml ?? string.Empty;
                 SichtbarAb = rec.SichtbarAb;
                 SichtbarBis = rec.SichtbarBis;
-                SortOrderValue = rec.SortOrder ?? 0;
+                SortOrderText = rec.SortOrder?.ToString() ?? string.Empty;
             }
         }
     }

@@ -104,19 +104,104 @@ public sealed class ReleaseNotesService
 
     public string ExtractUnreleasedBlock(string changelogText)
     {
-        if (string.IsNullOrWhiteSpace(changelogText))
+        return ExtractChangelogBlock(changelogText, "## [Unreleased]");
+    }
+
+    public string ExtractChangelogBlock(string changelogText, string header)
+    {
+        if (string.IsNullOrWhiteSpace(changelogText) || string.IsNullOrWhiteSpace(header))
             return string.Empty;
 
-        const string marker = "## [Unreleased]";
-        var start = changelogText.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+        var start = changelogText.IndexOf(header, StringComparison.OrdinalIgnoreCase);
         if (start < 0)
             return string.Empty;
 
-        var next = changelogText.IndexOf("\n## [", start + marker.Length, StringComparison.Ordinal);
+        var next = changelogText.IndexOf("\n## [", start + header.Length, StringComparison.Ordinal);
         if (next < 0)
             return changelogText[start..].Trim();
 
         return changelogText[start..next].Trim();
+    }
+
+    public string EnsureChangelogSkeleton(string changelogText)
+    {
+        if (!string.IsNullOrWhiteSpace(changelogText)
+            && changelogText.IndexOf("## [Unreleased]", StringComparison.OrdinalIgnoreCase) >= 0)
+        {
+            return changelogText;
+        }
+
+        var sb = new StringBuilder();
+        sb.AppendLine("# Changelog");
+        sb.AppendLine();
+        sb.AppendLine("## [Unreleased]");
+        sb.AppendLine();
+        sb.AppendLine("### Hinzugefügt");
+        sb.AppendLine("- (keine)");
+        sb.AppendLine();
+        sb.AppendLine("### Geändert");
+        sb.AppendLine("- (keine)");
+        sb.AppendLine();
+        sb.AppendLine("### Behoben");
+        sb.AppendLine("- (keine)");
+        sb.AppendLine();
+        sb.AppendLine("### Entfernt");
+        sb.AppendLine("- (keine)");
+
+        return sb.ToString().TrimEnd() + "\n";
+    }
+
+    public string UpsertChangelogBlock(string changelogText, string header, string newBlock)
+    {
+        changelogText = EnsureChangelogSkeleton(changelogText);
+
+        header = (header ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(header))
+            header = "## [Unreleased]";
+
+        newBlock = (newBlock ?? string.Empty).Trim();
+        if (!newBlock.StartsWith(header, StringComparison.OrdinalIgnoreCase))
+            newBlock = header + "\n\n" + newBlock;
+
+        newBlock = newBlock.TrimEnd() + "\n";
+
+        var idx = changelogText.IndexOf(header, StringComparison.OrdinalIgnoreCase);
+        if (idx < 0)
+        {
+            // Insert after main title if possible, else prepend.
+            const string title = "# Changelog";
+            var titleIdx = changelogText.IndexOf(title, StringComparison.OrdinalIgnoreCase);
+            if (titleIdx >= 0)
+            {
+                var afterTitle = changelogText.IndexOf('\n', titleIdx + title.Length);
+                if (afterTitle >= 0)
+                {
+                    return changelogText[..(afterTitle + 1)].TrimEnd()
+                           + "\n\n"
+                           + newBlock.TrimEnd()
+                           + "\n\n"
+                           + changelogText[(afterTitle + 1)..].TrimStart();
+                }
+            }
+
+            return newBlock + "\n" + changelogText.TrimStart();
+        }
+
+        var next = changelogText.IndexOf("\n## [", idx + header.Length, StringComparison.Ordinal);
+        if (next < 0)
+            return changelogText[..idx] + newBlock;
+
+        return changelogText[..idx] + newBlock + changelogText[next..];
+    }
+
+    public void WriteChangelog(string repoRoot, string changelogText)
+    {
+        if (string.IsNullOrWhiteSpace(repoRoot) || !Directory.Exists(repoRoot))
+            throw new InvalidOperationException("RepoRoot ist ungültig.");
+
+        var path = GetChangelogPath(repoRoot);
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllText(path, (changelogText ?? string.Empty).TrimEnd() + "\n", Encoding.UTF8);
     }
 
     public string? TryReadLatestReleaseNotesSummary(string repoRoot)

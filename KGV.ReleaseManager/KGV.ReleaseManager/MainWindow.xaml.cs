@@ -15,6 +15,8 @@ public partial class MainWindow : Window
     private readonly FolderPickerService _folderPickerService = new();
     private readonly ReleaseNotesService _releaseNotesService = new();
 
+    private string _loadedChangelogHeader = "## [Unreleased]";
+
     private VersionInfo? _currentWpfVersion;
     private VersionInfo? _currentAndroidVersion;
     private int _currentAndroidBuild;
@@ -145,14 +147,14 @@ public partial class MainWindow : Window
                 throw new InvalidOperationException("Der KGV-Projektordner ist ungültig.");
 
             var version = GetReleaseNotesTargetVersion();
-            var changelogText = _releaseNotesService.ReadChangelogOrEmpty(repoRoot);
-            var unreleased = _releaseNotesService.ExtractUnreleasedBlock(changelogText);
 
-            if (string.IsNullOrWhiteSpace(unreleased))
-                unreleased = "(Kein [Unreleased]-Block gefunden oder leer.)";
+            var changelog = GetChangelogBlockForTargetVersion(repoRoot, version);
+            var block = changelog.Block;
+            if (string.IsNullOrWhiteSpace(block))
+                block = "(Kein Changelog-Block gefunden oder leer.)";
 
             var context = _releaseNotesService.TryReadLatestReleaseNotesSummary(repoRoot);
-            var prompt = _releaseNotesService.BuildClipboardPrompt(version, DateTime.Today, unreleased, context);
+            var prompt = _releaseNotesService.BuildClipboardPrompt(version, DateTime.Today, block, context);
 
             Clipboard.SetText(prompt);
             System.Windows.MessageBox.Show(this, "Daten kopiert.", "Release-Daten kopieren", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -161,6 +163,21 @@ public partial class MainWindow : Window
         {
             System.Windows.MessageBox.Show(this, ex.Message, "Release-Daten kopieren", MessageBoxButton.OK, MessageBoxImage.Error);
         }
+    }
+
+    private (string Header, string Block) GetChangelogBlockForTargetVersion(string repoRoot, string version)
+    {
+        var changelogText = _releaseNotesService.ReadChangelogOrEmpty(repoRoot);
+        changelogText = _releaseNotesService.EnsureChangelogSkeleton(changelogText);
+
+        var versionHeader = $"## [{version}]";
+        var versionBlock = _releaseNotesService.ExtractChangelogBlock(changelogText, versionHeader);
+        if (!string.IsNullOrWhiteSpace(versionBlock))
+            return (versionHeader, versionBlock);
+
+        const string unreleasedHeader = "## [Unreleased]";
+        var unreleasedBlock = _releaseNotesService.ExtractChangelogBlock(changelogText, unreleasedHeader);
+        return (unreleasedHeader, unreleasedBlock);
     }
 
     private void OpenChangelog_Click(object sender, RoutedEventArgs e)
@@ -177,6 +194,16 @@ public partial class MainWindow : Window
         {
             System.Windows.MessageBox.Show(this, ex.Message, "Changelog öffnen", MessageBoxButton.OK, MessageBoxImage.Error);
         }
+    }
+
+    private void LoadChangelogBlock_Click(object sender, RoutedEventArgs e)
+    {
+        LoadChangelogBlockSafe(showMessageOnSuccess: true);
+    }
+
+    private void SaveChangelogBlock_Click(object sender, RoutedEventArgs e)
+    {
+        SaveChangelogBlockSafe();
     }
 
     private void PasteReleaseText_Click(object sender, RoutedEventArgs e)
@@ -236,12 +263,68 @@ public partial class MainWindow : Window
         {
             LogTextBox.Clear();
             LoadVersions();
+            LoadChangelogBlockSafe(showMessageOnSuccess: false);
             AppendLog("Versionen erfolgreich geladen.");
         }
         catch (Exception ex)
         {
             AppendLog("FEHLER beim Laden: " + ex.Message);
             System.Windows.MessageBox.Show(this, ex.Message, "Versionen laden", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void LoadChangelogBlockSafe(bool showMessageOnSuccess)
+    {
+        try
+        {
+            var repoRoot = RepoRootTextBox.Text.Trim();
+            if (string.IsNullOrWhiteSpace(repoRoot) || !Directory.Exists(repoRoot))
+                return;
+
+            var version = GetReleaseNotesTargetVersion();
+            var result = GetChangelogBlockForTargetVersion(repoRoot, version);
+
+            _loadedChangelogHeader = result.Header;
+            LoadedChangelogHeaderRun.Text = _loadedChangelogHeader;
+            ChangelogBlockTextBox.Text = result.Block;
+
+            AppendLog($"Changelog-Block geladen: {_loadedChangelogHeader}");
+
+            if (showMessageOnSuccess)
+            {
+                System.Windows.MessageBox.Show(this, "Changelog-Block geladen.", "CHANGELOG laden", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+        }
+        catch (Exception ex)
+        {
+            AppendLog("FEHLER beim Laden des CHANGELOG: " + ex.Message);
+            System.Windows.MessageBox.Show(this, ex.Message, "CHANGELOG laden", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void SaveChangelogBlockSafe()
+    {
+        try
+        {
+            var repoRoot = RepoRootTextBox.Text.Trim();
+            if (string.IsNullOrWhiteSpace(repoRoot) || !Directory.Exists(repoRoot))
+                throw new InvalidOperationException("Der KGV-Projektordner ist ungültig.");
+
+            var inputBlock = (ChangelogBlockTextBox.Text ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(inputBlock))
+                throw new InvalidOperationException("Changelog-Block ist leer.");
+
+            var current = _releaseNotesService.ReadChangelogOrEmpty(repoRoot);
+            var updated = _releaseNotesService.UpsertChangelogBlock(current, _loadedChangelogHeader, inputBlock);
+            _releaseNotesService.WriteChangelog(repoRoot, updated);
+
+            AppendLog($"Changelog-Block gespeichert: {_loadedChangelogHeader}");
+            System.Windows.MessageBox.Show(this, "Changelog-Block gespeichert.", "CHANGELOG speichern", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            AppendLog("FEHLER beim Speichern des CHANGELOG: " + ex.Message);
+            System.Windows.MessageBox.Show(this, ex.Message, "CHANGELOG speichern", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
