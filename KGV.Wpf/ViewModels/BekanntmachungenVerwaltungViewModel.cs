@@ -1,4 +1,5 @@
 using KGV.Core.Interfaces;
+using KGV.Core.Helpers;
 using KGV.Core.Models;
 using KGV.Core.Security;
 using KGV.Wpf.Helpers;
@@ -252,6 +253,9 @@ namespace KGV.Wpf.ViewModels
             if (!CanEdit) return;
             if (EditItem == null) return;
 
+            long? reselectId = null;
+            var reloadAfterSave = false;
+
             if (string.IsNullOrWhiteSpace((EditItem.Titel ?? string.Empty).Trim()))
             {
                 StatusText = "Bitte Titel ausfüllen.";
@@ -286,19 +290,8 @@ namespace KGV.Wpf.ViewModels
                     return;
                 }
 
-                var existing = Items.FirstOrDefault(x => x.Id == saved.Id);
-                if (existing != null)
-                {
-                    existing.ApplySaved(saved);
-                    SelectedItem = existing;
-                }
-                else
-                {
-                    var inserted = new BekanntmachungEditItem(saved);
-                    Items.Insert(0, inserted);
-                    SelectedItem = inserted;
-                }
-
+                reselectId = saved.Id;
+                reloadAfterSave = true;
                 EditItem = null;
                 StatusText = "Gespeichert.";
             }
@@ -310,6 +303,13 @@ namespace KGV.Wpf.ViewModels
             {
                 IsBusy = false;
                 _opLock.Release();
+            }
+
+            if (reloadAfterSave)
+            {
+                await LoadAsync();
+                if (reselectId.HasValue)
+                    SelectedItem = Items.FirstOrDefault(x => x.Id == reselectId.Value) ?? SelectedItem;
             }
         }
 
@@ -483,7 +483,7 @@ namespace KGV.Wpf.ViewModels
                 {
                     Id = Id,
                     Titel = (Titel ?? string.Empty).Trim(),
-                    InhaltHtml = BuildHtml(InhaltText, FontSize, IsBold, IsItalic),
+                    InhaltHtml = BekanntmachungMarkup.ToHtml(InhaltText, FontSize),
                     SichtbarAb = SichtbarAb,
                     SichtbarBis = SichtbarBis,
                     SortOrder = sortOrder
@@ -495,58 +495,25 @@ namespace KGV.Wpf.ViewModels
                 Id = rec.Id;
                 Titel = (rec.Titel ?? string.Empty).Trim();
                 InhaltHtml = rec.InhaltHtml ?? string.Empty;
-                InhaltText = ExtractPlainText(InhaltHtml);
-                TryExtractEditorStyle(InhaltHtml, out var fs, out var bold, out var italic);
+                InhaltText = BekanntmachungMarkup.ToEditorTextWithMarkers(InhaltHtml);
+                TryExtractEditorStyle(InhaltHtml, out var fs);
                 FontSize = fs;
-                IsBold = bold;
-                IsItalic = italic;
+                IsBold = false;
+                IsItalic = false;
                 SichtbarAb = rec.SichtbarAb;
                 SichtbarBis = rec.SichtbarBis;
                 SortOrderText = rec.SortOrder?.ToString() ?? string.Empty;
             }
 
-            private static string BuildHtml(string? text, int fontSize, bool bold, bool italic)
-            {
-                text = (text ?? string.Empty).Trim();
-                var encoded = System.Net.WebUtility.HtmlEncode(text)
-                    .Replace("\r\n", "\n", StringComparison.Ordinal)
-                    .Replace("\r", "\n", StringComparison.Ordinal)
-                    .Replace("\n", "<br/>", StringComparison.Ordinal);
-
-                var styles = new List<string> { $"font-size:{fontSize}px" };
-                if (bold) styles.Add("font-weight:bold");
-                if (italic) styles.Add("font-style:italic");
-
-                return $"<p style=\"{string.Join(";", styles)}\">{encoded}</p>";
-            }
-
-            private static string ExtractPlainText(string? html)
-            {
-                html = html ?? string.Empty;
-                // Minimaler Fallback: Tags entfernen + <br> als Zeilenumbruch.
-                var s = html
-                    .Replace("<br/>", "\n", StringComparison.OrdinalIgnoreCase)
-                    .Replace("<br>", "\n", StringComparison.OrdinalIgnoreCase)
-                    .Replace("<br />", "\n", StringComparison.OrdinalIgnoreCase);
-
-                s = System.Text.RegularExpressions.Regex.Replace(s, "<[^>]+>", string.Empty);
-                return System.Net.WebUtility.HtmlDecode(s).Trim();
-            }
-
-            private static void TryExtractEditorStyle(string? html, out int fontSize, out bool bold, out bool italic)
+            private static void TryExtractEditorStyle(string? html, out int fontSize)
             {
                 fontSize = 14;
-                bold = false;
-                italic = false;
 
                 html = html ?? string.Empty;
                 var m = System.Text.RegularExpressions.Regex.Match(html, "style\\s*=\\s*\\\"(?<style>[^\\\"]+)\\\"", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
                 if (!m.Success) return;
 
                 var style = m.Groups["style"].Value;
-                if (style.Contains("font-weight:bold", StringComparison.OrdinalIgnoreCase)) bold = true;
-                if (style.Contains("font-style:italic", StringComparison.OrdinalIgnoreCase)) italic = true;
-
                 var m2 = System.Text.RegularExpressions.Regex.Match(style, "font-size\\s*:\\s*(?<n>\\d+)px", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
                 if (m2.Success && int.TryParse(m2.Groups["n"].Value, out var fs) && fs > 0)
                     fontSize = fs;

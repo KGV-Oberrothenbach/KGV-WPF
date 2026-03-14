@@ -1,4 +1,5 @@
 using KGV.Core.Interfaces;
+using KGV.Core.Helpers;
 using KGV.Core.Models;
 using KGV.Core.Security;
 using System;
@@ -496,8 +497,21 @@ public sealed class ArbeitseinsaetzeAdminPage : FooterContentPage
 
             _selected.Beschreibung = _beschreibung.Text ?? string.Empty;
             _selected.Datum = _datum.Date;
-            _selected.StartUhrzeit = (_start.Text ?? string.Empty).Trim();
-            _selected.EndUhrzeit = (_ende.Text ?? string.Empty).Trim();
+
+            if (!TimeText.TryNormalize(_start.Text, out var startNorm))
+            {
+                _status.Text = "Startzeit ist ungültig. Beispiele: 9, 930, 9:30, 13:00.";
+                return;
+            }
+
+            if (!TimeText.TryNormalize(_ende.Text, out var endNorm))
+            {
+                _status.Text = "Endzeit ist ungültig. Beispiele: 9, 930, 9:30, 13:00.";
+                return;
+            }
+
+            _selected.StartUhrzeit = startNorm;
+            _selected.EndUhrzeit = endNorm;
             _selected.Treffpunkt = (_treffpunkt.Text ?? string.Empty).Trim();
 
             var stundenText = (_stundenWert.Text ?? string.Empty).Trim();

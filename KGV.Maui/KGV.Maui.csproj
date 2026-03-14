@@ -21,8 +21,8 @@
 		<AndroidTargetSdkVersion>35</AndroidTargetSdkVersion>
 		<SupportedOSPlatformVersion>21</SupportedOSPlatformVersion>
 
-		<ApplicationDisplayVersion>0.1.9</ApplicationDisplayVersion>
-		<ApplicationVersion>7</ApplicationVersion>
+		<ApplicationDisplayVersion>0.1.10</ApplicationDisplayVersion>
+		<ApplicationVersion>8</ApplicationVersion>
 	</PropertyGroup>
 
 	<!-- Debug stability settings -->

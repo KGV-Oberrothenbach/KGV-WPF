@@ -221,14 +221,18 @@ namespace KGV.Wpf.ViewModels
         {
             try
             {
-                if (!_userContext.MitgliedId.HasValue || _userContext.MitgliedId.Value <= 0 || _userContext.MitgliedId.Value > int.MaxValue)
-                {
-                    Pflichtstunden = null;
-                    return;
-                }
+                int? myMitgliedId = null;
+                if (_userContext.MitgliedId.HasValue && _userContext.MitgliedId.Value > 0 && _userContext.MitgliedId.Value <= int.MaxValue)
+                    myMitgliedId = (int)_userContext.MitgliedId.Value;
 
-                var myMitgliedId = (int)_userContext.MitgliedId.Value;
-                var member = await _supabaseService.GetMitgliedByIdAsync(myMitgliedId);
+                // Fallback: sauber über auth_user_id auflösen (wie in "Meine Arbeitsstunden")
+                MitgliedRecord? member = null;
+                if (myMitgliedId.HasValue)
+                    member = await _supabaseService.GetMitgliedByIdAsync(myMitgliedId.Value);
+
+                if (member == null)
+                    member = await _supabaseService.GetMitgliedByAuthUserIdAsync(_userContext.UserId);
+
                 if (member == null)
                 {
                     Pflichtstunden = null;
@@ -250,12 +254,25 @@ namespace KGV.Wpf.ViewModels
                     return;
                 }
 
-                var rec = await _supabaseService.GetPflichtstundenUebersichtAsync(hauptmitgliedId, saison.Id);
-                if (rec == null)
+                var eval = await _supabaseService.GetPflichtstundenEvaluationAsync(hauptmitgliedId, saison.Id);
+                if (eval == null)
                 {
                     Pflichtstunden = null;
                     return;
                 }
+
+                var rec = new PflichtstundenUebersichtRecord
+                {
+                    HauptmitgliedId = eval.HauptmitgliedId,
+                    SaisonId = eval.SaisonId,
+                    Jahr = eval.Jahr,
+                    Sollstunden = eval.Sollstunden,
+                    Geleistet = eval.Geleistet,
+                    Offen = eval.OffeneStunden,
+                    Fehlbetrag = eval.Fehlbetrag,
+                    Befreiungsgrund = eval.Grund,
+                    Regelgrund = null
+                };
 
                 Pflichtstunden = new PflichtstundenTile(rec);
             }

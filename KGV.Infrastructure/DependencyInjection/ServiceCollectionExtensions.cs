@@ -36,7 +36,8 @@ namespace KGV.Infrastructure.DependencyInjection
                 new SupabaseService(
                     sp.GetRequiredService<ISupabaseClientFactory>(),
                     sp.GetService<ILogger<SupabaseService>>(),
-                    () => sp.GetService<IUserContextAccessor>()?.CurrentUserContext));
+                    () => sp.GetService<IUserContextAccessor>()?.CurrentUserContext,
+                    configuration));
 
             return services;
         }

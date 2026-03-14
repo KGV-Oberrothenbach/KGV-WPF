@@ -262,6 +262,9 @@ namespace KGV.Wpf.ViewModels
             if (!CanEdit) return;
             if (EditItem == null) return;
 
+            long? reselectId = null;
+            var reloadAfterSave = false;
+
             if (string.IsNullOrWhiteSpace((EditItem.Titel ?? string.Empty).Trim()))
             {
                 StatusText = "Bitte Titel ausfüllen.";
@@ -295,19 +298,8 @@ namespace KGV.Wpf.ViewModels
                     return;
                 }
 
-                var existing = Items.FirstOrDefault(x => x.Id == saved.Id);
-                if (existing != null)
-                {
-                    existing.ApplySaved(saved);
-                    SelectedItem = existing;
-                }
-                else
-                {
-                    var inserted = new TerminEditItem(saved);
-                    Items.Insert(0, inserted);
-                    SelectedItem = inserted;
-                }
-
+                reselectId = saved.Id;
+                reloadAfterSave = true;
                 EditItem = null;
                 StatusText = "Gespeichert.";
             }
@@ -319,6 +311,13 @@ namespace KGV.Wpf.ViewModels
             {
                 IsBusy = false;
                 _opLock.Release();
+            }
+
+            if (reloadAfterSave)
+            {
+                await LoadAsync();
+                if (reselectId.HasValue)
+                    SelectedItem = Items.FirstOrDefault(x => x.Id == reselectId.Value) ?? SelectedItem;
             }
         }
 
@@ -341,8 +340,8 @@ namespace KGV.Wpf.ViewModels
             }
 
             // Normalisieren (Doppelpunkt wird hier ergänzt)
-            item.StartUhrzeit = start ?? string.Empty;
-            item.EndUhrzeit = end ?? string.Empty;
+            item.StartUhrzeit = start;
+            item.EndUhrzeit = end;
 
             return true;
         }

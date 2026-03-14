@@ -5,6 +5,7 @@ using KGV.Core.Models;
 using KGV.Core.Security;
 using KGV.Infrastructure.Models;
 using KGV.Infrastructure.Supabase;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Supabase;
 using Supabase.Postgrest.Exceptions;
@@ -32,16 +33,22 @@ namespace KGV.Infrastructure.Services
         private readonly ISupabaseClientFactory _clientFactory;
         private readonly ILogger<SupabaseService>? _logger;
         private readonly Func<UserContext?>? _userContextAccessor;
+        private readonly bool _enableLegacyRoleBefreiung;
         private Client? _client;
 
         public SupabaseService(
             ISupabaseClientFactory clientFactory,
             ILogger<SupabaseService>? logger = null,
-            Func<UserContext?>? userContextAccessor = null)
+            Func<UserContext?>? userContextAccessor = null,
+            IConfiguration? configuration = null)
         {
             _clientFactory = clientFactory;
             _logger = logger;
             _userContextAccessor = userContextAccessor;
+
+            // Übergangsregel (Legacy): kann später per Konfiguration abgeschaltet werden,
+            // ohne dass WPF/MAUI dafür Sonderlogik brauchen.
+            _enableLegacyRoleBefreiung = configuration?.GetValue("Workhours:EnableLegacyRoleBefreiung", true) ?? true;
         }
 
         public async Task<List<AppUserDTO>> GetAppUsersAsync()
@@ -274,6 +281,20 @@ namespace KGV.Infrastructure.Services
             {
                 throw;
             }
+            catch (PostgrestException ex)
+            {
+                var msg = ex.Message ?? string.Empty;
+
+                if (msg.Contains("Kapazität erreicht", StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidOperationException(msg, ex);
+
+                if (msg.Contains("wartungsvertrag_zuordnungen_no_overlap", StringComparison.OrdinalIgnoreCase)
+                    || msg.Contains("exclusion constraint", StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidOperationException("Diese Zuordnung überschneidet sich mit einer bestehenden Zuordnung (Duplikat/Überlappung).", ex);
+
+                _logger?.LogError(ex, "SaveWartungsvertragZuordnungAsync failed");
+                return null;
+            }
             catch (Exception ex)
             {
                 _logger?.LogError(ex, "SaveWartungsvertragZuordnungAsync failed");
@@ -399,10 +420,10 @@ namespace KGV.Infrastructure.Services
                     }
                 }
 
-                // Priorität 2: Übergangsregel (Legacy) über Rolle
+                // Priorität 2: Übergangsregel (Legacy) über Rolle (zentral, später abschaltbar)
                 string? legacyRole = null;
                 var isLegacyRoleBefreit = false;
-                if (befreitVertrag == null)
+                if (befreitVertrag == null && _enableLegacyRoleBefreiung)
                 {
                     legacyRole = (await GetAppUserRoleForMitgliedAsync(hauptmitgliedId) ?? string.Empty).Trim();
                     if (string.IsNullOrWhiteSpace(legacyRole))
@@ -1210,7 +1231,7 @@ namespace KGV.Infrastructure.Services
             {
                 var write = new StartseiteBekanntmachungWriteRecord
                 {
-                    Id = record.Id,
+                    Id = record.Id > 0 ? record.Id : null,
                     Titel = record.Titel,
                     InhaltHtml = record.InhaltHtml,
                     SichtbarAb = record.SichtbarAb,
@@ -1224,14 +1245,14 @@ namespace KGV.Infrastructure.Services
                 {
                     var resp = await _client
                         .From<StartseiteBekanntmachungWriteRecord>()
-                        .Where(x => x.Id == record.Id)
+                        .Where(x => x.Id == (long?)record.Id)
                         .Update(write);
 
                     var updated = resp?.Models?.FirstOrDefault();
                     if (updated == null)
                         throw new InvalidOperationException("Speichern fehlgeschlagen (kein Datensatz zurückgegeben).");
 
-                    id = updated.Id;
+                    id = updated.Id ?? 0;
                 }
                 else
                 {
@@ -1243,7 +1264,7 @@ namespace KGV.Infrastructure.Services
                     if (inserted == null)
                         throw new InvalidOperationException("Speichern fehlgeschlagen (kein Datensatz zurückgegeben).");
 
-                    id = inserted.Id;
+                    id = inserted.Id ?? 0;
                 }
 
                 if (id <= 0)
@@ -1280,7 +1301,7 @@ namespace KGV.Infrastructure.Services
 
                 var write = new StartseiteTerminWriteRecord
                 {
-                    Id = record.Id,
+                    Id = record.Id > 0 ? record.Id : null,
                     Titel = record.Titel,
                     Beschreibung = record.Beschreibung,
                     Datum = record.Datum,
@@ -1296,14 +1317,14 @@ namespace KGV.Infrastructure.Services
                 {
                     var resp = await _client
                         .From<StartseiteTerminWriteRecord>()
-                        .Where(x => x.Id == record.Id)
+                        .Where(x => x.Id == (long?)record.Id)
                         .Update(write);
 
                     var updated = resp?.Models?.FirstOrDefault();
                     if (updated == null)
                         throw new InvalidOperationException("Speichern fehlgeschlagen (kein Datensatz zurückgegeben).");
 
-                    id = updated.Id;
+                    id = updated.Id ?? 0;
                 }
                 else
                 {
@@ -1315,7 +1336,7 @@ namespace KGV.Infrastructure.Services
                     if (inserted == null)
                         throw new InvalidOperationException("Speichern fehlgeschlagen (kein Datensatz zurückgegeben).");
 
-                    id = inserted.Id;
+                    id = inserted.Id ?? 0;
                 }
 
                 if (id <= 0)
@@ -1341,14 +1362,23 @@ namespace KGV.Infrastructure.Services
 
             try
             {
+                // DB erwartet time-Felder -> nur gültiges HH:mm oder null senden (keine leeren Strings)
+                var startRaw = (record.StartUhrzeit ?? string.Empty).Trim();
+                if (!TimeText.TryNormalize(startRaw, out var startNorm))
+                    startNorm = null;
+
+                var endRaw = (record.EndUhrzeit ?? string.Empty).Trim();
+                if (!TimeText.TryNormalize(endRaw, out var endNorm))
+                    endNorm = null;
+
                 var write = new StartseiteArbeitseinsatzWriteRecord
                 {
-                    Id = record.Id,
+                    Id = record.Id > 0 ? record.Id : null,
                     Titel = record.Titel,
                     Beschreibung = record.Beschreibung,
                     Datum = record.Datum,
-                    StartUhrzeit = record.StartUhrzeit,
-                    EndUhrzeit = record.EndUhrzeit,
+                    StartUhrzeit = startNorm,
+                    EndUhrzeit = endNorm,
                     Treffpunkt = record.Treffpunkt,
                     MaxTeilnehmer = record.MaxTeilnehmer,
                     StundenWert = record.StundenWert ?? 0m,
@@ -1363,14 +1393,14 @@ namespace KGV.Infrastructure.Services
                 {
                     var resp = await _client
                         .From<StartseiteArbeitseinsatzWriteRecord>()
-                        .Where(x => x.Id == record.Id)
+                        .Where(x => x.Id == (long?)record.Id)
                         .Update(write);
 
                     var updated = resp?.Models?.FirstOrDefault();
                     if (updated == null)
                         throw new InvalidOperationException("Speichern fehlgeschlagen (kein Datensatz zurückgegeben).");
 
-                    id = updated.Id;
+                    id = updated.Id ?? 0;
                 }
                 else
                 {
@@ -1382,7 +1412,7 @@ namespace KGV.Infrastructure.Services
                     if (inserted == null)
                         throw new InvalidOperationException("Speichern fehlgeschlagen (kein Datensatz zurückgegeben).");
 
-                    id = inserted.Id;
+                    id = inserted.Id ?? 0;
                 }
 
                 if (id <= 0)
@@ -1411,7 +1441,7 @@ namespace KGV.Infrastructure.Services
 
                 await _client
                     .From<StartseiteBekanntmachungWriteRecord>()
-                    .Where(x => x.Id == id)
+                    .Where(x => x.Id == (long?)id)
                     .Delete();
 
                 return true;
@@ -1433,7 +1463,7 @@ namespace KGV.Infrastructure.Services
 
                 await _client
                     .From<StartseiteTerminWriteRecord>()
-                    .Where(x => x.Id == id)
+                    .Where(x => x.Id == (long?)id)
                     .Delete();
 
                 return true;
@@ -1455,7 +1485,7 @@ namespace KGV.Infrastructure.Services
 
                 await _client
                     .From<StartseiteArbeitseinsatzWriteRecord>()
-                    .Where(x => x.Id == id)
+                    .Where(x => x.Id == (long?)id)
                     .Delete();
 
                 return true;
@@ -1469,22 +1499,34 @@ namespace KGV.Infrastructure.Services
 
         private static string BuildUserFacingSaveError(Exception ex)
         {
-            // Ziel: echte Ursache sichtbar machen (statt nur "Speichern fehlgeschlagen").
-            // PostgrestException enthält oft ein JSON-Error-Payload. Das holen wir defensiv via Reflection.
             try
             {
                 var msg = (ex.Message ?? string.Empty).Trim();
 
+                // Häufige Postgres-Fehler (fachlich lesbar, ohne JSON-Rohpayload)
+                if (msg.Contains("invalid input syntax for type time", StringComparison.OrdinalIgnoreCase))
+                    return "Uhrzeit ist ungültig. Bitte HH:mm angeben oder Feld leer lassen.";
+
+                if (msg.Contains("duplicate key value violates unique constraint", StringComparison.OrdinalIgnoreCase)
+                    || msg.Contains("already exists", StringComparison.OrdinalIgnoreCase))
+                    return "Speichern fehlgeschlagen (ID-Konflikt). Bitte erneut versuchen.";
+
+                // Falls das Exception-Objekt ein JSON-Content enthält, nicht direkt ins UI geben.
                 var contentProp = ex.GetType().GetProperty("Content");
-                var content = contentProp?.GetValue(ex) as string;
-                content = (content ?? string.Empty).Trim();
+                var content = (contentProp?.GetValue(ex) as string ?? string.Empty).Trim();
+                if (content.StartsWith("{", StringComparison.Ordinal) || content.StartsWith("[", StringComparison.Ordinal))
+                    content = string.Empty;
 
-                if (!string.IsNullOrWhiteSpace(content) && !msg.Contains(content, StringComparison.Ordinal))
-                    msg = string.IsNullOrWhiteSpace(msg) ? content : msg + "\n" + content;
+                // Wenn keine klar map-bare Ursache, defensiv nur eine kurze Message durchreichen.
+                // (Verhindert, dass komplette JSON/Stack-Infos in der UI landen.)
+                if (string.IsNullOrWhiteSpace(msg))
+                    return "Speichern fehlgeschlagen.";
 
-                return string.IsNullOrWhiteSpace(msg)
-                    ? "Speichern fehlgeschlagen."
-                    : msg;
+                // Einzeilige Messages sind i.d.R. ok, Multi-Line eher nicht.
+                if (msg.Contains('\n') || msg.Contains('\r'))
+                    return "Speichern fehlgeschlagen.";
+
+                return msg;
             }
             catch
             {

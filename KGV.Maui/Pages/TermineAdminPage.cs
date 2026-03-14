@@ -475,8 +475,8 @@ public sealed class TermineAdminPage : FooterContentPage
                 return;
             }
 
-            _selected.StartUhrzeit = startNorm ?? string.Empty;
-            _selected.EndUhrzeit = endNorm ?? string.Empty;
+            _selected.StartUhrzeit = startNorm;
+            _selected.EndUhrzeit = endNorm;
             _selected.SichtbarAb = _sichtbarAb.Date;
             _selected.SichtbarBis = _sichtbarBisEnabled.IsToggled ? _sichtbarBis.Date : null;
 

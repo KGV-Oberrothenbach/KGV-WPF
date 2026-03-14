@@ -1,4 +1,5 @@
 using KGV.Core.Interfaces;
+using KGV.Core.Helpers;
 using KGV.Core.Models;
 using KGV.Core.Security;
 using System;
@@ -27,8 +28,9 @@ public sealed class BekanntmachungenAdminPage : FooterContentPage
     private readonly Entry _titel;
     private readonly Editor _inhaltText;
     private readonly Picker _fontSize;
-    private readonly Switch _isBold;
-    private readonly Switch _isItalic;
+    private readonly Button _boldSelection;
+    private readonly Button _italicSelection;
+    private readonly Button _fontSizeSelection;
     private readonly DatePicker _sichtbarAb;
     private readonly DatePicker _sichtbarBis;
     private readonly Switch _sichtbarBisEnabled;
@@ -112,8 +114,14 @@ public sealed class BekanntmachungenAdminPage : FooterContentPage
         _fontSize.ItemsSource = new List<int> { 12, 14, 16, 18, 20 };
         _fontSize.SelectedIndex = 1; // 14
 
-        _isBold = new Switch { IsToggled = false };
-        _isItalic = new Switch { IsToggled = false };
+        _boldSelection = new Button { Text = "Fett → Auswahl" };
+        _boldSelection.Clicked += (_, __) => { ApplyWrapToSelection(BekanntmachungMarkup.BoldOpen, BekanntmachungMarkup.BoldClose); MarkDirty(); };
+
+        _italicSelection = new Button { Text = "Kursiv → Auswahl" };
+        _italicSelection.Clicked += (_, __) => { ApplyWrapToSelection(BekanntmachungMarkup.ItalicOpen, BekanntmachungMarkup.ItalicClose); MarkDirty(); };
+
+        _fontSizeSelection = new Button { Text = "Größe → Auswahl" };
+        _fontSizeSelection.Clicked += (_, __) => { ApplyFontSizeToSelection(); MarkDirty(); };
         _sichtbarAb = new DatePicker { Date = DateTime.Today };
         _sichtbarBis = new DatePicker { Date = DateTime.Today };
         _sichtbarBisEnabled = new Switch { IsToggled = false };
@@ -144,8 +152,9 @@ public sealed class BekanntmachungenAdminPage : FooterContentPage
                 Spacing = 12,
                 Children =
                 {
-                    new HorizontalStackLayout { Spacing = 6, Children = { new Label { Text = "Fett", VerticalTextAlignment = TextAlignment.Center }, _isBold } },
-                    new HorizontalStackLayout { Spacing = 6, Children = { new Label { Text = "Kursiv", VerticalTextAlignment = TextAlignment.Center }, _isItalic } }
+                    _fontSizeSelection,
+                    _boldSelection,
+                    _italicSelection
                 }
             },
             1,
@@ -172,8 +181,6 @@ public sealed class BekanntmachungenAdminPage : FooterContentPage
         _titel.TextChanged += (_, __) => MarkDirty();
         _inhaltText.TextChanged += (_, __) => MarkDirty();
         _fontSize.SelectedIndexChanged += (_, __) => { ApplyEditorStyle(); MarkDirty(); };
-        _isBold.Toggled += (_, __) => { ApplyEditorStyle(); MarkDirty(); };
-        _isItalic.Toggled += (_, __) => { ApplyEditorStyle(); MarkDirty(); };
         _sichtbarAb.DateSelected += (_, __) => MarkDirty();
         _sichtbarBis.DateSelected += (_, __) => MarkDirty();
         _sortOrder.TextChanged += (_, __) => MarkDirty();
@@ -321,17 +328,6 @@ public sealed class BekanntmachungenAdminPage : FooterContentPage
             _titel.Text = string.Empty;
             _inhaltText.Text = string.Empty;
             _fontSize.SelectedIndex = 1; // 14
-
-            _suppressDirtyTracking = true;
-            try
-            {
-                _isBold.IsToggled = false;
-                _isItalic.IsToggled = false;
-            }
-            finally
-            {
-                _suppressDirtyTracking = false;
-            }
             _sichtbarAb.Date = DateTime.Today;
             _sichtbarBis.Date = DateTime.Today;
 
@@ -351,8 +347,9 @@ public sealed class BekanntmachungenAdminPage : FooterContentPage
             _titel.IsEnabled = false;
             _inhaltText.IsEnabled = false;
             _fontSize.IsEnabled = false;
-            _isBold.IsEnabled = false;
-            _isItalic.IsEnabled = false;
+            _fontSizeSelection.IsEnabled = false;
+            _boldSelection.IsEnabled = false;
+            _italicSelection.IsEnabled = false;
             _sichtbarAb.IsEnabled = false;
             _sichtbarBisEnabled.IsEnabled = false;
             _sichtbarBis.IsEnabled = false;
@@ -365,8 +362,9 @@ public sealed class BekanntmachungenAdminPage : FooterContentPage
         _titel.IsEnabled = true;
         _inhaltText.IsEnabled = true;
         _fontSize.IsEnabled = true;
-        _isBold.IsEnabled = true;
-        _isItalic.IsEnabled = true;
+        _fontSizeSelection.IsEnabled = true;
+        _boldSelection.IsEnabled = true;
+        _italicSelection.IsEnabled = true;
         _sichtbarAb.IsEnabled = true;
         _sichtbarBisEnabled.IsEnabled = true;
         _sortOrder.IsEnabled = true;
@@ -374,19 +372,8 @@ public sealed class BekanntmachungenAdminPage : FooterContentPage
         _titel.Text = _selected.Titel ?? string.Empty;
         var html = _selected.InhaltHtml ?? string.Empty;
         _inhaltText.Text = ExtractPlainText(html);
-        TryExtractEditorStyle(html, out var fs, out var bold, out var italic);
+        TryExtractEditorStyle(html, out var fs);
         _fontSize.SelectedItem = fs;
-
-        _suppressDirtyTracking = true;
-        try
-        {
-            _isBold.IsToggled = bold;
-            _isItalic.IsToggled = italic;
-        }
-        finally
-        {
-            _suppressDirtyTracking = false;
-        }
 
         if (_selected.SichtbarAb.HasValue)
             _sichtbarAb.Date = _selected.SichtbarAb.Value.Date;
@@ -415,59 +402,66 @@ public sealed class BekanntmachungenAdminPage : FooterContentPage
     {
         var fontSize = _fontSize.SelectedItem is int fs && fs > 0 ? fs : 14;
         _inhaltText.FontSize = fontSize;
-
-        var attrs = FontAttributes.None;
-        if (_isBold.IsToggled) attrs |= FontAttributes.Bold;
-        if (_isItalic.IsToggled) attrs |= FontAttributes.Italic;
-        _inhaltText.FontAttributes = attrs;
+        _inhaltText.FontAttributes = FontAttributes.None;
     }
 
     private string BuildHtml()
     {
-        var text = (_inhaltText.Text ?? string.Empty).Trim();
-        var encoded = System.Net.WebUtility.HtmlEncode(text)
-            .Replace("\r\n", "\n", StringComparison.Ordinal)
-            .Replace("\r", "\n", StringComparison.Ordinal)
-            .Replace("\n", "<br/>", StringComparison.Ordinal);
-
         var fontSize = _fontSize.SelectedItem is int fs && fs > 0 ? fs : 14;
-        var styles = new List<string> { $"font-size:{fontSize}px" };
-        if (_isBold.IsToggled) styles.Add("font-weight:bold");
-        if (_isItalic.IsToggled) styles.Add("font-style:italic");
-
-        return $"<p style=\"{string.Join(";", styles)}\">{encoded}</p>";
+        return BekanntmachungMarkup.ToHtml(_inhaltText.Text, fontSize);
     }
 
     private static string ExtractPlainText(string? html)
     {
-        html ??= string.Empty;
-
-        var s = html
-            .Replace("<br/>", "\n", StringComparison.OrdinalIgnoreCase)
-            .Replace("<br>", "\n", StringComparison.OrdinalIgnoreCase)
-            .Replace("<br />", "\n", StringComparison.OrdinalIgnoreCase);
-
-        s = System.Text.RegularExpressions.Regex.Replace(s, "<[^>]+>", string.Empty);
-        return System.Net.WebUtility.HtmlDecode(s).Trim();
+        return BekanntmachungMarkup.ToEditorTextWithMarkers(html);
     }
 
-    private static void TryExtractEditorStyle(string? html, out int fontSize, out bool bold, out bool italic)
+    private static void TryExtractEditorStyle(string? html, out int fontSize)
     {
         fontSize = 14;
-        bold = false;
-        italic = false;
 
         html ??= string.Empty;
         var m = System.Text.RegularExpressions.Regex.Match(html, "style\\s*=\\s*\\\"(?<style>[^\\\"]+)\\\"", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
         if (!m.Success) return;
 
         var style = m.Groups["style"].Value;
-        if (style.Contains("font-weight:bold", StringComparison.OrdinalIgnoreCase)) bold = true;
-        if (style.Contains("font-style:italic", StringComparison.OrdinalIgnoreCase)) italic = true;
-
         var m2 = System.Text.RegularExpressions.Regex.Match(style, "font-size\\s*:\\s*(?<n>\\d+)px", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
         if (m2.Success && int.TryParse(m2.Groups["n"].Value, out var fs) && fs > 0)
             fontSize = fs;
+    }
+
+    private void ApplyFontSizeToSelection()
+    {
+        var fontSize = _fontSize.SelectedItem is int fs && fs > 0 ? fs : 14;
+        ApplyWrapToSelection($"{{{{fs:{fontSize}}}}}", BekanntmachungMarkup.FontSizeClose);
+    }
+
+    private void ApplyWrapToSelection(string open, string close)
+    {
+        if (!_isEditMode)
+            return;
+
+        var start = _inhaltText.CursorPosition;
+        var len = _inhaltText.SelectionLength;
+        if (len <= 0)
+            return;
+
+        var text = _inhaltText.Text ?? string.Empty;
+        var updated = BekanntmachungMarkup.WrapSelection(text, start, len, open, close);
+        if (string.Equals(updated, text, StringComparison.Ordinal))
+            return;
+
+        _suppressDirtyTracking = true;
+        try
+        {
+            _inhaltText.Text = updated;
+            _inhaltText.CursorPosition = start + open.Length;
+            _inhaltText.SelectionLength = len;
+        }
+        finally
+        {
+            _suppressDirtyTracking = false;
+        }
     }
 
     private async Task NewAsync()

@@ -500,14 +500,23 @@ public sealed class HomePage : FooterContentPage
         try
         {
             var ctx = _userContextAccessor.CurrentUserContext;
-            if (ctx?.MitgliedId == null || ctx.MitgliedId.Value <= 0 || ctx.MitgliedId.Value > int.MaxValue)
+            if (ctx == null)
             {
                 _pflichtstundenCard.IsVisible = false;
                 return;
             }
 
-            var myMitgliedId = (int)ctx.MitgliedId.Value;
-            var member = await _supabaseService.GetMitgliedByIdAsync(myMitgliedId);
+            int? myMitgliedId = null;
+            if (ctx.MitgliedId.HasValue && ctx.MitgliedId.Value > 0 && ctx.MitgliedId.Value <= int.MaxValue)
+                myMitgliedId = (int)ctx.MitgliedId.Value;
+
+            MitgliedRecord? member = null;
+            if (myMitgliedId.HasValue)
+                member = await _supabaseService.GetMitgliedByIdAsync(myMitgliedId.Value);
+
+            if (member == null)
+                member = await _supabaseService.GetMitgliedByAuthUserIdAsync(ctx.UserId);
+
             if (member == null)
             {
                 _pflichtstundenCard.IsVisible = false;
@@ -530,19 +539,19 @@ public sealed class HomePage : FooterContentPage
                 return;
             }
 
-            var rec = await _supabaseService.GetPflichtstundenUebersichtAsync(hauptmitgliedId, saison.Id);
-            if (rec == null)
+            var eval = await _supabaseService.GetPflichtstundenEvaluationAsync(hauptmitgliedId, saison.Id);
+            if (eval == null)
             {
                 _pflichtstundenCard.IsVisible = false;
                 return;
             }
 
-            _pfSaison.Text = rec.Jahr.ToString(DeCulture);
-            _pfSoll.Text = rec.Sollstunden.ToString("0.##", DeCulture);
-            _pfGeleistet.Text = rec.Geleistet.ToString("0.##", DeCulture);
-            _pfOffen.Text = rec.Offen.ToString("0.##", DeCulture);
+            _pfSaison.Text = eval.Jahr.ToString(DeCulture);
+            _pfSoll.Text = eval.Sollstunden.ToString("0.##", DeCulture);
+            _pfGeleistet.Text = eval.Geleistet.ToString("0.##", DeCulture);
+            _pfOffen.Text = eval.OffeneStunden.ToString("0.##", DeCulture);
 
-            var befreiung = (rec.Befreiungsgrund ?? string.Empty).Trim();
+            var befreiung = (eval.Grund ?? string.Empty).Trim();
             _pfBefreiung.Text = befreiung;
             _pfBefreiung.IsVisible = !string.IsNullOrWhiteSpace(befreiung);
 

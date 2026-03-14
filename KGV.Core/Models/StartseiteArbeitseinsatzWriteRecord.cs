@@ -6,9 +6,9 @@ namespace KGV.Core.Models;
 [Table("arbeitseinsatz")]
 public sealed class StartseiteArbeitseinsatzWriteRecord : BaseModel
 {
-    [PrimaryKey("id")]
+    [PrimaryKey("id", false)]
     [Column("id")]
-    public long Id { get; set; }
+    public long? Id { get; set; }
 
     [Column("titel")]
     public string? Titel { get; set; }

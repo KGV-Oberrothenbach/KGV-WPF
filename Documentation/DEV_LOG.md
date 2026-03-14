@@ -218,6 +218,43 @@
 - Arbeitsstunden/Pflichtstunden:
   - Fehlbetrag fachlich korrigiert: `max(0, offen * EuroProFehlstunde)` und nie negativ.
   - Anzeige als Euro-Text (z.B. `250,-€`).
+
+---
+
+## 2026-03-14 – Bugfix: Startseite-CRUD (ID=0), Time-Nulls, Home "Meine Arbeitsstunden", Bekanntmachungen Auswahl-Formatierung
+
+### Erledigt
+- Startseite-Verwaltung (Arbeitseinsätze/Termine/Bekanntmachungen): Insert/Update robuster gemacht.
+  - Insert sendet keine `id=0` mehr (Write-Records PK-Insert deaktiviert + nullable `Id` + Service setzt `Id=null` bei Inserts).
+  - `time`-Felder werden konsequent als gültiges `HH:mm` oder `NULL` gespeichert (kein `""` mehr).
+  - DB/Service-Fehlertexte werden UI-tauglich gekürzt (kein rohes JSON-Error-Payload im UI).
+- Home/Startseite: Pflichtstunden/geleistete Stunden werden jetzt über denselben User→Mitglied-Auflösungsweg geladen wie "Meine Arbeitsstunden" (Fallback über `auth_user_id`) und über die zentrale Pflichtstunden-Auswertung.
+- Bekanntmachungen: Formatierung (Fett/Kursiv/Schriftgröße) wird auf die markierte Textauswahl angewendet (Marker-basiert, später erweiterbar) und bestehende Teilformatierungen bleiben beim Laden/Speichern erhalten.
+
+### Betroffene Dateien
+- Core
+  - `KGV.Core/Models/StartseiteArbeitseinsatzWriteRecord.cs`
+  - `KGV.Core/Models/StartseiteTerminWriteRecord.cs`
+  - `KGV.Core/Models/StartseiteBekanntmachungWriteRecord.cs`
+  - `KGV.Core/Helpers/BekanntmachungMarkup.cs` (neu)
+- Infrastructure
+  - `KGV.Infrastructure/Services/SupabaseService.cs`
+- WPF
+  - `KGV.Wpf/ViewModels/HomeViewModel.cs`
+  - `KGV.Wpf/ViewModels/TermineVerwaltungViewModel.cs`
+  - `KGV.Wpf/ViewModels/ArbeitseinsaetzeVerwaltungViewModel.cs`
+  - `KGV.Wpf/ViewModels/BekanntmachungenVerwaltungViewModel.cs`
+  - `Views/BekanntmachungenVerwaltungView.xaml`
+  - `KGV.Wpf/Views/BekanntmachungenVerwaltungView.xaml.cs`
+- MAUI
+  - `KGV.Maui/Pages/HomePage.xaml.cs`
+  - `KGV.Maui/Pages/TermineAdminPage.cs`
+  - `KGV.Maui/Pages/ArbeitseinsaetzeAdminPage.cs`
+  - `KGV.Maui/Pages/BekanntmachungenAdminPage.cs`
+
+### Hinweise
+- Auswahl-Formatierung nutzt Marker im Editor-Text (`{{b}}...{{/b}}`, `{{i}}...{{/i}}`, `{{fs:N}}...{{/fs}}`), die beim Speichern in HTML-Tags übersetzt werden.
+- Für eine spätere WYSIWYG-Editor-Verbesserung bleibt die Lösung bewusst minimal und ohne neue UI-Komponenten.
   - Vorstand/Admin werden als befreit berücksichtigt (Soll/Offen/Fehlbetrag = 0).
 
 ### Hinweise
@@ -306,6 +343,10 @@
 - Kapazität/Regeln beim Zuweisen zentral in `SupabaseService.SaveWartungsvertragZuordnungAsync` abgesichert:
   - Duplikatschutz (gleicher Vertrag nicht mehrfach gleichzeitig aktiv pro Mitglied)
   - `MaxAktiveZuordnungen` (max. aktive Zuordnungen pro Vertrag)
+- Legacy-Rollenbefreiung ist zentral per Konfiguration vorbereitbar: `Workhours:EnableLegacyRoleBefreiung` (Default `true`).
+- DB-seitige Absicherung vorbereitet (SQL-Skripte):
+  - Exclusion Constraint (Überlappungen verhindern) + Trigger mit Row-Lock für atomare Kapazitätsprüfung.
+  - Query zur Identifikation von Bestandsfällen (Legacy-Rolle befreit, aber kein befreiernder Vertrag aktiv).
 
 ### Betroffene Dateien (Details)
 - Core
@@ -313,6 +354,9 @@
   - `KGV.Core/Interfaces/ISupabaseService.cs`
 - Infrastructure
   - `KGV.Infrastructure/Services/SupabaseService.cs`
+- Documentation
+  - `Documentation/DB/2026-03-14_wartungsvertrag_zuordnung_db_absicherung.sql`
+  - `Documentation/DB/2026-03-14_query_legacy_role_befreit_ohne_vertrag.sql`
 - WPF
   - `KGV.Wpf/ViewModels/ArbeitsstundenViewModel.cs`
 - MAUI
