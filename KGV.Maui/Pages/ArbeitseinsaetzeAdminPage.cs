@@ -23,6 +23,7 @@ public sealed class ArbeitseinsaetzeAdminPage : FooterContentPage
     private readonly Label _status;
 
     private readonly Button _saveButton;
+    private readonly Button _deleteButton;
 
     private readonly Entry _titel;
     private readonly Editor _beschreibung;
@@ -64,6 +65,9 @@ public sealed class ArbeitseinsaetzeAdminPage : FooterContentPage
 
         _saveButton = new Button { Text = "Speichern" };
         _saveButton.Clicked += async (_, __) => await SaveAsync();
+
+        _deleteButton = new Button { Text = "Löschen" };
+        _deleteButton.Clicked += async (_, __) => await DeleteAsync();
 
         var cancelButton = new Button { Text = "Abbrechen" };
         cancelButton.Clicked += async (_, __) => await CancelAsync();
@@ -159,7 +163,7 @@ public sealed class ArbeitseinsaetzeAdminPage : FooterContentPage
                 new Label { Text = "Sichtbarkeit", FontAttributes = FontAttributes.Bold },
                 BuildVisibleGrid(),
                 _angemeldet,
-                new HorizontalStackLayout { Spacing = 10, Children = { _saveButton, cancelButton, deactivateButton } }
+                new HorizontalStackLayout { Spacing = 10, Children = { _saveButton, cancelButton, deactivateButton, _deleteButton } }
             }
         };
 
@@ -243,6 +247,12 @@ public sealed class ArbeitseinsaetzeAdminPage : FooterContentPage
             && !_isBusy
             && _hasUnsavedChanges
             && IsFormValid();
+
+        _deleteButton.IsEnabled = CanEdit
+            && _isEditMode
+            && !_isBusy
+            && _selected != null
+            && _selected.Id > 0;
     }
 
     private void UpdateAnmeldungBisVisibility()
@@ -565,6 +575,49 @@ public sealed class ArbeitseinsaetzeAdminPage : FooterContentPage
         _sichtbarBis.Date = DateTime.Today;
         UpdateSichtbarBisVisibility();
         await SaveAsync();
+    }
+
+    private async Task DeleteAsync()
+    {
+        if (!CanEdit) return;
+        if (_selected == null) return;
+        if (!_isEditMode) return;
+        if (_isBusy) return;
+        if (_selected.Id <= 0) return;
+
+        var confirm = await DisplayAlert(
+            "Löschen bestätigen",
+            "Eintrag wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.\n\nHinweis: Wenn es bereits Anmeldungen gibt, kann das Löschen je nach DB-Regeln fehlschlagen.",
+            "Löschen",
+            "Abbrechen");
+
+        if (!confirm)
+            return;
+
+        SetBusy(true);
+        _status.Text = string.Empty;
+
+        try
+        {
+            var ok = await _supabaseService.DeleteStartseiteArbeitseinsatzAsync(_selected.Id);
+            if (!ok)
+            {
+                _status.Text = "Löschen fehlgeschlagen.";
+                return;
+            }
+
+            _status.Text = "Gelöscht.";
+            await LoadAsync();
+            ExitEditMode();
+        }
+        catch (Exception ex)
+        {
+            _status.Text = ex.Message;
+        }
+        finally
+        {
+            SetBusy(false);
+        }
     }
 
     private void EnterEditMode()

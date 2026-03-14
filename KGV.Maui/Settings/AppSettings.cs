@@ -10,6 +10,8 @@ public static class AppSettings
     {
         public string? LastEmail { get; set; }
         public string? AppMode { get; set; }
+
+        public string? ImpressumVerantwortlichText { get; set; }
     }
 
     private static UserSettings _settings = new();
@@ -24,6 +26,14 @@ public static class AppSettings
     {
         get => _settings.AppMode;
         set => _settings.AppMode = value;
+    }
+
+    public static string ImpressumVerantwortlichText
+    {
+        get => string.IsNullOrWhiteSpace(_settings.ImpressumVerantwortlichText)
+            ? "Kleingartenverein Oberrothenbach e.V."
+            : _settings.ImpressumVerantwortlichText!;
+        set => _settings.ImpressumVerantwortlichText = value;
     }
 
     public static void Load()

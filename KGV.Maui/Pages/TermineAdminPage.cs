@@ -1,4 +1,5 @@
 using KGV.Core.Interfaces;
+using KGV.Core.Helpers;
 using KGV.Core.Models;
 using KGV.Core.Security;
 using System;
@@ -23,11 +24,14 @@ public sealed class TermineAdminPage : FooterContentPage
     private readonly Label _status;
 
     private readonly Button _saveButton;
+    private readonly Button _deleteButton;
 
     private readonly Entry _titel;
     private readonly Editor _beschreibung;
     private readonly DatePicker _datum;
+    private readonly Picker _startPicker;
     private readonly Entry _start;
+    private readonly Picker _endePicker;
     private readonly Entry _ende;
     private readonly DatePicker _sichtbarAb;
     private readonly DatePicker _sichtbarBis;
@@ -57,6 +61,9 @@ public sealed class TermineAdminPage : FooterContentPage
 
         _saveButton = new Button { Text = "Speichern" };
         _saveButton.Clicked += async (_, __) => await SaveAsync();
+
+        _deleteButton = new Button { Text = "Löschen" };
+        _deleteButton.Clicked += async (_, __) => await DeleteAsync();
 
         var cancelButton = new Button { Text = "Abbrechen" };
         cancelButton.Clicked += async (_, __) => await CancelAsync();
@@ -113,8 +120,32 @@ public sealed class TermineAdminPage : FooterContentPage
         _titel = new Entry { Placeholder = "Titel" };
         _beschreibung = new Editor { AutoSize = EditorAutoSizeOption.TextChanges, HeightRequest = 160, Placeholder = "Beschreibung" };
         _datum = new DatePicker { Date = DateTime.Today };
+
+        var timeOptions = TimeText.BuildHalfHourOptions();
+
+        _startPicker = new Picker { Title = "Start wählen" };
+        _startPicker.ItemsSource = timeOptions.ToList();
+        _startPicker.SelectedIndexChanged += (_, __) =>
+        {
+            if (_startPicker.SelectedItem is string t)
+                _start.Text = t;
+            MarkDirty();
+        };
+
         _start = new Entry { Placeholder = "Start (HH:mm)", Keyboard = Keyboard.Text };
+        _start.Unfocused += (_, __) => TryNormalizeEntryTime(_start);
+
+        _endePicker = new Picker { Title = "Ende wählen" };
+        _endePicker.ItemsSource = timeOptions.ToList();
+        _endePicker.SelectedIndexChanged += (_, __) =>
+        {
+            if (_endePicker.SelectedItem is string t)
+                _ende.Text = t;
+            MarkDirty();
+        };
+
         _ende = new Entry { Placeholder = "Ende (HH:mm)", Keyboard = Keyboard.Text };
+        _ende.Unfocused += (_, __) => TryNormalizeEntryTime(_ende);
         _sichtbarAb = new DatePicker { Date = DateTime.Today };
         _sichtbarBis = new DatePicker { Date = DateTime.Today };
         _sichtbarBisEnabled = new Switch { IsToggled = false };
@@ -143,7 +174,7 @@ public sealed class TermineAdminPage : FooterContentPage
                 _beschreibung,
                 BuildWhenGrid(),
                 BuildVisibleGrid(),
-                new HorizontalStackLayout { Spacing = 10, Children = { _saveButton, cancelButton, deactivateButton } }
+                new HorizontalStackLayout { Spacing = 10, Children = { _saveButton, cancelButton, deactivateButton, _deleteButton } }
             }
         };
 
@@ -209,6 +240,12 @@ public sealed class TermineAdminPage : FooterContentPage
             && !_isBusy
             && _hasUnsavedChanges
             && IsFormValid();
+
+        _deleteButton.IsEnabled = CanEdit
+            && _isEditMode
+            && !_isBusy
+            && _selected != null
+            && _selected.Id > 0;
     }
 
     private void UpdateSichtbarBisVisibility()
@@ -282,7 +319,9 @@ public sealed class TermineAdminPage : FooterContentPage
         _titel.IsEnabled = enabled;
         _beschreibung.IsEnabled = enabled;
         _datum.IsEnabled = enabled;
+        _startPicker.IsEnabled = enabled;
         _start.IsEnabled = enabled;
+        _endePicker.IsEnabled = enabled;
         _ende.IsEnabled = enabled;
         _sichtbarAb.IsEnabled = enabled;
         _sichtbarBisEnabled.IsEnabled = enabled;
@@ -294,6 +333,8 @@ public sealed class TermineAdminPage : FooterContentPage
             _datum.Date = DateTime.Today;
             _start.Text = string.Empty;
             _ende.Text = string.Empty;
+            _startPicker.SelectedItem = null;
+            _endePicker.SelectedItem = null;
             _sichtbarAb.Date = DateTime.Today;
             _sichtbarBis.Date = DateTime.Today;
 
@@ -315,8 +356,11 @@ public sealed class TermineAdminPage : FooterContentPage
         _titel.Text = _selected.Titel ?? string.Empty;
         _beschreibung.Text = _selected.Beschreibung ?? string.Empty;
         if (_selected.Datum.HasValue) _datum.Date = _selected.Datum.Value.Date;
+
         _start.Text = _selected.StartUhrzeit ?? string.Empty;
         _ende.Text = _selected.EndUhrzeit ?? string.Empty;
+        _startPicker.SelectedItem = (_startPicker.ItemsSource as IList<string>)?.FirstOrDefault(x => string.Equals(x, _start.Text?.Trim(), StringComparison.Ordinal));
+        _endePicker.SelectedItem = (_endePicker.ItemsSource as IList<string>)?.FirstOrDefault(x => string.Equals(x, _ende.Text?.Trim(), StringComparison.Ordinal));
         if (_selected.SichtbarAb.HasValue) _sichtbarAb.Date = _selected.SichtbarAb.Value.Date;
 
         _suppressDirtyTracking = true;
@@ -346,8 +390,8 @@ public sealed class TermineAdminPage : FooterContentPage
             Titel = string.Empty,
             Beschreibung = string.Empty,
             Datum = DateTime.Today,
-            StartUhrzeit = string.Empty,
-            EndUhrzeit = string.Empty,
+            StartUhrzeit = "10:00",
+            EndUhrzeit = "13:00",
             SichtbarAb = DateTime.Today,
             SichtbarBis = null
         };
@@ -418,8 +462,21 @@ public sealed class TermineAdminPage : FooterContentPage
 
             _selected.Beschreibung = _beschreibung.Text ?? string.Empty;
             _selected.Datum = _datum.Date;
-            _selected.StartUhrzeit = (_start.Text ?? string.Empty).Trim();
-            _selected.EndUhrzeit = (_ende.Text ?? string.Empty).Trim();
+
+            if (!TryNormalizeTimeText(_start.Text, out var startNorm))
+            {
+                _status.Text = "Startzeit ist ungültig. Beispiele: 9, 930, 9:30, 13:00.";
+                return;
+            }
+
+            if (!TryNormalizeTimeText(_ende.Text, out var endNorm))
+            {
+                _status.Text = "Endzeit ist ungültig. Beispiele: 9, 930, 9:30, 13:00.";
+                return;
+            }
+
+            _selected.StartUhrzeit = startNorm ?? string.Empty;
+            _selected.EndUhrzeit = endNorm ?? string.Empty;
             _selected.SichtbarAb = _sichtbarAb.Date;
             _selected.SichtbarBis = _sichtbarBisEnabled.IsToggled ? _sichtbarBis.Date : null;
 
@@ -462,6 +519,49 @@ public sealed class TermineAdminPage : FooterContentPage
         _sichtbarBis.Date = DateTime.Today;
         UpdateSichtbarBisVisibility();
         await SaveAsync();
+    }
+
+    private async Task DeleteAsync()
+    {
+        if (!CanEdit) return;
+        if (_selected == null) return;
+        if (!_isEditMode) return;
+        if (_isBusy) return;
+        if (_selected.Id <= 0) return;
+
+        var confirm = await DisplayAlert(
+            "Löschen bestätigen",
+            "Eintrag wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+            "Löschen",
+            "Abbrechen");
+
+        if (!confirm)
+            return;
+
+        SetBusy(true);
+        _status.Text = string.Empty;
+
+        try
+        {
+            var ok = await _supabaseService.DeleteStartseiteTerminAsync(_selected.Id);
+            if (!ok)
+            {
+                _status.Text = "Löschen fehlgeschlagen.";
+                return;
+            }
+
+            _status.Text = "Gelöscht.";
+            await LoadAsync();
+            ExitEditMode();
+        }
+        catch (Exception ex)
+        {
+            _status.Text = ex.Message;
+        }
+        finally
+        {
+            SetBusy(false);
+        }
     }
 
     private void EnterEditMode()
@@ -538,9 +638,54 @@ public sealed class TermineAdminPage : FooterContentPage
         };
 
         grid.Add(new VerticalStackLayout { Spacing = 4, Children = { new Label { Text = "Datum *", FontAttributes = FontAttributes.Bold }, _datum } }, 0, 0);
-        grid.Add(new VerticalStackLayout { Spacing = 4, Children = { new Label { Text = "Start", FontAttributes = FontAttributes.Bold }, _start } }, 1, 0);
-        grid.Add(new VerticalStackLayout { Spacing = 4, Children = { new Label { Text = "Ende", FontAttributes = FontAttributes.Bold }, _ende } }, 2, 0);
+
+        grid.Add(new VerticalStackLayout
+        {
+            Spacing = 4,
+            Children =
+            {
+                new Label { Text = "Start", FontAttributes = FontAttributes.Bold },
+                _startPicker,
+                _start
+            }
+        }, 1, 0);
+
+        grid.Add(new VerticalStackLayout
+        {
+            Spacing = 4,
+            Children =
+            {
+                new Label { Text = "Ende", FontAttributes = FontAttributes.Bold },
+                _endePicker,
+                _ende
+            }
+        }, 2, 0);
         return grid;
+    }
+
+    private static bool TryNormalizeTimeText(string? input, out string? normalized)
+        => TimeText.TryNormalize(input, out normalized);
+
+    private void TryNormalizeEntryTime(Entry entry)
+    {
+        if (!_isEditMode)
+            return;
+
+        if (!TimeText.TryNormalize(entry.Text, out var norm))
+            return;
+
+        if (norm != null && !string.Equals(entry.Text, norm, StringComparison.Ordinal))
+        {
+            _suppressDirtyTracking = true;
+            try
+            {
+                entry.Text = norm;
+            }
+            finally
+            {
+                _suppressDirtyTracking = false;
+            }
+        }
     }
 
     private Grid BuildVisibleGrid()

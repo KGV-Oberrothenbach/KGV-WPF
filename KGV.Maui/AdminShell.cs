@@ -30,6 +30,8 @@ public sealed class AdminShell : Shell, IAppShellInitializer
             Routing.RegisterRoute("bekanntmachungen_admin", typeof(BekanntmachungenAdminPage));
             Routing.RegisterRoute("termine_admin", typeof(TermineAdminPage));
             Routing.RegisterRoute("arbeitseinsaetze_admin", typeof(ArbeitseinsaetzeAdminPage));
+            Routing.RegisterRoute("wartungsvertraege_admin", typeof(WartungsvertraegeAdminPage));
+            Routing.RegisterRoute("wartungsvertraege_member", typeof(MemberWartungsvertraegePage));
             _routesRegistered = true;
         }
 
@@ -71,6 +73,20 @@ public sealed class AdminShell : Shell, IAppShellInitializer
                     Title = "Saison",
                     Route = "saison",
                     ContentTemplate = new DataTemplate(() => _services.GetRequiredService<SaisonPage>())
+                }
+            }
+        });
+
+        Items.Add(new FlyoutItem
+        {
+            Title = "Wartungsverträge",
+            Items =
+            {
+                new ShellContent
+                {
+                    Title = "Wartungsverträge",
+                    Route = "wartungsvertraege",
+                    ContentTemplate = new DataTemplate(() => _services.GetRequiredService<WartungsvertraegeAdminPage>())
                 }
             }
         });
@@ -129,6 +145,20 @@ public sealed class AdminShell : Shell, IAppShellInitializer
                     Title = "Arbeitsstunden",
                     Route = "workhours_member",
                     ContentTemplate = new DataTemplate(() => _services.GetRequiredService<MemberArbeitsstundenPage>())
+                }
+            }
+        });
+
+        Items.Add(new FlyoutItem
+        {
+            Title = "Wartungsverträge",
+            Items =
+            {
+                new ShellContent
+                {
+                    Title = "Wartungsverträge",
+                    Route = "wartungsvertraege_member",
+                    ContentTemplate = new DataTemplate(() => _services.GetRequiredService<MemberWartungsvertraegePage>())
                 }
             }
         });

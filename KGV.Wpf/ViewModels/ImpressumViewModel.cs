@@ -19,7 +19,17 @@ public sealed class ImpressumViewModel : BaseViewModel, INavigationAware
     public string Headline => "Impressum";
 
     public string VerantwortlichHeadline => "Verantwortlich";
-    public string VerantwortlichText => "Kleingartenverein Oberrothenbach e.V.";
+
+    private string _verantwortlichText = KGV.Wpf.AppSettings.ImpressumVerantwortlichText;
+    public string VerantwortlichText
+    {
+        get => _verantwortlichText;
+        set
+        {
+            if (SetProperty(ref _verantwortlichText, value ?? string.Empty))
+                OnAnySlotChanged();
+        }
+    }
 
     public ObservableCollection<ImpressumSlotItem> VorstandSlots { get; } = new();
     public ObservableCollection<ImpressumSlotItem> BauausschussSlots { get; } = new();
@@ -73,6 +83,7 @@ public sealed class ImpressumViewModel : BaseViewModel, INavigationAware
     public RelayCommand<object?> CancelCommand { get; }
 
     private IReadOnlyDictionary<string, int?> _snapshotBySlotKey = new Dictionary<string, int?>();
+    private string _snapshotVerantwortlichText = string.Empty;
     private bool _loaded;
 
     public ImpressumViewModel(ISupabaseService supabaseService, UserContext userContext)
@@ -230,7 +241,15 @@ public sealed class ImpressumViewModel : BaseViewModel, INavigationAware
                 return;
             }
 
+            // Verantwortlich-Text ist (aktuell) ein lokales App-Setting.
+            KGV.Wpf.AppSettings.ImpressumVerantwortlichText = (VerantwortlichText ?? string.Empty).Trim();
+            KGV.Wpf.AppSettings.Save();
+
             await LoadAsync();
+
+            // explizit sicherstellen (UI-Anforderung): nach Erfolg Bearbeiten-Modus verlassen
+            IsEditMode = false;
+            HasUnsavedChanges = false;
         }
         catch (Exception ex)
         {
@@ -269,6 +288,8 @@ public sealed class ImpressumViewModel : BaseViewModel, INavigationAware
             .Concat(BauausschussSlots)
             .GroupBy(x => x.SlotKey, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.First().SelectedMemberId, StringComparer.OrdinalIgnoreCase);
+
+        _snapshotVerantwortlichText = (VerantwortlichText ?? string.Empty).Trim();
     }
 
     private void OnAnySlotChanged()
@@ -281,7 +302,9 @@ public sealed class ImpressumViewModel : BaseViewModel, INavigationAware
             .GroupBy(x => x.SlotKey, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.First().SelectedMemberId, StringComparer.OrdinalIgnoreCase);
 
-        HasUnsavedChanges = !DictionaryEquals(_snapshotBySlotKey, current);
+        var respText = (VerantwortlichText ?? string.Empty).Trim();
+        HasUnsavedChanges = !DictionaryEquals(_snapshotBySlotKey, current)
+            || !string.Equals(_snapshotVerantwortlichText, respText, StringComparison.Ordinal);
     }
 
     private static bool DictionaryEquals(IReadOnlyDictionary<string, int?> a, IReadOnlyDictionary<string, int?> b)

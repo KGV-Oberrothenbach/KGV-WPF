@@ -1,5 +1,6 @@
 ﻿// File: Infrastructure/Services/SupabaseService.cs
 using KGV.Core.Interfaces;
+using KGV.Core.Helpers;
 using KGV.Core.Models;
 using KGV.Core.Security;
 using KGV.Infrastructure.Models;
@@ -68,7 +69,6 @@ namespace KGV.Infrastructure.Services
                     });
                 }
             }
-
             catch (Exception ex)
             {
                 _logger?.LogError(ex, "GetAppUsersAsync failed");
@@ -204,6 +204,56 @@ namespace KGV.Infrastructure.Services
                 if (_client == null) return null;
                 if (zuordnung == null) return null;
 
+                if (zuordnung.HauptmitgliedId <= 0)
+                    throw new InvalidOperationException("HauptmitgliedId fehlt.");
+
+                if (zuordnung.WartungsvertragId <= 0)
+                    throw new InvalidOperationException("WartungsvertragId fehlt.");
+
+                var contract = await _client
+                    .From<WartungsvertragRecord>()
+                    .Where(x => x.Id == zuordnung.WartungsvertragId)
+                    .Single();
+
+                if (contract == null)
+                    throw new InvalidOperationException("Wartungsvertrag existiert nicht.");
+
+                if (!contract.Aktiv)
+                    throw new InvalidOperationException($"Wartungsvertrag '{contract.Titel}' ist deaktiviert und kann nicht zugeordnet werden.");
+
+                var when = (zuordnung.GueltigAb == default ? DateTime.Today : zuordnung.GueltigAb.Date);
+                if (when < DateTime.Today) when = DateTime.Today;
+
+                static bool IsActiveAt(WartungsvertragZuordnungRecord x, DateTime at)
+                {
+                    if (x.GueltigAb.Date > at) return false;
+                    if (!x.GueltigBis.HasValue) return true;
+                    return x.GueltigBis.Value.Date >= at;
+                }
+
+                // Regel 1: Duplikatschutz (kein gleicher Vertrag gleichzeitig aktiv für dasselbe Mitglied)
+                var existingForMember = await _client
+                    .From<WartungsvertragZuordnungRecord>()
+                    .Where(x => x.HauptmitgliedId == zuordnung.HauptmitgliedId)
+                    .Where(x => x.WartungsvertragId == zuordnung.WartungsvertragId)
+                    .Get();
+
+                if (existingForMember?.Models?.Any(x => x.Id != zuordnung.Id && IsActiveAt(x, when)) == true)
+                    throw new InvalidOperationException($"Der Wartungsvertrag '{contract.Titel}' ist für dieses Mitglied bereits aktiv zugeordnet.");
+
+                // Regel 2: Kapazität (MaxAktiveZuordnungen pro Vertrag)
+                if (contract.MaxAktiveZuordnungen > 0)
+                {
+                    var allForContract = await _client
+                        .From<WartungsvertragZuordnungRecord>()
+                        .Where(x => x.WartungsvertragId == zuordnung.WartungsvertragId)
+                        .Get();
+
+                    var activeCount = allForContract?.Models?.Count(x => x.Id != zuordnung.Id && IsActiveAt(x, when)) ?? 0;
+                    if (activeCount >= contract.MaxAktiveZuordnungen)
+                        throw new InvalidOperationException($"Kapazität erreicht: '{contract.Titel}' erlaubt max. {contract.MaxAktiveZuordnungen} aktive Zuordnung(en). Aktuell aktiv: {activeCount}.");
+                }
+
                 if (zuordnung.Id > 0)
                 {
                     var resp = await _client
@@ -219,6 +269,10 @@ namespace KGV.Infrastructure.Services
                     .Insert(zuordnung);
 
                 return insertResp?.Models?.FirstOrDefault();
+            }
+            catch (InvalidOperationException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
@@ -280,6 +334,141 @@ namespace KGV.Infrastructure.Services
             catch (Exception ex)
             {
                 _logger?.LogError(ex, "GetPflichtstundenUebersichtAsync failed");
+                return null;
+            }
+        }
+
+        public async Task<PflichtstundenEvaluationResult?> GetPflichtstundenEvaluationAsync(int hauptmitgliedId, int saisonId, DateTime? asOfDate = null)
+        {
+            try
+            {
+                await InitializeAsync();
+                if (_client == null) return null;
+                if (hauptmitgliedId <= 0) return null;
+                if (saisonId <= 0) return null;
+
+                var saisonen = await GetSaisonRecordsAsync();
+                var saison = saisonen?.FirstOrDefault(x => x.Id == saisonId);
+                if (saison == null) return null;
+
+                var rec = await GetPflichtstundenUebersichtAsync(hauptmitgliedId, saisonId);
+                if (rec == null) return null;
+
+                var when = (asOfDate ?? DateTime.Today).Date;
+
+                // Priorität 1: Befreiung über aktiven Wartungsvertrag (beliebig viele aktiv -> ein befreiender reicht)
+                WartungsvertragRecord? befreitVertrag = null;
+                WartungsvertragZuordnungRecord? befreitZuordnung = null;
+
+                var contracts = await GetWartungsvertraegeAsync();
+                if (contracts != null && contracts.Count > 0)
+                {
+                    var contractById = contracts.Where(x => x != null).ToDictionary(x => x.Id, x => x);
+                    var z = await GetWartungsvertragZuordnungenAsync(hauptmitgliedId);
+
+                    if (z != null && z.Count > 0)
+                    {
+                        bool IsActiveAt(WartungsvertragZuordnungRecord x)
+                        {
+                            if (x.GueltigAb.Date > when) return false;
+                            if (!x.GueltigBis.HasValue) return true;
+                            return x.GueltigBis.Value.Date >= when;
+                        }
+
+                        var candidates = z
+                            .Where(x => x != null)
+                            .Where(IsActiveAt)
+                            .OrderByDescending(x => x.GueltigAb)
+                            .ToList();
+
+                        foreach (var one in candidates)
+                        {
+                            if (!contractById.TryGetValue(one.WartungsvertragId, out var c))
+                                continue;
+
+                            if (!c.Aktiv)
+                                continue;
+
+                            if (!c.BefreitVonPflichtstunden)
+                                continue;
+
+                            befreitZuordnung = one;
+                            befreitVertrag = c;
+                            break;
+                        }
+                    }
+                }
+
+                // Priorität 2: Übergangsregel (Legacy) über Rolle
+                string? legacyRole = null;
+                var isLegacyRoleBefreit = false;
+                if (befreitVertrag == null)
+                {
+                    legacyRole = (await GetAppUserRoleForMitgliedAsync(hauptmitgliedId) ?? string.Empty).Trim();
+                    if (string.IsNullOrWhiteSpace(legacyRole))
+                    {
+                        var m = await GetMitgliedByIdAsync(hauptmitgliedId);
+                        legacyRole = (m?.Role ?? string.Empty).Trim();
+                    }
+
+                    isLegacyRoleBefreit = legacyRole.Equals("admin", StringComparison.OrdinalIgnoreCase)
+                                          || legacyRole.Equals("vorstand", StringComparison.OrdinalIgnoreCase);
+                }
+
+                var istBefreit = befreitVertrag != null || isLegacyRoleBefreit;
+                var quelle = befreitVertrag != null
+                    ? PflichtstundenBefreiungsQuelle.Wartungsvertrag
+                    : (isLegacyRoleBefreit ? PflichtstundenBefreiungsQuelle.LegacyRole : PflichtstundenBefreiungsQuelle.None);
+
+                var geleistet = rec.Geleistet;
+
+                var baseOffen = rec.Offen;
+                if (baseOffen < 0m) baseOffen = 0m;
+
+                var soll = istBefreit ? 0m : rec.Sollstunden;
+                var offen = istBefreit ? 0m : baseOffen;
+
+                var euro = saison.EuroProFehlstunde;
+                var fehl = istBefreit ? 0m : offen * euro;
+                if (fehl < 0m) fehl = 0m;
+
+                var grund = string.Empty;
+                if (istBefreit)
+                {
+                    if (befreitVertrag != null)
+                        grund = $"Befreit durch Wartungsvertrag: {befreitVertrag.Titel}";
+                    else
+                        grund = $"Übergangsregel: Rolle '{legacyRole}' befreit";
+                }
+                else
+                {
+                    grund = !string.IsNullOrWhiteSpace(rec.Befreiungsgrund)
+                        ? rec.Befreiungsgrund!
+                        : (rec.Regelgrund ?? string.Empty);
+                }
+
+                return new PflichtstundenEvaluationResult
+                {
+                    HauptmitgliedId = hauptmitgliedId,
+                    SaisonId = saisonId,
+                    Jahr = saison.Jahr,
+                    Sollstunden = soll,
+                    Geleistet = geleistet,
+                    OffeneStunden = offen,
+                    Fehlbetrag = fehl,
+                    EuroProFehlstunde = euro,
+                    IstBefreit = istBefreit,
+                    BefreiungsQuelle = quelle,
+                    Grund = grund,
+                    BefreienderWartungsvertragId = befreitVertrag?.Id,
+                    BefreienderWartungsvertragTitel = befreitVertrag?.Titel,
+                    BefreienderWartungsvertragBereich = befreitVertrag?.Bereich,
+                    LegacyRole = isLegacyRoleBefreit ? legacyRole : null
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "GetPflichtstundenEvaluationAsync failed");
                 return null;
             }
         }
@@ -1080,14 +1269,23 @@ namespace KGV.Infrastructure.Services
 
             try
             {
+                // DB erwartet time-Felder -> nur gültiges HH:mm oder null senden (keine leeren Strings / Escape-Zeichen)
+                var startRaw = (record.StartUhrzeit ?? string.Empty).Trim();
+                if (!TimeText.TryNormalize(startRaw, out var startNorm))
+                    startNorm = null;
+
+                var endRaw = (record.EndUhrzeit ?? string.Empty).Trim();
+                if (!TimeText.TryNormalize(endRaw, out var endNorm))
+                    endNorm = null;
+
                 var write = new StartseiteTerminWriteRecord
                 {
                     Id = record.Id,
                     Titel = record.Titel,
                     Beschreibung = record.Beschreibung,
                     Datum = record.Datum,
-                    StartUhrzeit = record.StartUhrzeit,
-                    EndUhrzeit = record.EndUhrzeit,
+                    StartUhrzeit = startNorm,
+                    EndUhrzeit = endNorm,
                     SichtbarAb = record.SichtbarAb,
                     SichtbarBis = record.SichtbarBis
                 };
@@ -1200,6 +1398,72 @@ namespace KGV.Infrastructure.Services
             {
                 _logger?.LogError(ex, "SaveStartseiteArbeitseinsatzAsync failed");
                 throw new InvalidOperationException(BuildUserFacingSaveError(ex), ex);
+            }
+        }
+
+        public async Task<bool> DeleteStartseiteBekanntmachungAsync(long id)
+        {
+            try
+            {
+                await InitializeAsync();
+                if (_client == null) return false;
+                if (id <= 0) return false;
+
+                await _client
+                    .From<StartseiteBekanntmachungWriteRecord>()
+                    .Where(x => x.Id == id)
+                    .Delete();
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "DeleteStartseiteBekanntmachungAsync failed");
+                return false;
+            }
+        }
+
+        public async Task<bool> DeleteStartseiteTerminAsync(long id)
+        {
+            try
+            {
+                await InitializeAsync();
+                if (_client == null) return false;
+                if (id <= 0) return false;
+
+                await _client
+                    .From<StartseiteTerminWriteRecord>()
+                    .Where(x => x.Id == id)
+                    .Delete();
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "DeleteStartseiteTerminAsync failed");
+                return false;
+            }
+        }
+
+        public async Task<bool> DeleteStartseiteArbeitseinsatzAsync(long id)
+        {
+            try
+            {
+                await InitializeAsync();
+                if (_client == null) return false;
+                if (id <= 0) return false;
+
+                await _client
+                    .From<StartseiteArbeitseinsatzWriteRecord>()
+                    .Where(x => x.Id == id)
+                    .Delete();
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "DeleteStartseiteArbeitseinsatzAsync failed");
+                return false;
             }
         }
 

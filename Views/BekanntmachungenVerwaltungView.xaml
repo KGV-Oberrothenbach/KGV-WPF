@@ -60,9 +60,45 @@
                         <TextBlock Text="Titel *" FontWeight="SemiBold" />
                         <TextBox Text="{Binding EditItem.Titel, UpdateSourceTrigger=PropertyChanged}" />
 
-                        <TextBlock Text="Inhalt (HTML) *" FontWeight="SemiBold" Margin="0,12,0,0" />
-                        <TextBox Text="{Binding EditItem.InhaltHtml, UpdateSourceTrigger=PropertyChanged}"
-                                 AcceptsReturn="True" TextWrapping="Wrap" Height="240" />
+                        <TextBlock Text="Inhalt *" FontWeight="SemiBold" Margin="0,12,0,0" />
+
+                        <StackPanel Orientation="Horizontal" Margin="0,6,0,6">
+                            <TextBlock Text="Schriftgröße" VerticalAlignment="Center" Margin="0,0,8,0" />
+                            <ComboBox Width="90"
+                                      SelectedValue="{Binding EditItem.FontSize, UpdateSourceTrigger=PropertyChanged}"
+                                      SelectedValuePath="Content"
+                                      Margin="0,0,12,0">
+                                <ComboBoxItem Content="12" />
+                                <ComboBoxItem Content="14" />
+                                <ComboBoxItem Content="16" />
+                                <ComboBoxItem Content="18" />
+                                <ComboBoxItem Content="20" />
+                            </ComboBox>
+
+                            <ToggleButton Content="Fett" IsChecked="{Binding EditItem.IsBold, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,8,0" />
+                            <ToggleButton Content="Kursiv" IsChecked="{Binding EditItem.IsItalic, UpdateSourceTrigger=PropertyChanged}" />
+                        </StackPanel>
+
+                        <TextBox Text="{Binding EditItem.InhaltText, UpdateSourceTrigger=PropertyChanged}"
+                                 AcceptsReturn="True"
+                                 TextWrapping="Wrap"
+                                 Height="240"
+                                 FontSize="{Binding EditItem.FontSize}">
+                            <TextBox.Style>
+                                <Style TargetType="TextBox">
+                                    <Setter Property="FontWeight" Value="Normal" />
+                                    <Setter Property="FontStyle" Value="Normal" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding EditItem.IsBold}" Value="True">
+                                            <Setter Property="FontWeight" Value="Bold" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding EditItem.IsItalic}" Value="True">
+                                            <Setter Property="FontStyle" Value="Italic" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBox.Style>
+                        </TextBox>
 
                         <Grid Margin="0,12,0,0">
                             <Grid.ColumnDefinitions>
@@ -88,6 +124,7 @@
                             <Button Content="Speichern" Command="{Binding SaveCommand}" />
                             <Button Content="Abbrechen" Command="{Binding CancelCommand}" />
                             <Button Content="Deaktivieren" Command="{Binding DeactivateCommand}" />
+                            <Button Content="Löschen" Command="{Binding DeleteCommand}" />
                         </StackPanel>
                     </StackPanel>
                 </ScrollViewer>

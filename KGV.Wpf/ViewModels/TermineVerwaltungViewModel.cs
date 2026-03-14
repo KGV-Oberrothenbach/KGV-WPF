@@ -1,4 +1,5 @@
 using KGV.Core.Interfaces;
+using KGV.Core.Helpers;
 using KGV.Core.Models;
 using KGV.Core.Security;
 using KGV.Wpf.Helpers;
@@ -45,6 +46,8 @@ namespace KGV.Wpf.ViewModels
         }
 
         public bool CanEdit => _userContext.Role == UserRole.Admin || _userContext.Role == UserRole.Vorstand;
+
+        public IReadOnlyList<string> TimeOptions { get; } = TimeText.BuildHalfHourOptions();
 
         public ObservableCollection<TerminEditItem> Items { get; } = new();
 
@@ -118,6 +121,7 @@ namespace KGV.Wpf.ViewModels
         public RelayCommand<object?> SaveCommand { get; }
         public RelayCommand<object?> CancelCommand { get; }
         public RelayCommand<object?> DeactivateCommand { get; }
+        public RelayCommand<object?> DeleteCommand { get; }
 
         public TermineVerwaltungViewModel(ISupabaseService supabaseService, UserContext userContext)
         {
@@ -129,6 +133,7 @@ namespace KGV.Wpf.ViewModels
             SaveCommand = new RelayCommand<object?>(_ => _ = SaveAsync(), _ => CanEdit && !IsBusy && IsEditMode && EditItem != null && HasUnsavedChanges && IsSaveValid(EditItem));
             CancelCommand = new RelayCommand<object?>(_ => _ = CancelAsync(), _ => !IsBusy && IsEditMode);
             DeactivateCommand = new RelayCommand<object?>(_ => _ = DeactivateAsync(), _ => CanEdit && !IsBusy && IsEditMode && EditItem != null && EditItem.Id > 0);
+            DeleteCommand = new RelayCommand<object?>(_ => _ = DeleteAsync(), _ => CanEdit && !IsBusy && IsEditMode && EditItem != null && EditItem.Id > 0);
         }
 
         public Task OnNavigatedFromAsync() => Task.CompletedTask;
@@ -181,6 +186,14 @@ namespace KGV.Wpf.ViewModels
             if (!item.Datum.HasValue)
                 return false;
 
+            var startRaw = (item.StartUhrzeit ?? string.Empty).Trim();
+            if (!string.IsNullOrWhiteSpace(startRaw) && !TimeText.TryNormalize(startRaw, out _))
+                return false;
+
+            var endRaw = (item.EndUhrzeit ?? string.Empty).Trim();
+            if (!string.IsNullOrWhiteSpace(endRaw) && !TimeText.TryNormalize(endRaw, out _))
+                return false;
+
             return true;
         }
 
@@ -196,8 +209,8 @@ namespace KGV.Wpf.ViewModels
                 Titel = string.Empty,
                 Beschreibung = string.Empty,
                 Datum = DateTime.Today,
-                StartUhrzeit = string.Empty,
-                EndUhrzeit = string.Empty,
+                StartUhrzeit = "10:00",
+                EndUhrzeit = "13:00",
                 SichtbarAb = DateTime.Today,
                 SichtbarBis = null
             };
@@ -261,6 +274,12 @@ namespace KGV.Wpf.ViewModels
                 return;
             }
 
+            if (!TryNormalizeTimes(EditItem, out var error))
+            {
+                StatusText = error;
+                return;
+            }
+
             if (!await _opLock.WaitAsync(0))
                 return;
 
@@ -303,6 +322,31 @@ namespace KGV.Wpf.ViewModels
             }
         }
 
+        private static bool TryNormalizeTimes(TerminEditItem item, out string error)
+        {
+            error = string.Empty;
+
+            var startRaw = (item.StartUhrzeit ?? string.Empty).Trim();
+            if (!TimeText.TryNormalize(startRaw, out var start))
+            {
+                error = "Startzeit ist ungültig. Bitte HH:mm verwenden (z.B. 09:30).";
+                return false;
+            }
+
+            var endRaw = (item.EndUhrzeit ?? string.Empty).Trim();
+            if (!TimeText.TryNormalize(endRaw, out var end))
+            {
+                error = "Endzeit ist ungültig. Bitte HH:mm verwenden (z.B. 13:00).";
+                return false;
+            }
+
+            // Normalisieren (Doppelpunkt wird hier ergänzt)
+            item.StartUhrzeit = start ?? string.Empty;
+            item.EndUhrzeit = end ?? string.Empty;
+
+            return true;
+        }
+
         private async Task DeactivateAsync()
         {
             if (!CanEdit) return;
@@ -310,6 +354,55 @@ namespace KGV.Wpf.ViewModels
 
             EditItem.SichtbarBis = DateTime.Today;
             await SaveAsync();
+        }
+
+        private async Task DeleteAsync()
+        {
+            if (!CanEdit) return;
+            if (EditItem == null) return;
+            if (EditItem.Id <= 0) return;
+
+            var result = MessageBox.Show(
+                "Eintrag wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+                "Löschen bestätigen",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            if (result != MessageBoxResult.Yes)
+                return;
+
+            if (!await _opLock.WaitAsync(0))
+                return;
+
+            IsBusy = true;
+            StatusText = string.Empty;
+
+            try
+            {
+                var ok = await _supabaseService.DeleteStartseiteTerminAsync(EditItem.Id);
+                if (!ok)
+                {
+                    StatusText = "Löschen fehlgeschlagen.";
+                    return;
+                }
+
+                var existing = Items.FirstOrDefault(x => x.Id == EditItem.Id);
+                if (existing != null)
+                    Items.Remove(existing);
+
+                SelectedItem = Items.FirstOrDefault();
+                EditItem = null;
+                StatusText = "Gelöscht.";
+            }
+            catch (Exception ex)
+            {
+                StatusText = ex.Message;
+            }
+            finally
+            {
+                IsBusy = false;
+                _opLock.Release();
+            }
         }
 
         private void EditItem_PropertyChanged(object? sender, PropertyChangedEventArgs e)

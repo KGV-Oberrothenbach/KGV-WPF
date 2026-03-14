@@ -1,5 +1,6 @@
 using System.Globalization;
 using KGV.Core.Interfaces;
+using KGV.Core.Helpers;
 using KGV.Core.Models;
 using KGV.Maui.State;
 
@@ -13,6 +14,7 @@ public sealed class MyArbeitsstundenPage : FooterContentPage
     private bool _isBusy;
     private Task? _initTask;
     private int? _currentSaisonId;
+    private SaisonRecord? _currentSaison;
 
     private readonly ActivityIndicator _busy;
 
@@ -215,6 +217,7 @@ public sealed class MyArbeitsstundenPage : FooterContentPage
         var year = DateTime.Today.Year;
         var selected = saisonen.FirstOrDefault(s => s.Jahr == year) ?? saisonen.OrderByDescending(s => s.Jahr).First();
         _currentSaisonId = selected.Id;
+        _currentSaison = selected;
     }
 
     private async Task LoadPflichtstundenAsync()
@@ -227,15 +230,19 @@ public sealed class MyArbeitsstundenPage : FooterContentPage
             if (_state.CurrentMitgliedId == null || _state.CurrentMitgliedId.Value <= 0 || _state.CurrentMitgliedId.Value > int.MaxValue)
                 return;
 
-            var mainId = (int)_state.CurrentMitgliedId.Value;
+            var memberId = (int)_state.CurrentMitgliedId.Value;
+            var member = await _supabaseService.GetMitgliedByIdAsync(memberId);
+            var hauptmitgliedId = member?.HauptmitgliedId ?? memberId;
 
-            var rec = await _supabaseService.GetPflichtstundenUebersichtAsync(mainId, _currentSaisonId.Value);
+            var eval = await _supabaseService.GetPflichtstundenEvaluationAsync(hauptmitgliedId, _currentSaisonId.Value);
+            if (eval == null)
+                return;
 
-            _pflichtSoll.Text = (rec?.Sollstunden).GetValueOrDefault().ToString(CultureInfo.CurrentCulture);
-            _pflichtIst.Text = (rec?.Geleistet).GetValueOrDefault().ToString(CultureInfo.CurrentCulture);
-            _pflichtOffen.Text = (rec?.Offen).GetValueOrDefault().ToString(CultureInfo.CurrentCulture);
-            _pflichtFehlbetrag.Text = (rec?.Fehlbetrag).GetValueOrDefault().ToString(CultureInfo.CurrentCulture);
-            _pflichtGrund.Text = string.IsNullOrWhiteSpace(rec?.Befreiungsgrund) ? (rec?.Regelgrund ?? string.Empty) : rec!.Befreiungsgrund!;
+            _pflichtSoll.Text = eval.Sollstunden.ToString("0.##", CultureInfo.CurrentCulture);
+            _pflichtIst.Text = eval.Geleistet.ToString("0.##", CultureInfo.CurrentCulture);
+            _pflichtOffen.Text = eval.OffeneStunden.ToString("0.##", CultureInfo.CurrentCulture);
+            _pflichtFehlbetrag.Text = MoneyText.FormatEuro(eval.Fehlbetrag);
+            _pflichtGrund.Text = eval.Grund;
 
             _pflichtHeader.IsVisible = true;
         }
@@ -253,26 +260,13 @@ public sealed class MyArbeitsstundenPage : FooterContentPage
     {
         _options.Clear();
 
-        var mainId = (int)_state.CurrentMitgliedId!.Value;
-        _options.Add(new MemberOption(mainId, "Hauptmitglied"));
+        var memberId = (int)_state.CurrentMitgliedId!.Value;
+        _options.Add(new MemberOption(memberId, "Ich"));
 
-        if (_state.CurrentNebenMitgliedId != null && _state.CurrentNebenMitgliedId.Value > 0 && _state.CurrentNebenMitgliedId.Value <= int.MaxValue)
-        {
-            var neben = await _supabaseService.GetNebenmitgliedByHauptmitgliedIdAsync(mainId);
-            if (neben != null)
-            {
-                _options.Add(new MemberOption(neben.Id, $"Nebenmitglied: {neben.Name} {neben.Vorname}".Trim()));
-            }
-            else
-            {
-                // defensiv: State korrigieren, wenn das Nebenmitglied nicht mehr existiert/zugeordnet ist
-                _state.CurrentNebenMitgliedId = null;
-            }
-        }
-
-        _forWhomPicker.IsVisible = _options.Count > 1;
+        // "Meine Arbeitsstunden" ist strikt nutzerbezogen: keine Auswahl anderer Mitglieder.
+        _forWhomPicker.IsVisible = false;
         _forWhomPicker.ItemsSource = _options;
-        _forWhomPicker.SelectedItem = _options.Count > 0 ? _options[0] : null;
+        _forWhomPicker.SelectedItem = _options[0];
     }
 
     private async Task LoadListAsync()
@@ -282,10 +276,10 @@ public sealed class MyArbeitsstundenPage : FooterContentPage
         if (_options.Count == 0)
             return;
 
-        var ids = _options.Select(o => o.MitgliedId).Distinct().ToArray();
-        var list = await _supabaseService.GetArbeitsstundenAsync(ids);
+        var id = _options[0].MitgliedId;
+        var list = await _supabaseService.GetArbeitsstundenAsync(id);
 
-        var memberMap = _options.GroupBy(o => o.MitgliedId).ToDictionary(g => g.Key, g => g.First().Display);
+        var memberMap = new Dictionary<int, string> { [id] = _options[0].Display };
 
         foreach (var a in list.OrderByDescending(x => x.Datum).ThenByDescending(x => x.Id))
         {

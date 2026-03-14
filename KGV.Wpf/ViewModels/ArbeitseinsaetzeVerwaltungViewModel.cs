@@ -118,6 +118,7 @@ namespace KGV.Wpf.ViewModels
         public RelayCommand<object?> SaveCommand { get; }
         public RelayCommand<object?> CancelCommand { get; }
         public RelayCommand<object?> DeactivateCommand { get; }
+        public RelayCommand<object?> DeleteCommand { get; }
 
         public ArbeitseinsaetzeVerwaltungViewModel(ISupabaseService supabaseService, UserContext userContext)
         {
@@ -129,6 +130,7 @@ namespace KGV.Wpf.ViewModels
             SaveCommand = new RelayCommand<object?>(_ => _ = SaveAsync(), _ => CanEdit && !IsBusy && IsEditMode && EditItem != null && HasUnsavedChanges && IsSaveValid(EditItem));
             CancelCommand = new RelayCommand<object?>(_ => _ = CancelAsync(), _ => !IsBusy && IsEditMode);
             DeactivateCommand = new RelayCommand<object?>(_ => _ = DeactivateAsync(), _ => CanEdit && !IsBusy && IsEditMode && EditItem != null && EditItem.Id > 0);
+            DeleteCommand = new RelayCommand<object?>(_ => _ = DeleteAsync(), _ => CanEdit && !IsBusy && IsEditMode && EditItem != null && EditItem.Id > 0);
         }
 
         public Task OnNavigatedFromAsync() => Task.CompletedTask;
@@ -347,6 +349,55 @@ namespace KGV.Wpf.ViewModels
 
             EditItem.SichtbarBis = DateTime.Today;
             await SaveAsync();
+        }
+
+        private async Task DeleteAsync()
+        {
+            if (!CanEdit) return;
+            if (EditItem == null) return;
+            if (EditItem.Id <= 0) return;
+
+            var result = MessageBox.Show(
+                "Eintrag wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.\n\nHinweis: Wenn es bereits Anmeldungen gibt, kann das Löschen je nach DB-Regeln fehlschlagen.",
+                "Löschen bestätigen",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            if (result != MessageBoxResult.Yes)
+                return;
+
+            if (!await _opLock.WaitAsync(0))
+                return;
+
+            IsBusy = true;
+            StatusText = string.Empty;
+
+            try
+            {
+                var ok = await _supabaseService.DeleteStartseiteArbeitseinsatzAsync(EditItem.Id);
+                if (!ok)
+                {
+                    StatusText = "Löschen fehlgeschlagen.";
+                    return;
+                }
+
+                var existing = Items.FirstOrDefault(x => x.Id == EditItem.Id);
+                if (existing != null)
+                    Items.Remove(existing);
+
+                SelectedItem = Items.FirstOrDefault();
+                EditItem = null;
+                StatusText = "Gelöscht.";
+            }
+            catch (Exception ex)
+            {
+                StatusText = ex.Message;
+            }
+            finally
+            {
+                IsBusy = false;
+                _opLock.Release();
+            }
         }
 
         private void EditItem_PropertyChanged(object? sender, PropertyChangedEventArgs e)

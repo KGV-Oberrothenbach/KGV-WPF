@@ -22,9 +22,13 @@ public sealed class BekanntmachungenAdminPage : FooterContentPage
     private readonly Label _status;
 
     private readonly Button _saveButton;
+    private readonly Button _deleteButton;
 
     private readonly Entry _titel;
-    private readonly Editor _inhaltHtml;
+    private readonly Editor _inhaltText;
+    private readonly Picker _fontSize;
+    private readonly Switch _isBold;
+    private readonly Switch _isItalic;
     private readonly DatePicker _sichtbarAb;
     private readonly DatePicker _sichtbarBis;
     private readonly Switch _sichtbarBisEnabled;
@@ -54,6 +58,9 @@ public sealed class BekanntmachungenAdminPage : FooterContentPage
 
         _saveButton = new Button { Text = "Speichern" };
         _saveButton.Clicked += async (_, __) => await SaveAsync();
+
+        _deleteButton = new Button { Text = "Löschen" };
+        _deleteButton.Clicked += async (_, __) => await DeleteAsync();
 
         var cancelButton = new Button { Text = "Abbrechen" };
         cancelButton.Clicked += async (_, __) => await CancelAsync();
@@ -100,7 +107,13 @@ public sealed class BekanntmachungenAdminPage : FooterContentPage
         };
 
         _titel = new Entry { Placeholder = "Titel" };
-        _inhaltHtml = new Editor { AutoSize = EditorAutoSizeOption.TextChanges, HeightRequest = 200, Placeholder = "Inhalt (HTML)" };
+        _inhaltText = new Editor { AutoSize = EditorAutoSizeOption.TextChanges, HeightRequest = 200, Placeholder = "Inhalt" };
+        _fontSize = new Picker { Title = "Schriftgröße" };
+        _fontSize.ItemsSource = new List<int> { 12, 14, 16, 18, 20 };
+        _fontSize.SelectedIndex = 1; // 14
+
+        _isBold = new Switch { IsToggled = false };
+        _isItalic = new Switch { IsToggled = false };
         _sichtbarAb = new DatePicker { Date = DateTime.Today };
         _sichtbarBis = new DatePicker { Date = DateTime.Today };
         _sichtbarBisEnabled = new Switch { IsToggled = false };
@@ -118,6 +131,26 @@ public sealed class BekanntmachungenAdminPage : FooterContentPage
             TextColor = Colors.Gray
         };
 
+        var formatGrid = new Grid
+        {
+            ColumnDefinitions = { new ColumnDefinition(GridLength.Auto), new ColumnDefinition(GridLength.Star) },
+            RowDefinitions = { new RowDefinition(GridLength.Auto), new RowDefinition(GridLength.Auto) }
+        };
+        formatGrid.Add(new Label { Text = "Schriftgröße", VerticalTextAlignment = TextAlignment.Center }, 0, 0);
+        formatGrid.Add(_fontSize, 1, 0);
+        formatGrid.Add(
+            new HorizontalStackLayout
+            {
+                Spacing = 12,
+                Children =
+                {
+                    new HorizontalStackLayout { Spacing = 6, Children = { new Label { Text = "Fett", VerticalTextAlignment = TextAlignment.Center }, _isBold } },
+                    new HorizontalStackLayout { Spacing = 6, Children = { new Label { Text = "Kursiv", VerticalTextAlignment = TextAlignment.Center }, _isItalic } }
+                }
+            },
+            1,
+            1);
+
         _form = new VerticalStackLayout
         {
             Spacing = 12,
@@ -126,17 +159,21 @@ public sealed class BekanntmachungenAdminPage : FooterContentPage
             {
                 new Label { Text = "Titel *", FontAttributes = FontAttributes.Bold },
                 _titel,
-                new Label { Text = "Inhalt (HTML) *", FontAttributes = FontAttributes.Bold },
-                _inhaltHtml,
+                new Label { Text = "Inhalt *", FontAttributes = FontAttributes.Bold },
+                formatGrid,
+                _inhaltText,
                 BuildDatesGrid(),
                 new Label { Text = "Sortierung", FontAttributes = FontAttributes.Bold },
                 _sortOrder,
-                new HorizontalStackLayout { Spacing = 10, Children = { _saveButton, cancelButton, deactivateButton } }
+                 new HorizontalStackLayout { Spacing = 10, Children = { _saveButton, cancelButton, deactivateButton, _deleteButton } }
             }
         };
 
         _titel.TextChanged += (_, __) => MarkDirty();
-        _inhaltHtml.TextChanged += (_, __) => MarkDirty();
+        _inhaltText.TextChanged += (_, __) => MarkDirty();
+        _fontSize.SelectedIndexChanged += (_, __) => { ApplyEditorStyle(); MarkDirty(); };
+        _isBold.Toggled += (_, __) => { ApplyEditorStyle(); MarkDirty(); };
+        _isItalic.Toggled += (_, __) => { ApplyEditorStyle(); MarkDirty(); };
         _sichtbarAb.DateSelected += (_, __) => MarkDirty();
         _sichtbarBis.DateSelected += (_, __) => MarkDirty();
         _sortOrder.TextChanged += (_, __) => MarkDirty();
@@ -186,8 +223,9 @@ public sealed class BekanntmachungenAdminPage : FooterContentPage
         var titel = (_titel.Text ?? string.Empty).Trim();
         if (string.IsNullOrWhiteSpace(titel)) return false;
 
-        var inhalt = (_inhaltHtml.Text ?? string.Empty).Trim();
-        if (string.IsNullOrWhiteSpace(inhalt)) return false;
+        // Inhalt kommt aus normalem Textfeld (HTML wird intern erzeugt)
+        var inhaltText = (_inhaltText.Text ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(inhaltText)) return false;
 
         var sortText = (_sortOrder.Text ?? string.Empty).Trim();
         if (!string.IsNullOrWhiteSpace(sortText) && !int.TryParse(sortText, out _))
@@ -203,6 +241,12 @@ public sealed class BekanntmachungenAdminPage : FooterContentPage
             && !_isBusy
             && _hasUnsavedChanges
             && IsFormValid();
+
+        _deleteButton.IsEnabled = CanEdit
+            && _isEditMode
+            && !_isBusy
+            && _selected != null
+            && _selected.Id > 0;
     }
 
     private void UpdateSichtbarBisVisibility()
@@ -275,7 +319,19 @@ public sealed class BekanntmachungenAdminPage : FooterContentPage
         if (!_isEditMode || _selected == null)
         {
             _titel.Text = string.Empty;
-            _inhaltHtml.Text = string.Empty;
+            _inhaltText.Text = string.Empty;
+            _fontSize.SelectedIndex = 1; // 14
+
+            _suppressDirtyTracking = true;
+            try
+            {
+                _isBold.IsToggled = false;
+                _isItalic.IsToggled = false;
+            }
+            finally
+            {
+                _suppressDirtyTracking = false;
+            }
             _sichtbarAb.Date = DateTime.Today;
             _sichtbarBis.Date = DateTime.Today;
 
@@ -293,7 +349,10 @@ public sealed class BekanntmachungenAdminPage : FooterContentPage
             _sortOrder.Text = string.Empty;
 
             _titel.IsEnabled = false;
-            _inhaltHtml.IsEnabled = false;
+            _inhaltText.IsEnabled = false;
+            _fontSize.IsEnabled = false;
+            _isBold.IsEnabled = false;
+            _isItalic.IsEnabled = false;
             _sichtbarAb.IsEnabled = false;
             _sichtbarBisEnabled.IsEnabled = false;
             _sichtbarBis.IsEnabled = false;
@@ -304,13 +363,30 @@ public sealed class BekanntmachungenAdminPage : FooterContentPage
         }
 
         _titel.IsEnabled = true;
-        _inhaltHtml.IsEnabled = true;
+        _inhaltText.IsEnabled = true;
+        _fontSize.IsEnabled = true;
+        _isBold.IsEnabled = true;
+        _isItalic.IsEnabled = true;
         _sichtbarAb.IsEnabled = true;
         _sichtbarBisEnabled.IsEnabled = true;
         _sortOrder.IsEnabled = true;
 
         _titel.Text = _selected.Titel ?? string.Empty;
-        _inhaltHtml.Text = _selected.InhaltHtml ?? string.Empty;
+        var html = _selected.InhaltHtml ?? string.Empty;
+        _inhaltText.Text = ExtractPlainText(html);
+        TryExtractEditorStyle(html, out var fs, out var bold, out var italic);
+        _fontSize.SelectedItem = fs;
+
+        _suppressDirtyTracking = true;
+        try
+        {
+            _isBold.IsToggled = bold;
+            _isItalic.IsToggled = italic;
+        }
+        finally
+        {
+            _suppressDirtyTracking = false;
+        }
 
         if (_selected.SichtbarAb.HasValue)
             _sichtbarAb.Date = _selected.SichtbarAb.Value.Date;
@@ -330,7 +406,68 @@ public sealed class BekanntmachungenAdminPage : FooterContentPage
 
         _sortOrder.Text = _selected.SortOrder?.ToString() ?? string.Empty;
 
+        ApplyEditorStyle();
+
         UpdateSaveButtonState();
+    }
+
+    private void ApplyEditorStyle()
+    {
+        var fontSize = _fontSize.SelectedItem is int fs && fs > 0 ? fs : 14;
+        _inhaltText.FontSize = fontSize;
+
+        var attrs = FontAttributes.None;
+        if (_isBold.IsToggled) attrs |= FontAttributes.Bold;
+        if (_isItalic.IsToggled) attrs |= FontAttributes.Italic;
+        _inhaltText.FontAttributes = attrs;
+    }
+
+    private string BuildHtml()
+    {
+        var text = (_inhaltText.Text ?? string.Empty).Trim();
+        var encoded = System.Net.WebUtility.HtmlEncode(text)
+            .Replace("\r\n", "\n", StringComparison.Ordinal)
+            .Replace("\r", "\n", StringComparison.Ordinal)
+            .Replace("\n", "<br/>", StringComparison.Ordinal);
+
+        var fontSize = _fontSize.SelectedItem is int fs && fs > 0 ? fs : 14;
+        var styles = new List<string> { $"font-size:{fontSize}px" };
+        if (_isBold.IsToggled) styles.Add("font-weight:bold");
+        if (_isItalic.IsToggled) styles.Add("font-style:italic");
+
+        return $"<p style=\"{string.Join(";", styles)}\">{encoded}</p>";
+    }
+
+    private static string ExtractPlainText(string? html)
+    {
+        html ??= string.Empty;
+
+        var s = html
+            .Replace("<br/>", "\n", StringComparison.OrdinalIgnoreCase)
+            .Replace("<br>", "\n", StringComparison.OrdinalIgnoreCase)
+            .Replace("<br />", "\n", StringComparison.OrdinalIgnoreCase);
+
+        s = System.Text.RegularExpressions.Regex.Replace(s, "<[^>]+>", string.Empty);
+        return System.Net.WebUtility.HtmlDecode(s).Trim();
+    }
+
+    private static void TryExtractEditorStyle(string? html, out int fontSize, out bool bold, out bool italic)
+    {
+        fontSize = 14;
+        bold = false;
+        italic = false;
+
+        html ??= string.Empty;
+        var m = System.Text.RegularExpressions.Regex.Match(html, "style\\s*=\\s*\\\"(?<style>[^\\\"]+)\\\"", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        if (!m.Success) return;
+
+        var style = m.Groups["style"].Value;
+        if (style.Contains("font-weight:bold", StringComparison.OrdinalIgnoreCase)) bold = true;
+        if (style.Contains("font-style:italic", StringComparison.OrdinalIgnoreCase)) italic = true;
+
+        var m2 = System.Text.RegularExpressions.Regex.Match(style, "font-size\\s*:\\s*(?<n>\\d+)px", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        if (m2.Success && int.TryParse(m2.Groups["n"].Value, out var fs) && fs > 0)
+            fontSize = fs;
     }
 
     private async Task NewAsync()
@@ -413,12 +550,14 @@ public sealed class BekanntmachungenAdminPage : FooterContentPage
                 return;
             }
 
-            _selected.InhaltHtml = _inhaltHtml.Text ?? string.Empty;
-            if (string.IsNullOrWhiteSpace((_selected.InhaltHtml ?? string.Empty).Trim()))
+            var inhaltText = (_inhaltText.Text ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(inhaltText))
             {
                 _status.Text = "Bitte Inhalt ausfüllen.";
                 return;
             }
+
+            _selected.InhaltHtml = BuildHtml();
 
             _selected.SichtbarAb = _sichtbarAb.Date;
 
@@ -478,6 +617,49 @@ public sealed class BekanntmachungenAdminPage : FooterContentPage
         _sichtbarBis.Date = DateTime.Today;
         UpdateSichtbarBisVisibility();
         await SaveAsync();
+    }
+
+    private async Task DeleteAsync()
+    {
+        if (!CanEdit) return;
+        if (_selected == null) return;
+        if (!_isEditMode) return;
+        if (_isBusy) return;
+        if (_selected.Id <= 0) return;
+
+        var confirm = await DisplayAlert(
+            "Löschen bestätigen",
+            "Eintrag wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+            "Löschen",
+            "Abbrechen");
+
+        if (!confirm)
+            return;
+
+        SetBusy(true);
+        _status.Text = string.Empty;
+
+        try
+        {
+            var ok = await _supabaseService.DeleteStartseiteBekanntmachungAsync(_selected.Id);
+            if (!ok)
+            {
+                _status.Text = "Löschen fehlgeschlagen.";
+                return;
+            }
+
+            _status.Text = "Gelöscht.";
+            await LoadAsync();
+            ExitEditMode();
+        }
+        catch (Exception ex)
+        {
+            _status.Text = ex.Message;
+        }
+        finally
+        {
+            SetBusy(false);
+        }
     }
 
     private void EnterEditMode()

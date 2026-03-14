@@ -104,6 +104,11 @@ namespace KGV.Wpf.Infrastructure.Services
                 return new SaisonViewModel(_supabaseService);
             }
 
+            if (viewModelType == typeof(WartungsvertraegeVerwaltungViewModel))
+            {
+                return new WartungsvertraegeVerwaltungViewModel(_supabaseService, mainVm.UserContext);
+            }
+
             if (viewModelType == typeof(AblesungErfassenViewModel))
             {
                 return new AblesungErfassenViewModel(_supabaseService);
@@ -180,6 +185,17 @@ namespace KGV.Wpf.Infrastructure.Services
                         "Bitte parameter übergeben oder SelectedMember im MainWindowViewModel setzen.");
 
                 return new ArbeitsstundenViewModel(_supabaseService, _authService, member);
+            }
+
+            if (viewModelType == typeof(MemberWartungsvertraegeViewModel))
+            {
+                var member = ResolveMember();
+                if (member == null)
+                    throw new InvalidOperationException(
+                        "Navigation zu MemberWartungsvertraegeViewModel ohne MemberDTO. " +
+                        "Bitte parameter übergeben oder SelectedMember im MainWindowViewModel setzen.");
+
+                return new MemberWartungsvertraegeViewModel(_supabaseService, mainVm.UserContext, member);
             }
 
             if (viewModelType == typeof(AdminRoleViewModel))

@@ -377,6 +377,13 @@ namespace KGV.Wpf.ViewModels
                     ViewModelType = typeof(SaisonViewModel),
                     IsVisible = true
                 });
+
+                NavigationItems.Add(new NavigationItem
+                {
+                    Title = "Wartungsverträge",
+                    ViewModelType = typeof(WartungsvertraegeVerwaltungViewModel),
+                    IsVisible = true
+                });
             }
 
             // Export (immer sichtbar)
@@ -411,6 +418,14 @@ namespace KGV.Wpf.ViewModels
             {
                 Title = "Arbeitsstunden",
                 ViewModelType = typeof(ArbeitsstundenViewModel),
+                IsVisible = SelectedMember != null && UserContext.Has(PermissionFlags.CanManageWorkHours),
+                ButtonMargin = new System.Windows.Thickness(5)
+            });
+
+            MemberNavigationItems.Add(new NavigationItem
+            {
+                Title = "Wartungsverträge",
+                ViewModelType = typeof(MemberWartungsvertraegeViewModel),
                 IsVisible = SelectedMember != null && UserContext.Has(PermissionFlags.CanManageWorkHours),
                 ButtonMargin = new System.Windows.Thickness(5)
             });

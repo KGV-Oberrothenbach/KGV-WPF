@@ -199,8 +199,125 @@
 - `CHANGELOG.md` in eine stabile Grundstruktur überführt (`# Changelog`, `## [Unreleased]`, Kategorien).
 - ReleaseManager erweitert: eigener CHANGELOG-Block kann aus `CHANGELOG.md` geladen und dorthin zurückgeschrieben werden (Ziel: Feld ist nicht mehr leer/unbrauchbar).
 
+---
+
+## 2026-03-13 – Terminzeiten (Supabase time), Bekanntmachungen-Formatierung, Impressum, Wartungsverträge, Arbeitsstunden
+
+### Erledigt
+- Termin-Speichern abgesichert: Start/Ende werden vor DB-Write auf gültiges `HH:mm` normalisiert; leere/ungültige Werte werden als `null` gesendet (verhindert Postgres-Fehler `invalid input syntax for type time`).
+- Termin-UI verbessert:
+  - WPF: Start/Ende als editierbare `ComboBox` mit 30-Minuten-Auswahl + freier Eingabe.
+  - MAUI: Start/Ende via `Picker` (30-Minuten) + `Entry` (freie Eingabe), Normalisierung beim Verlassen des Feldes + Validierung beim Speichern.
+  - Defaults: Beginn `10:00`, Ende `13:00`.
+- Bekanntmachungen: Formatierungs-UI (Schriftgröße/Fett/Kursiv) wirkt nun sichtbar im Editor (WPF+MAUI).
+- Impressum:
+  - Anzeige nur noch Handynummern (Telefon entfernt).
+  - Feld "Verantwortlich" ist frei editierbar; Speicherung aktuell lokal in User-Settings.
+  - Nach erfolgreichem Speichern wird der Bearbeiten-Modus sicher beendet.
+- Wartungsverträge: erster nutzbarer Verwaltungsstand (Anlegen/Bearbeiten) in WPF+MAUI ergänzt.
+- Arbeitsstunden/Pflichtstunden:
+  - Fehlbetrag fachlich korrigiert: `max(0, offen * EuroProFehlstunde)` und nie negativ.
+  - Anzeige als Euro-Text (z.B. `250,-€`).
+  - Vorstand/Admin werden als befreit berücksichtigt (Soll/Offen/Fehlbetrag = 0).
+
+### Hinweise
+- Zeiteingaben werden beim Speichern (und in MAUI zusätzlich beim Unfocus) normalisiert; der Doppelpunkt wird dabei automatisch ergänzt.
+- Wartungsvertrags-Zuordnungen (Vertrag -> Mitglied) sind als nächster Schritt vorgesehen; aktuell ist vorrangig die Pflege der Vertragsdefinitionen umgesetzt.
+
+### Betroffene Dateien (Details)
+- Core
+  - `KGV.Core/Helpers/TimeText.cs`
+  - `KGV.Core/Helpers/MoneyText.cs`
+- Infrastructure
+  - `KGV.Infrastructure/Services/SupabaseService.cs`
+- WPF
+  - `Views/TermineVerwaltungView.xaml`
+  - `KGV.Wpf/ViewModels/TermineVerwaltungViewModel.cs`
+  - `Views/BekanntmachungenVerwaltungView.xaml`
+  - `Views/ImpressumView.xaml`
+  - `KGV.Wpf/ViewModels/ImpressumViewModel.cs`
+  - `KGV.Wpf/AppSettings.cs`
+  - `KGV.Wpf/ViewModels/ArbeitsstundenViewModel.cs`
+  - `KGV.Wpf/Views/ArbeitsstundenView.xaml`
+  - `KGV.Wpf/ViewModels/WartungsvertraegeVerwaltungViewModel.cs`
+  - `Views/WartungsvertraegeVerwaltungView.xaml`
+  - `Views/WartungsvertraegeVerwaltungView.xaml.cs`
+  - `KGV.Wpf/App.xaml`
+  - `KGV.Wpf/ViewModels/MainWindowViewModel.cs`
+  - `KGV.Wpf/Infrastructure/Services/NavigationService.cs`
+- MAUI
+  - `KGV.Maui/Pages/TermineAdminPage.cs`
+  - `KGV.Maui/Pages/BekanntmachungenAdminPage.cs`
+  - `KGV.Maui/Pages/ImpressumPage.cs`
+  - `KGV.Maui/Settings/AppSettings.cs`
+  - `KGV.Maui/Pages/MyArbeitsstundenPage.cs`
+  - `KGV.Maui/Pages/MemberArbeitsstundenPage.cs`
+  - `KGV.Maui/Pages/WartungsvertraegeAdminPage.cs`
+  - `KGV.Maui/MauiProgram.cs`
+  - `KGV.Maui/AdminShell.cs`
+
+
 ### Hinweise
 - ReleaseManager greift weiterhin ausschließlich auf `Documentation/CHANGELOG.md` zu; `DEV_LOG.md` wird in diesem Workflow nicht geschrieben.
+
+---
+
+## 2026-03-13 – Mitglied ↔ Wartungsvertrag Zuordnung (WPF + MAUI) + Pflichtstunden-Befreiung via Vertrag
+
+### Erledigt
+- Mitgliedsbezogene Zuordnung umgesetzt (nicht zentral in der Vertragsverwaltung):
+  - WPF: neuer Mitglieds-Navigationspunkt "Wartungsverträge" mit Zuweisen + Beenden (inkl. optionaler Bemerkung).
+  - MAUI (AdminShell): neue Seite "Wartungsverträge" im Mitgliedskontext (analog zu Arbeitsstunden/Dokumente).
+- Duplikate verhindert: derselbe Wartungsvertrag kann nicht mehrfach gleichzeitig aktiv beim selben Mitglied zugeordnet werden.
+- Grundlage für Sonderfälle: Befreiung von Pflichtstunden kann über einen Wartungsvertrag mit Flag `BefreitVonPflichtstunden` abgebildet werden.
+- Pflichtstunden/Fehlbetrag: Befreiung wird jetzt zusätzlich zu Role (admin/vorstand) auch über aktive Wartungsvertrags-Zuordnung geprüft.
+
+### Hinweise
+- Historisierung ist minimal über `gueltig_bis`: "Entfernen" endet die Zuordnung mit Enddatum (keine Hard-Deletes).
+- Die UI bietet bewusst kein Editieren bestehender Zuordnungen (Ändern = Beenden + neu zuweisen), um Komplexität niedrig zu halten.
+
+### Betroffene Dateien (Details)
+- WPF
+  - `KGV.Wpf/ViewModels/MemberWartungsvertraegeViewModel.cs` (neu)
+  - `KGV.Wpf/Views/MemberWartungsvertraegeView.xaml` (neu)
+  - `KGV.Wpf/Views/MemberWartungsvertraegeView.xaml.cs` (neu)
+  - `KGV.Wpf/App.xaml` (DataTemplate)
+  - `KGV.Wpf/ViewModels/MainWindowViewModel.cs` (Member-Navigation)
+  - `KGV.Wpf/Infrastructure/Services/NavigationService.cs` (Factory)
+  - `KGV.Wpf/ViewModels/ArbeitsstundenViewModel.cs` (Befreiung via Vertrag)
+- MAUI
+  - `KGV.Maui/Pages/MemberWartungsvertraegePage.cs` (neu)
+  - `KGV.Maui/MauiProgram.cs` (DI)
+  - `KGV.Maui/AdminShell.cs` (Menü)
+  - `KGV.Maui/Pages/MyArbeitsstundenPage.cs` (Befreiung via Vertrag)
+  - `KGV.Maui/Pages/MemberArbeitsstundenPage.cs` (Befreiung via Vertrag)
+
+---
+
+## 2026-03-14 – Pflichtstunden/Befreiung konsolidiert + Kapazitätsprüfung Wartungsvertrag
+
+### Erledigt
+- Zentrale fachliche Quelle eingeführt: Pflichtstunden/Befreiung/Offen/Fehlbetrag werden über `ISupabaseService.GetPflichtstundenEvaluationAsync(...)` ausgewertet (Result-Objekt mit Quelle + Grund).
+- WPF + MAUI Arbeitsstunden-Ansichten nutzen diese zentrale Auswertung; keine verteilte Rollen-/Vertragslogik mehr in den Pages/ViewModels.
+- Priorität fachlich explizit:
+  1) aktiver Wartungsvertrag mit `BefreitVonPflichtstunden`
+  2) Übergangsregel: Rolle `admin`/`vorstand`
+  3) sonst Regel/Befreiungsgrund aus DB-View
+- Kapazität/Regeln beim Zuweisen zentral in `SupabaseService.SaveWartungsvertragZuordnungAsync` abgesichert:
+  - Duplikatschutz (gleicher Vertrag nicht mehrfach gleichzeitig aktiv pro Mitglied)
+  - `MaxAktiveZuordnungen` (max. aktive Zuordnungen pro Vertrag)
+
+### Betroffene Dateien (Details)
+- Core
+  - `KGV.Core/Models/PflichtstundenEvaluationResult.cs` (neu)
+  - `KGV.Core/Interfaces/ISupabaseService.cs`
+- Infrastructure
+  - `KGV.Infrastructure/Services/SupabaseService.cs`
+- WPF
+  - `KGV.Wpf/ViewModels/ArbeitsstundenViewModel.cs`
+- MAUI
+  - `KGV.Maui/Pages/MyArbeitsstundenPage.cs`
+  - `KGV.Maui/Pages/MemberArbeitsstundenPage.cs`
 
 ---
 
@@ -228,3 +345,16 @@
 
 ### Hinweise
 - Die Update-Diagnose-Details werden intern weiterhin protokolliert (WPF: `Debug.WriteLine`, MAUI: `ILogger` im `AndroidUpdateService`).
+
+---
+
+## 2026-03-13 – Restprobleme: MAUI Impressum, Bekanntmachungen-Editor, Löschen Startseite, „Meine Arbeitsstunden“
+
+### Erledigt
+- MAUI Impressum: Android-Crash „The specified child already has a parent…“ behoben (keine View/Label-Instanz mehr doppelt in zwei Layouts eingefügt).
+- Bekanntmachungen (WPF + MAUI): Eingabe von rohem HTML durch einfachen Text-Editor ersetzt (Schriftgröße + Fett + Kursiv). Speicherung bleibt intern in `inhalt_html` als HTML (generiert aus Text + Formatflags).
+- Startseite-Verwaltung (WPF + MAUI): Löschen für Arbeitseinsätze/Termine/Bekanntmachungen ergänzt (mit Sicherheitsabfrage + Rollencheck) + Service-Methoden zum Hard-Delete über Basistabellen.
+- „Meine Arbeitsstunden“: Anzeige/Load strikt auf aktuell eingeloggten Nutzer eingeschränkt; Pflichtstunden werden über `HauptmitgliedId ?? Id` in der aktuellen Saison geladen.
+
+### Hinweise
+- Hard-Delete kann je nach DB-Regeln (RLS/FKs) fehlschlagen; UI zeigt dann „Löschen fehlgeschlagen.“ an (Deaktivieren bleibt als Alternative bestehen).

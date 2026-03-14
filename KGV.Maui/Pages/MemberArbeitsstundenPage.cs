@@ -1,5 +1,6 @@
 using System.Globalization;
 using KGV.Core.Interfaces;
+using KGV.Core.Helpers;
 using KGV.Core.Models;
 using KGV.Maui.State;
 
@@ -13,6 +14,7 @@ public sealed class MemberArbeitsstundenPage : FooterContentPage
     private bool _isBusy;
     private Task? _initTask;
     private int? _currentSaisonId;
+    private SaisonRecord? _currentSaison;
 
     private readonly ActivityIndicator _busy;
 
@@ -177,6 +179,7 @@ public sealed class MemberArbeitsstundenPage : FooterContentPage
         var year = DateTime.Today.Year;
         var selected = saisonen.FirstOrDefault(s => s.Jahr == year) ?? saisonen.OrderByDescending(s => s.Jahr).First();
         _currentSaisonId = selected.Id;
+        _currentSaison = selected;
     }
 
     private async Task LoadPflichtstundenAsync(int selectedMitgliedId)
@@ -192,13 +195,15 @@ public sealed class MemberArbeitsstundenPage : FooterContentPage
             var member = await _supabaseService.GetMitgliedByIdAsync(selectedMitgliedId);
             var hauptmitgliedId = member?.HauptmitgliedId ?? selectedMitgliedId;
 
-            var rec = await _supabaseService.GetPflichtstundenUebersichtAsync(hauptmitgliedId, _currentSaisonId.Value);
+            var eval = await _supabaseService.GetPflichtstundenEvaluationAsync(hauptmitgliedId, _currentSaisonId.Value);
+            if (eval == null)
+                return;
 
-            _pflichtSoll.Text = (rec?.Sollstunden).GetValueOrDefault().ToString(CultureInfo.CurrentCulture);
-            _pflichtIst.Text = (rec?.Geleistet).GetValueOrDefault().ToString(CultureInfo.CurrentCulture);
-            _pflichtOffen.Text = (rec?.Offen).GetValueOrDefault().ToString(CultureInfo.CurrentCulture);
-            _pflichtFehlbetrag.Text = (rec?.Fehlbetrag).GetValueOrDefault().ToString(CultureInfo.CurrentCulture);
-            _pflichtGrund.Text = string.IsNullOrWhiteSpace(rec?.Befreiungsgrund) ? (rec?.Regelgrund ?? string.Empty) : rec!.Befreiungsgrund!;
+            _pflichtSoll.Text = eval.Sollstunden.ToString("0.##", CultureInfo.CurrentCulture);
+            _pflichtIst.Text = eval.Geleistet.ToString("0.##", CultureInfo.CurrentCulture);
+            _pflichtOffen.Text = eval.OffeneStunden.ToString("0.##", CultureInfo.CurrentCulture);
+            _pflichtFehlbetrag.Text = MoneyText.FormatEuro(eval.Fehlbetrag);
+            _pflichtGrund.Text = eval.Grund;
         }
         catch
         {

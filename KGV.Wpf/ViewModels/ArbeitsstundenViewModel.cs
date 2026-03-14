@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using CommunityToolkit.Mvvm.Messaging;
 using KGV.Core.Interfaces;
+using KGV.Core.Helpers;
 using KGV.Core.Models;
 using KGV.Wpf.Helpers;
 using KGV.Wpf.Messages;
@@ -49,8 +50,14 @@ namespace KGV.Wpf.ViewModels
         public PflichtstundenUebersichtRecord? Pflichtstunden
         {
             get => _pflichtstunden;
-            private set => SetProperty(ref _pflichtstunden, value);
+            private set
+            {
+                if (SetProperty(ref _pflichtstunden, value))
+                    OnPropertyChanged(nameof(FehlbetragText));
+            }
         }
+
+        public string FehlbetragText => MoneyText.FormatEuro(Pflichtstunden?.Fehlbetrag ?? 0m);
 
         public RelayCommand<object?> NeueArbeitsstundeCommand { get; }
         public RelayCommand<object?> BearbeitenCommand { get; }
@@ -83,23 +90,36 @@ namespace KGV.Wpf.ViewModels
 
         private async Task LoadAsync()
         {
-            var nebenRec = await _supabaseService.GetNebenmitgliedByHauptmitgliedIdAsync(Hauptmitglied.Id);
-            Nebenmitglied = nebenRec != null ? new MemberDTO { Id = nebenRec.Id, Vorname = nebenRec.Vorname ?? "", Nachname = nebenRec.Name ?? "" } : null;
+            await EnsureCurrentUserMitgliedIdAsync();
+
+            var restrictToOwn = !_authService.IsAdmin && !_authService.IsVorstand && _currentUserMitgliedId.HasValue;
+
+            if (restrictToOwn)
+            {
+                Nebenmitglied = null;
+            }
+            else
+            {
+                var nebenRec = await _supabaseService.GetNebenmitgliedByHauptmitgliedIdAsync(Hauptmitglied.Id);
+                Nebenmitglied = nebenRec != null ? new MemberDTO { Id = nebenRec.Id, Vorname = nebenRec.Vorname ?? "", Nachname = nebenRec.Name ?? "" } : null;
+            }
 
             var saisonen = await _supabaseService.GetSaisonRecordsAsync();
             Saisons.Clear();
             foreach (var s in saisonen.OrderByDescending(x => x.Jahr))
                 Saisons.Add(s);
 
-            var ids = new List<int> { Hauptmitglied.Id };
-            if (Nebenmitglied != null) ids.Add(Nebenmitglied.Id);
+            var ids = restrictToOwn
+                ? new List<int> { _currentUserMitgliedId!.Value }
+                : new List<int> { Hauptmitglied.Id };
+
+            if (!restrictToOwn && Nebenmitglied != null)
+                ids.Add(Nebenmitglied.Id);
 
             var items = await _supabaseService.GetArbeitsstundenAsync(ids.ToArray());
             Arbeitsstunden.Clear();
             foreach (var i in items)
                 Arbeitsstunden.Add(i);
-
-            await EnsureCurrentUserMitgliedIdAsync();
         }
 
         private async Task LoadPflichtstundenAsync()
@@ -121,7 +141,35 @@ namespace KGV.Wpf.ViewModels
                     return;
                 }
 
-                Pflichtstunden = await _supabaseService.GetPflichtstundenUebersichtAsync(Hauptmitglied.Id, saison.Id);
+                await EnsureCurrentUserMitgliedIdAsync();
+                var restrictToOwn = !_authService.IsAdmin && !_authService.IsVorstand && _currentUserMitgliedId.HasValue;
+
+                var hauptmitgliedId = Hauptmitglied.Id;
+                if (restrictToOwn)
+                {
+                    var member = await _supabaseService.GetMitgliedByIdAsync(_currentUserMitgliedId!.Value);
+                    hauptmitgliedId = member?.HauptmitgliedId ?? _currentUserMitgliedId!.Value;
+                }
+
+                var eval = await _supabaseService.GetPflichtstundenEvaluationAsync(hauptmitgliedId, saison.Id);
+                if (eval == null)
+                {
+                    Pflichtstunden = null;
+                    return;
+                }
+
+                Pflichtstunden = new PflichtstundenUebersichtRecord
+                {
+                    HauptmitgliedId = eval.HauptmitgliedId,
+                    SaisonId = eval.SaisonId,
+                    Jahr = eval.Jahr,
+                    Sollstunden = eval.Sollstunden,
+                    Geleistet = eval.Geleistet,
+                    Offen = eval.OffeneStunden,
+                    Fehlbetrag = eval.Fehlbetrag,
+                    Regelgrund = null,
+                    Befreiungsgrund = eval.Grund
+                };
             }
             catch
             {

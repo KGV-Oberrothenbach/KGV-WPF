@@ -148,6 +148,7 @@
                             <Button Content="Speichern" Command="{Binding SaveCommand}" />
                             <Button Content="Abbrechen" Command="{Binding CancelCommand}" />
                             <Button Content="Deaktivieren" Command="{Binding DeactivateCommand}" />
+                            <Button Content="Löschen" Command="{Binding DeleteCommand}" />
                         </StackPanel>
                     </StackPanel>
                 </ScrollViewer>

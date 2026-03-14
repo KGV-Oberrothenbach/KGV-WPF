@@ -117,6 +117,7 @@ namespace KGV.Wpf.ViewModels
         public RelayCommand<object?> SaveCommand { get; }
         public RelayCommand<object?> CancelCommand { get; }
         public RelayCommand<object?> DeactivateCommand { get; }
+        public RelayCommand<object?> DeleteCommand { get; }
 
         public BekanntmachungenVerwaltungViewModel(ISupabaseService supabaseService, UserContext userContext)
         {
@@ -128,6 +129,7 @@ namespace KGV.Wpf.ViewModels
             SaveCommand = new RelayCommand<object?>(_ => _ = SaveAsync(), _ => CanEdit && !IsBusy && IsEditMode && EditItem != null && HasUnsavedChanges && IsSaveValid(EditItem));
             CancelCommand = new RelayCommand<object?>(_ => _ = CancelAsync(), _ => !IsBusy && IsEditMode);
             DeactivateCommand = new RelayCommand<object?>(_ => _ = DeactivateAsync(), _ => CanEdit && !IsBusy && IsEditMode && EditItem != null && EditItem.Id > 0);
+            DeleteCommand = new RelayCommand<object?>(_ => _ = DeleteAsync(), _ => CanEdit && !IsBusy && IsEditMode && EditItem != null && EditItem.Id > 0);
         }
 
         public Task OnNavigatedFromAsync() => Task.CompletedTask;
@@ -177,7 +179,7 @@ namespace KGV.Wpf.ViewModels
             if (string.IsNullOrWhiteSpace((item.Titel ?? string.Empty).Trim()))
                 return false;
 
-            if (string.IsNullOrWhiteSpace((item.InhaltHtml ?? string.Empty).Trim()))
+            if (string.IsNullOrWhiteSpace((item.InhaltText ?? string.Empty).Trim()))
                 return false;
 
             var sortText = (item.SortOrderText ?? string.Empty).Trim();
@@ -256,7 +258,7 @@ namespace KGV.Wpf.ViewModels
                 return;
             }
 
-            if (string.IsNullOrWhiteSpace((EditItem.InhaltHtml ?? string.Empty).Trim()))
+            if (string.IsNullOrWhiteSpace((EditItem.InhaltText ?? string.Empty).Trim()))
             {
                 StatusText = "Bitte Inhalt ausfüllen.";
                 return;
@@ -320,6 +322,55 @@ namespace KGV.Wpf.ViewModels
             await SaveAsync();
         }
 
+        private async Task DeleteAsync()
+        {
+            if (!CanEdit) return;
+            if (EditItem == null) return;
+            if (EditItem.Id <= 0) return;
+
+            var result = MessageBox.Show(
+                "Eintrag wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+                "Löschen bestätigen",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            if (result != MessageBoxResult.Yes)
+                return;
+
+            if (!await _opLock.WaitAsync(0))
+                return;
+
+            IsBusy = true;
+            StatusText = string.Empty;
+
+            try
+            {
+                var ok = await _supabaseService.DeleteStartseiteBekanntmachungAsync(EditItem.Id);
+                if (!ok)
+                {
+                    StatusText = "Löschen fehlgeschlagen.";
+                    return;
+                }
+
+                var existing = Items.FirstOrDefault(x => x.Id == EditItem.Id);
+                if (existing != null)
+                    Items.Remove(existing);
+
+                SelectedItem = Items.FirstOrDefault();
+                EditItem = null;
+                StatusText = "Gelöscht.";
+            }
+            catch (Exception ex)
+            {
+                StatusText = ex.Message;
+            }
+            finally
+            {
+                IsBusy = false;
+                _opLock.Release();
+            }
+        }
+
         private void EditItem_PropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
             if (_suppressDirtyTracking)
@@ -359,11 +410,40 @@ namespace KGV.Wpf.ViewModels
                 set => SetProperty(ref _titel, value ?? string.Empty);
             }
 
+            private string _inhaltText = string.Empty;
+            public string InhaltText
+            {
+                get => _inhaltText;
+                set => SetProperty(ref _inhaltText, value ?? string.Empty);
+            }
+
+            private int _fontSize = 14;
+            public int FontSize
+            {
+                get => _fontSize;
+                set => SetProperty(ref _fontSize, value <= 0 ? 14 : value);
+            }
+
+            private bool _isBold;
+            public bool IsBold
+            {
+                get => _isBold;
+                set => SetProperty(ref _isBold, value);
+            }
+
+            private bool _isItalic;
+            public bool IsItalic
+            {
+                get => _isItalic;
+                set => SetProperty(ref _isItalic, value);
+            }
+
+            // Intern weiterhin HTML (DB-Feld: inhalt_html)
             private string _inhaltHtml = string.Empty;
             public string InhaltHtml
             {
                 get => _inhaltHtml;
-                set => SetProperty(ref _inhaltHtml, value ?? string.Empty);
+                private set => SetProperty(ref _inhaltHtml, value ?? string.Empty);
             }
 
             private DateTime? _sichtbarAb;
@@ -403,7 +483,7 @@ namespace KGV.Wpf.ViewModels
                 {
                     Id = Id,
                     Titel = (Titel ?? string.Empty).Trim(),
-                    InhaltHtml = InhaltHtml ?? string.Empty,
+                    InhaltHtml = BuildHtml(InhaltText, FontSize, IsBold, IsItalic),
                     SichtbarAb = SichtbarAb,
                     SichtbarBis = SichtbarBis,
                     SortOrder = sortOrder
@@ -415,9 +495,61 @@ namespace KGV.Wpf.ViewModels
                 Id = rec.Id;
                 Titel = (rec.Titel ?? string.Empty).Trim();
                 InhaltHtml = rec.InhaltHtml ?? string.Empty;
+                InhaltText = ExtractPlainText(InhaltHtml);
+                TryExtractEditorStyle(InhaltHtml, out var fs, out var bold, out var italic);
+                FontSize = fs;
+                IsBold = bold;
+                IsItalic = italic;
                 SichtbarAb = rec.SichtbarAb;
                 SichtbarBis = rec.SichtbarBis;
                 SortOrderText = rec.SortOrder?.ToString() ?? string.Empty;
+            }
+
+            private static string BuildHtml(string? text, int fontSize, bool bold, bool italic)
+            {
+                text = (text ?? string.Empty).Trim();
+                var encoded = System.Net.WebUtility.HtmlEncode(text)
+                    .Replace("\r\n", "\n", StringComparison.Ordinal)
+                    .Replace("\r", "\n", StringComparison.Ordinal)
+                    .Replace("\n", "<br/>", StringComparison.Ordinal);
+
+                var styles = new List<string> { $"font-size:{fontSize}px" };
+                if (bold) styles.Add("font-weight:bold");
+                if (italic) styles.Add("font-style:italic");
+
+                return $"<p style=\"{string.Join(";", styles)}\">{encoded}</p>";
+            }
+
+            private static string ExtractPlainText(string? html)
+            {
+                html = html ?? string.Empty;
+                // Minimaler Fallback: Tags entfernen + <br> als Zeilenumbruch.
+                var s = html
+                    .Replace("<br/>", "\n", StringComparison.OrdinalIgnoreCase)
+                    .Replace("<br>", "\n", StringComparison.OrdinalIgnoreCase)
+                    .Replace("<br />", "\n", StringComparison.OrdinalIgnoreCase);
+
+                s = System.Text.RegularExpressions.Regex.Replace(s, "<[^>]+>", string.Empty);
+                return System.Net.WebUtility.HtmlDecode(s).Trim();
+            }
+
+            private static void TryExtractEditorStyle(string? html, out int fontSize, out bool bold, out bool italic)
+            {
+                fontSize = 14;
+                bold = false;
+                italic = false;
+
+                html = html ?? string.Empty;
+                var m = System.Text.RegularExpressions.Regex.Match(html, "style\\s*=\\s*\\\"(?<style>[^\\\"]+)\\\"", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                if (!m.Success) return;
+
+                var style = m.Groups["style"].Value;
+                if (style.Contains("font-weight:bold", StringComparison.OrdinalIgnoreCase)) bold = true;
+                if (style.Contains("font-style:italic", StringComparison.OrdinalIgnoreCase)) italic = true;
+
+                var m2 = System.Text.RegularExpressions.Regex.Match(style, "font-size\\s*:\\s*(?<n>\\d+)px", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                if (m2.Success && int.TryParse(m2.Groups["n"].Value, out var fs) && fs > 0)
+                    fontSize = fs;
             }
         }
     }

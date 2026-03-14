@@ -7,6 +7,7 @@ using KGV.Core.Impressum;
 using KGV.Core.Interfaces;
 using KGV.Core.Models;
 using KGV.Core.Security;
+using KGV.Maui.Settings;
 using Microsoft.Maui.ApplicationModel;
 using Microsoft.Maui.Controls.Shapes;
 
@@ -24,6 +25,7 @@ public sealed class ImpressumPage : FooterContentPage
     private bool _hasUnsavedChanges;
 
     private IReadOnlyDictionary<string, int?> _snapshotBySlotKey = new Dictionary<string, int?>();
+    private string _snapshotVerantwortlichText = string.Empty;
 
     private readonly ObservableCollection<MemberOption> _memberOptions = new();
     private readonly ObservableCollection<ImpressumSlotItem> _vorstandSlots = new();
@@ -35,6 +37,9 @@ public sealed class ImpressumPage : FooterContentPage
     private readonly Button _editButton;
     private readonly Button _saveButton;
     private readonly Button _cancelButton;
+
+    private readonly Label _verantwortlichLabel;
+    private readonly Entry _verantwortlichEntry;
 
     public ImpressumPage(ISupabaseService supabaseService, IUserContextAccessor userContextAccessor)
     {
@@ -72,13 +77,21 @@ public sealed class ImpressumPage : FooterContentPage
                     Content = content
                 };
 
+        _verantwortlichLabel = new Label { LineBreakMode = LineBreakMode.WordWrap };
+        _verantwortlichLabel.Text = AppSettings.ImpressumVerantwortlichText;
+
+        _verantwortlichEntry = new Entry { Placeholder = "Verantwortlich" };
+        _verantwortlichEntry.Text = AppSettings.ImpressumVerantwortlichText;
+        _verantwortlichEntry.TextChanged += (_, __) => OnAnySlotChanged();
+
         var verantwortlich = WrapCard(new VerticalStackLayout
         {
             Spacing = 8,
             Children =
             {
                 new Label { Text = "Verantwortlich", FontSize = 18, FontAttributes = FontAttributes.Bold },
-                new Label { Text = "Kleingartenverein Oberrothenbach e.V.", LineBreakMode = LineBreakMode.WordWrap }
+                _verantwortlichLabel,
+                _verantwortlichEntry
             }
         });
 
@@ -290,15 +303,11 @@ public sealed class ImpressumPage : FooterContentPage
         var name = new Label { FontAttributes = FontAttributes.Bold, LineBreakMode = LineBreakMode.WordWrap };
         name.SetBinding(Label.TextProperty, nameof(ImpressumSlotItem.AssignedName));
 
-        var tel = new Label { LineBreakMode = LineBreakMode.WordWrap };
-        tel.SetBinding(Label.TextProperty, nameof(ImpressumSlotItem.TelefonText));
-        tel.SetBinding(IsVisibleProperty, nameof(ImpressumSlotItem.HasTelefon));
-
         var handy = new Label { LineBreakMode = LineBreakMode.WordWrap };
         handy.SetBinding(Label.TextProperty, nameof(ImpressumSlotItem.HandyText));
         handy.SetBinding(IsVisibleProperty, nameof(ImpressumSlotItem.HasHandy));
 
-        var display = new VerticalStackLayout { Spacing = 4, Children = { name, tel, handy } };
+        var display = new VerticalStackLayout { Spacing = 4, Children = { name } };
         display.SetBinding(IsVisibleProperty, nameof(ImpressumSlotItem.ShowDisplay));
 
         var picker = new Picker { Title = "Person auswählen" };
@@ -306,7 +315,7 @@ public sealed class ImpressumPage : FooterContentPage
         picker.ItemDisplayBinding = new Binding(nameof(MemberOption.DisplayName));
         picker.SetBinding(Picker.SelectedItemProperty, nameof(ImpressumSlotItem.SelectedMember));
 
-        var edit = new VerticalStackLayout { Spacing = 6, Children = { picker, tel, handy } };
+        var edit = new VerticalStackLayout { Spacing = 6, Children = { picker } };
         edit.SetBinding(IsVisibleProperty, nameof(ImpressumSlotItem.ShowEdit));
 
         var grid = new Grid
@@ -319,7 +328,7 @@ public sealed class ImpressumPage : FooterContentPage
         };
 
         grid.Add(new VerticalStackLayout { Spacing = 6, Children = { funktion } }, 0, 0);
-        grid.Add(new VerticalStackLayout { Spacing = 6, Children = { display, edit } }, 1, 0);
+        grid.Add(new VerticalStackLayout { Spacing = 6, Children = { display, edit, handy } }, 1, 0);
 
         return wrapCard(grid);
     }
@@ -372,6 +381,10 @@ public sealed class ImpressumPage : FooterContentPage
                 return;
             }
 
+            AppSettings.ImpressumVerantwortlichText = (_verantwortlichEntry.Text ?? string.Empty).Trim();
+            AppSettings.Save();
+            _verantwortlichLabel.Text = AppSettings.ImpressumVerantwortlichText;
+
             _isEditMode = false;
             foreach (var s in _vorstandSlots.Concat(_bauSlots))
                 s.IsEditMode = false;
@@ -420,6 +433,8 @@ public sealed class ImpressumPage : FooterContentPage
             .Concat(_bauSlots)
             .GroupBy(x => x.SlotKey, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.First().SelectedMemberId, StringComparer.OrdinalIgnoreCase);
+
+        _snapshotVerantwortlichText = (_verantwortlichEntry.Text ?? string.Empty).Trim();
     }
 
     private void OnAnySlotChanged()
@@ -432,7 +447,10 @@ public sealed class ImpressumPage : FooterContentPage
             .GroupBy(x => x.SlotKey, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.First().SelectedMemberId, StringComparer.OrdinalIgnoreCase);
 
-        _hasUnsavedChanges = !DictionaryEquals(_snapshotBySlotKey, current);
+        var respText = (_verantwortlichEntry.Text ?? string.Empty).Trim();
+        var respSnap = AppSettings.ImpressumVerantwortlichText.Trim();
+        _hasUnsavedChanges = !DictionaryEquals(_snapshotBySlotKey, current)
+            || !string.Equals(respSnap, respText, StringComparison.Ordinal);
         UpdateUiState();
     }
 
@@ -464,6 +482,10 @@ public sealed class ImpressumPage : FooterContentPage
         _cancelButton.IsVisible = _isEditMode;
         _saveButton.IsEnabled = _isEditMode && _hasUnsavedChanges && !_isBusy;
         _cancelButton.IsEnabled = _isEditMode && !_isBusy;
+
+        _verantwortlichLabel.IsVisible = !_isEditMode;
+        _verantwortlichEntry.IsVisible = _isEditMode;
+        _verantwortlichEntry.IsEnabled = _isEditMode && !_isBusy;
     }
 
     public sealed class MemberOption

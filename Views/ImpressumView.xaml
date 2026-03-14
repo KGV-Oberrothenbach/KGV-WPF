@@ -60,7 +60,34 @@
                     CornerRadius="8">
                 <StackPanel>
                     <TextBlock Text="{Binding VerantwortlichHeadline}" FontSize="18" FontWeight="Bold" />
-                    <TextBlock Margin="0,8,0,0" Text="{Binding VerantwortlichText}" TextWrapping="Wrap" />
+
+                    <!-- Anzeige-Modus -->
+                    <TextBlock Margin="0,8,0,0" Text="{Binding VerantwortlichText}" TextWrapping="Wrap">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Visible" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsEditMode}" Value="True">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+
+                    <!-- Bearbeiten-Modus (freier Text) -->
+                    <TextBox Margin="0,8,0,0" Text="{Binding VerantwortlichText, UpdateSourceTrigger=PropertyChanged}" TextWrapping="Wrap" AcceptsReturn="True">
+                        <TextBox.Style>
+                            <Style TargetType="TextBox">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsEditMode}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBox.Style>
+                    </TextBox>
                 </StackPanel>
             </Border>
 
@@ -91,7 +118,6 @@
                                     </StackPanel.Style>
 
                                     <TextBlock Text="{Binding AssignedName}" FontWeight="Bold" TextWrapping="Wrap" />
-                                    <TextBlock Margin="0,4,0,0" Text="{Binding TelefonText}" Visibility="{Binding HasTelefon, Converter={StaticResource BoolToVis}}" TextWrapping="Wrap" />
                                     <TextBlock Margin="0,2,0,0" Text="{Binding HandyText}" Visibility="{Binding HasHandy, Converter={StaticResource BoolToVis}}" TextWrapping="Wrap" />
                                 </StackPanel>
 
@@ -112,7 +138,6 @@
                                               SelectedItem="{Binding SelectedMember}"
                                               DisplayMemberPath="DisplayName"
                                               Margin="0,0,0,6" />
-                                    <TextBlock Text="{Binding TelefonText}" Visibility="{Binding HasTelefon, Converter={StaticResource BoolToVis}}" TextWrapping="Wrap" />
                                     <TextBlock Margin="0,2,0,0" Text="{Binding HandyText}" Visibility="{Binding HasHandy, Converter={StaticResource BoolToVis}}" TextWrapping="Wrap" />
                                 </StackPanel>
                             </Grid>
@@ -148,7 +173,6 @@
                                     </StackPanel.Style>
 
                                     <TextBlock Text="{Binding AssignedName}" FontWeight="Bold" TextWrapping="Wrap" />
-                                    <TextBlock Margin="0,4,0,0" Text="{Binding TelefonText}" Visibility="{Binding HasTelefon, Converter={StaticResource BoolToVis}}" TextWrapping="Wrap" />
                                     <TextBlock Margin="0,2,0,0" Text="{Binding HandyText}" Visibility="{Binding HasHandy, Converter={StaticResource BoolToVis}}" TextWrapping="Wrap" />
                                 </StackPanel>
 
@@ -169,7 +193,6 @@
                                               SelectedItem="{Binding SelectedMember}"
                                               DisplayMemberPath="DisplayName"
                                               Margin="0,0,0,6" />
-                                    <TextBlock Text="{Binding TelefonText}" Visibility="{Binding HasTelefon, Converter={StaticResource BoolToVis}}" TextWrapping="Wrap" />
                                     <TextBlock Margin="0,2,0,0" Text="{Binding HandyText}" Visibility="{Binding HasHandy, Converter={StaticResource BoolToVis}}" TextWrapping="Wrap" />
                                 </StackPanel>
                             </Grid>

@@ -79,6 +79,7 @@ namespace KGV.Core.Interfaces
         Task<bool> EndWartungsvertragZuordnungAsync(long zuordnungId, DateTime gueltigBis, string? bemerkung);
 
         Task<PflichtstundenUebersichtRecord?> GetPflichtstundenUebersichtAsync(int hauptmitgliedId, int saisonId);
+        Task<PflichtstundenEvaluationResult?> GetPflichtstundenEvaluationAsync(int hauptmitgliedId, int saisonId, DateTime? asOfDate = null);
         Task<List<PflichtstundenUebersichtRecord>> GetPflichtstundenUebersichtForSaisonAsync(int saisonId);
         Task<MitgliedRecord?> GetMitgliedByAuthUserIdAsync(Guid authUserId);
         Task<MitgliedRecord?> GetMitgliedByAuthUserIdAsync(string authUserId);
@@ -136,6 +137,10 @@ namespace KGV.Core.Interfaces
         Task<StartseiteBekanntmachungRecord?> SaveStartseiteBekanntmachungAsync(StartseiteBekanntmachungRecord record);
         Task<StartseiteTerminRecord?> SaveStartseiteTerminAsync(StartseiteTerminRecord record);
         Task<StartseiteArbeitseinsatzRecord?> SaveStartseiteArbeitseinsatzAsync(StartseiteArbeitseinsatzRecord record);
+
+        Task<bool> DeleteStartseiteBekanntmachungAsync(long id);
+        Task<bool> DeleteStartseiteTerminAsync(long id);
+        Task<bool> DeleteStartseiteArbeitseinsatzAsync(long id);
 
         Task<HashSet<long>> GetMyArbeitseinsatzAnmeldungenAsync();
         Task<bool> SignUpForArbeitseinsatzAsync(long arbeitseinsatzId);

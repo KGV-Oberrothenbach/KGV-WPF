@@ -44,7 +44,7 @@
                     <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Pflichtstunden.Offen}" Margin="0,6,0,0" FontWeight="SemiBold" />
 
                     <TextBlock Grid.Row="1" Grid.Column="2" Text="Fehlbetrag" Margin="0,6,0,0" />
-                    <TextBlock Grid.Row="1" Grid.Column="3" Text="{Binding Pflichtstunden.Fehlbetrag}" Margin="0,6,0,0" FontWeight="SemiBold" />
+                    <TextBlock Grid.Row="1" Grid.Column="3" Text="{Binding FehlbetragText}" Margin="0,6,0,0" FontWeight="SemiBold" />
 
                     <TextBlock Grid.Row="2" Grid.Column="0" Text="Grund" Margin="0,6,0,0" />
                     <TextBlock Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="3" Text="{Binding Pflichtstunden.Befreiungsgrund}" Margin="0,6,0,0" TextWrapping="Wrap" />

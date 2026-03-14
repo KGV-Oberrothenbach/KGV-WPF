@@ -13,6 +13,8 @@ namespace KGV.Wpf
         {
             public string? LastEmail { get; set; }
 
+            public string? ImpressumVerantwortlichText { get; set; }
+
             // Supabase-Konfiguration
             public SupabaseSettings? Supabase { get; set; }
         }
@@ -29,6 +31,14 @@ namespace KGV.Wpf
         {
             get => _settings.LastEmail;
             set => _settings.LastEmail = value;
+        }
+
+        public static string ImpressumVerantwortlichText
+        {
+            get => string.IsNullOrWhiteSpace(_settings.ImpressumVerantwortlichText)
+                ? "Kleingartenverein Oberrothenbach e.V."
+                : _settings.ImpressumVerantwortlichText!;
+            set => _settings.ImpressumVerantwortlichText = value;
         }
 
         // Neue Properties für Supabase

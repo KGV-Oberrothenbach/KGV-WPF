@@ -53,6 +53,10 @@
                 <views:ArbeitsstundenView />
             </DataTemplate>
 
+            <DataTemplate DataType="{x:Type vm:MemberWartungsvertraegeViewModel}">
+                <views:MemberWartungsvertraegeView />
+            </DataTemplate>
+
             <DataTemplate DataType="{x:Type vm:NebenmitgliedDetailViewModel}">
                 <views:MemberDetailView />
             </DataTemplate>
@@ -75,6 +79,10 @@
 
             <DataTemplate DataType="{x:Type vm:SaisonViewModel}">
                 <views:SaisonView />
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type vm:WartungsvertraegeVerwaltungViewModel}">
+                <views:WartungsvertraegeVerwaltungView />
             </DataTemplate>
 
             <DataTemplate DataType="{x:Type vm:AblesenViewModel}">
