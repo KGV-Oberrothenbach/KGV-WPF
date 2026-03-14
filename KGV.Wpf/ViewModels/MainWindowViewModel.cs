@@ -586,6 +586,12 @@ namespace KGV.Wpf.ViewModels
                     parameter = SelectedMember;
                 }
 
+                if (item.ViewModelType == typeof(MemberWartungsvertraegeViewModel))
+                {
+                    if (SelectedMember == null) return;
+                    parameter = SelectedMember;
+                }
+
                 if (item.ViewModelType == typeof(DokumenteViewModel))
                 {
                     if (SelectedMember == null) return;

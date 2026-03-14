@@ -1,4 +1,6 @@
 using System.Windows.Controls;
+using System.Windows.Input;
+using KGV.Core.Helpers;
 
 namespace KGV.Views
 {
@@ -8,9 +10,18 @@ namespace KGV.Views
         {
             InitializeComponent();
         }
-        public void NewMethod()
+
+        private void OnTimeLostKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
         {
-            // New method implementation
+            if (sender is not ComboBox cb)
+                return;
+
+            var raw = (cb.Text ?? string.Empty).Trim();
+            if (!TimeText.TryNormalize(raw, out var norm))
+                return;
+
+            // empty is allowed -> null; keep UI empty, but normalize valid input
+            cb.Text = norm ?? string.Empty;
         }
     }
 }

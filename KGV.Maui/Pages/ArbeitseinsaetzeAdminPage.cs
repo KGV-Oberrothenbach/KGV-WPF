@@ -116,8 +116,11 @@ public sealed class ArbeitseinsaetzeAdminPage : FooterContentPage
         _titel = new Entry { Placeholder = "Titel" };
         _beschreibung = new Editor { AutoSize = EditorAutoSizeOption.TextChanges, HeightRequest = 160, Placeholder = "Beschreibung" };
         _datum = new DatePicker { Date = DateTime.Today };
-        _start = new Entry { Placeholder = "Start (HH:mm)" };
-        _ende = new Entry { Placeholder = "Ende (HH:mm)" };
+        _start = new Entry { Placeholder = "Start (HH:mm)", Keyboard = Keyboard.Text };
+        _start.Unfocused += (_, __) => TryNormalizeEntryTime(_start);
+
+        _ende = new Entry { Placeholder = "Ende (HH:mm)", Keyboard = Keyboard.Text };
+        _ende.Unfocused += (_, __) => TryNormalizeEntryTime(_ende);
         _treffpunkt = new Entry { Placeholder = "Treffpunkt" };
         _stundenWert = new Entry { Placeholder = "Stundenwert", Keyboard = Keyboard.Numeric };
         _maxTeilnehmer = new Entry { Placeholder = "Max. Teilnehmer", Keyboard = Keyboard.Numeric };
@@ -202,6 +205,17 @@ public sealed class ArbeitseinsaetzeAdminPage : FooterContentPage
         };
 
         Appearing += async (_, __) => await LoadAsync();
+    }
+
+    private static void TryNormalizeEntryTime(Entry entry)
+    {
+        if (entry == null) return;
+
+        var raw = (entry.Text ?? string.Empty).Trim();
+        if (!TimeText.TryNormalize(raw, out var norm))
+            return;
+
+        entry.Text = norm ?? string.Empty;
     }
 
     private static readonly CultureInfo DeCulture = CultureInfo.GetCultureInfo("de-DE");

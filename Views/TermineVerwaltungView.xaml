@@ -81,6 +81,7 @@
                                 <ComboBox ItemsSource="{Binding TimeOptions}"
                                           IsEditable="True"
                                           IsTextSearchEnabled="False"
+                                           LostKeyboardFocus="OnTimeLostKeyboardFocus"
                                           Text="{Binding EditItem.StartUhrzeit, UpdateSourceTrigger=PropertyChanged}" />
                             </StackPanel>
 
@@ -89,6 +90,7 @@
                                 <ComboBox ItemsSource="{Binding TimeOptions}"
                                           IsEditable="True"
                                           IsTextSearchEnabled="False"
+                                           LostKeyboardFocus="OnTimeLostKeyboardFocus"
                                           Text="{Binding EditItem.EndUhrzeit, UpdateSourceTrigger=PropertyChanged}" />
                             </StackPanel>
                         </Grid>

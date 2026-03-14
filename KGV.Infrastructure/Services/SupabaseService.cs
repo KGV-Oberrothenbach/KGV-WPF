@@ -167,10 +167,19 @@ namespace KGV.Infrastructure.Services
 
                 return insertResp?.Models?.FirstOrDefault();
             }
+            catch (InvalidOperationException)
+            {
+                throw;
+            }
+            catch (PostgrestException ex)
+            {
+                _logger?.LogError(ex, "SaveWartungsvertragAsync failed");
+                throw new InvalidOperationException(BuildUserFacingSaveError(ex), ex);
+            }
             catch (Exception ex)
             {
                 _logger?.LogError(ex, "SaveWartungsvertragAsync failed");
-                return null;
+                throw new InvalidOperationException(BuildUserFacingSaveError(ex), ex);
             }
         }
 
@@ -293,12 +302,12 @@ namespace KGV.Infrastructure.Services
                     throw new InvalidOperationException("Diese Zuordnung überschneidet sich mit einer bestehenden Zuordnung (Duplikat/Überlappung).", ex);
 
                 _logger?.LogError(ex, "SaveWartungsvertragZuordnungAsync failed");
-                return null;
+                throw new InvalidOperationException(BuildUserFacingSaveError(ex), ex);
             }
             catch (Exception ex)
             {
                 _logger?.LogError(ex, "SaveWartungsvertragZuordnungAsync failed");
-                return null;
+                throw new InvalidOperationException(BuildUserFacingSaveError(ex), ex);
             }
         }
 
@@ -441,9 +450,35 @@ namespace KGV.Infrastructure.Services
                     ? PflichtstundenBefreiungsQuelle.Wartungsvertrag
                     : (isLegacyRoleBefreit ? PflichtstundenBefreiungsQuelle.LegacyRole : PflichtstundenBefreiungsQuelle.None);
 
+                // Wichtig: Befreiung darf NICHT die Summe der geleisteten Stunden auf 0 setzen.
+                // Wir ermitteln Geleistet zentral über die tatsächlich erfassten Arbeitsstunden,
+                // damit Startseite und "Meine Arbeitsstunden" identische Fachlogik nutzen.
                 var geleistet = rec.Geleistet;
+                try
+                {
+                    var ids = new List<int> { hauptmitgliedId };
+                    var neben = await GetNebenmitgliedByHauptmitgliedIdAsync(hauptmitgliedId);
+                    if (neben != null && neben.Id > 0)
+                        ids.Add(neben.Id);
 
-                var baseOffen = rec.Offen;
+                    var hours = await GetArbeitsstundenAsync(ids.ToArray());
+                    if (hours != null && hours.Count > 0)
+                    {
+                        geleistet = hours
+                            .Where(x => x != null)
+                            .Where(x => x.SaisonId == saisonId)
+                            .Where(x => x.Datum.Date <= when)
+                            .Where(x => x.Freigegeben)
+                            .Sum(x => x.Stunden);
+                    }
+                }
+                catch
+                {
+                    // Fallback: falls die Detailabfrage scheitert, nutzen wir die View-Auswertung.
+                    geleistet = rec.Geleistet;
+                }
+
+                var baseOffen = rec.Sollstunden - geleistet;
                 if (baseOffen < 0m) baseOffen = 0m;
 
                 var soll = istBefreit ? 0m : rec.Sollstunden;
@@ -459,7 +494,7 @@ namespace KGV.Infrastructure.Services
                     if (befreitVertrag != null)
                         grund = $"Befreit durch Wartungsvertrag: {befreitVertrag.Titel}";
                     else
-                        grund = $"Übergangsregel: Rolle '{legacyRole}' befreit";
+                        grund = "Befreit (Übergangsregel)";
                 }
                 else
                 {

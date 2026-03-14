@@ -78,12 +78,14 @@
 
                             <StackPanel Grid.Column="1" Margin="0,0,10,0">
                                 <TextBlock Text="Start" FontWeight="SemiBold" />
-                                <TextBox Text="{Binding EditItem.StartUhrzeit, UpdateSourceTrigger=PropertyChanged}" />
+                                 <TextBox Text="{Binding EditItem.StartUhrzeit, UpdateSourceTrigger=PropertyChanged}"
+                                          LostKeyboardFocus="OnTimeLostKeyboardFocus" />
                             </StackPanel>
 
                             <StackPanel Grid.Column="2">
                                 <TextBlock Text="Ende" FontWeight="SemiBold" />
-                                <TextBox Text="{Binding EditItem.EndUhrzeit, UpdateSourceTrigger=PropertyChanged}" />
+                                 <TextBox Text="{Binding EditItem.EndUhrzeit, UpdateSourceTrigger=PropertyChanged}"
+                                          LostKeyboardFocus="OnTimeLostKeyboardFocus" />
                             </StackPanel>
                         </Grid>
 

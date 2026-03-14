@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Supabase.Postgrest.Attributes;
 using Supabase.Postgrest.Models;
 
@@ -8,6 +9,7 @@ public sealed class StartseiteBekanntmachungWriteRecord : BaseModel
 {
     [PrimaryKey("id", false)]
     [Column("id")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public long? Id { get; set; }
 
     [Column("titel")]

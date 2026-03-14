@@ -160,6 +160,23 @@
 
 ---
 
+## 2026-03-14 – Bugfix-Block: Startseite-CRUD (ID=NULL), Arbeitsstunden-Auswertung (Befreiung), Uhrzeit-Autoformat, Wartungsverträge-UX
+
+### Erledigt
+- Startseite-CRUD (Termin/Bekanntmachung/Arbeitseinsatz): Insert sendet `id` nicht mehr mit (auch nicht als `null`) → DB kann ID wieder selbst generieren.
+- DB-Migrationsskript ergänzt, um `id`-Default/Sequence/Identity für `arbeitseinsatz`, `termin`, `bekanntmachung` abzusichern und Sequences auf `MAX(id)` zu synchronisieren (inkl. reiner Prüfung auf `id=0`-Datensätze).
+- Pflichtstunden-Auswertung: Befreiung setzt nur noch Soll/Offen auf 0, Geleistet wird weiterhin aus echten (freigegebenen) Arbeitsstunden summiert (Startseite & "Meine Arbeitsstunden" identische Logik).
+- Legacy-Befreiungs-Fußtext entschärft (keine verwirrende Rollenmeldung auf der Startseite).
+- WPF: Arbeitsstunden-Liste selektierbar gemacht (SelectedItem Binding explizit TwoWay / FullRow).
+- Uhrzeit-Autoformat in WPF-Verwaltung wiederhergestellt (Termine/Arbeitseinsätze: Normalisierung auf HH:mm bei Fokusverlust).
+- Uhrzeit-Autoformat in MAUI (Arbeitseinsätze) wiederhergestellt (Normalisierung bei Unfocused).
+- Wartungsverträge: Navigation Member-Unterpunkt stabilisiert (SelectedMember wird als Parameter übergeben) + Save-Fehler werden wieder mit verständlicher Fehlermeldung bis ins UI propagiert.
+
+### Hinweise
+- DB-Skript ist defensiv/idempotent; es ändert keine vorhandenen `id=0`-Datensätze automatisch, sondern gibt nur einen NOTICE aus.
+
+---
+
 ## 2026-03-13 – Formulare/Validierung (nullable Felder) & Android App-Icon
 
 ### Erledigt
