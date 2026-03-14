@@ -1,0 +1,546 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Passwort festlegen – KGV Oberrothenbach</title>
+  <style>
+    :root {
+      --bg: #f6f8fa;
+      --card: #ffffff;
+      --text: #1f2328;
+      --muted: #57606a;
+      --border: #d0d7de;
+      --primary: #2da44e;
+      --primary-hover: #278a43;
+      --danger: #cf222e;
+      --ok: #1a7f37;
+      --focus: #0969da;
+      --shadow: 0 8px 24px rgba(140, 149, 159, 0.2);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .wrap {
+      max-width: 560px;
+      margin: 40px auto;
+      padding: 0 16px;
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      margin: 0 0 10px;
+    }
+
+    .intro {
+      color: var(--muted);
+      margin: 0 0 20px;
+      line-height: 1.5;
+    }
+
+    .box {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 24px;
+      box-shadow: var(--shadow);
+    }
+
+    .status {
+      margin-bottom: 16px;
+      padding: 12px 14px;
+      border-radius: 10px;
+      line-height: 1.45;
+      border: 1px solid transparent;
+    }
+
+    .status.muted {
+      color: var(--muted);
+      background: #f6f8fa;
+      border-color: var(--border);
+    }
+
+    .status.ok {
+      color: var(--ok);
+      background: #eaf6ec;
+      border-color: #9ad0a5;
+    }
+
+    .status.err {
+      color: var(--danger);
+      background: #fff1f2;
+      border-color: #f2b8bd;
+    }
+
+    form {
+      display: none;
+      margin-top: 8px;
+    }
+
+    label {
+      display: block;
+      margin-top: 14px;
+      margin-bottom: 6px;
+      font-weight: bold;
+    }
+
+    .field-wrap {
+      position: relative;
+    }
+
+    input[type="password"],
+    input[type="text"] {
+      width: 100%;
+      padding: 12px 90px 12px 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 1rem;
+      outline: none;
+      background: #fff;
+    }
+
+    input:focus {
+      border-color: var(--focus);
+      box-shadow: 0 0 0 3px rgba(9, 105, 218, 0.15);
+    }
+
+    .toggle-btn {
+      position: absolute;
+      top: 50%;
+      right: 8px;
+      transform: translateY(-50%);
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 0.95rem;
+      padding: 6px 8px;
+      border-radius: 8px;
+    }
+
+    .toggle-btn:hover {
+      background: #f3f4f6;
+    }
+
+    .pw-rules {
+      margin-top: 14px;
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #fbfcfd;
+    }
+
+    .pw-rules-title {
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+
+    .pw-rules ul {
+      margin: 0;
+      padding-left: 18px;
+    }
+
+    .pw-rules li {
+      margin: 6px 0;
+      color: var(--muted);
+    }
+
+    .pw-rules li.ok {
+      color: var(--ok);
+      font-weight: bold;
+    }
+
+    .row {
+      margin-top: 18px;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    button[type="submit"] {
+      border: none;
+      background: var(--primary);
+      color: #fff;
+      padding: 12px 18px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 1rem;
+      font-weight: bold;
+    }
+
+    button[type="submit"]:hover {
+      background: var(--primary-hover);
+    }
+
+    button[type="submit"]:disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
+    }
+
+    .hint {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 0.95rem;
+      line-height: 1.4;
+    }
+
+    .download {
+      display: none;
+      margin-top: 10px;
+    }
+
+    .download p {
+      margin: 10px 0;
+      line-height: 1.5;
+    }
+
+    .download a {
+      color: var(--focus);
+      font-weight: bold;
+      text-decoration: none;
+    }
+
+    .download a:hover {
+      text-decoration: underline;
+    }
+
+    .small {
+      font-size: 0.92rem;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Passwort festlegen</h1>
+    <p class="intro">
+      Bitte vergib jetzt dein Passwort für die KGV-App.
+    </p>
+
+    <div class="box">
+      <div id="status" class="status muted">Prüfe Einladungslink …</div>
+
+      <form id="pwForm" novalidate>
+        <label for="pw1">Neues Passwort</label>
+        <div class="field-wrap">
+          <input id="pw1" type="password" autocomplete="new-password" required />
+          <button type="button" class="toggle-btn" data-target="pw1">Anzeigen</button>
+        </div>
+
+        <label for="pw2">Passwort wiederholen</label>
+        <div class="field-wrap">
+          <input id="pw2" type="password" autocomplete="new-password" required />
+          <button type="button" class="toggle-btn" data-target="pw2">Anzeigen</button>
+        </div>
+
+        <div class="pw-rules">
+          <div class="pw-rules-title">Passwortanforderungen</div>
+          <ul>
+            <li id="rule-length">Mindestens 8 Zeichen</li>
+            <li id="rule-lower">Mindestens 1 Kleinbuchstabe</li>
+            <li id="rule-upper">Mindestens 1 Großbuchstabe</li>
+            <li id="rule-digit">Mindestens 1 Zahl</li>
+            <li id="rule-special">Mindestens 1 Sonderzeichen</li>
+            <li id="rule-match">Beide Eingaben stimmen überein</li>
+          </ul>
+        </div>
+
+        <div class="hint">
+          Aus Sicherheitsgründen sollte das Passwort nur für deinen KGV-Zugang verwendet werden.
+        </div>
+
+        <div class="row">
+          <button id="submitBtn" type="submit" disabled>Passwort speichern</button>
+        </div>
+      </form>
+
+      <div id="downloadLink" class="download">
+        <p class="status ok">Passwort erfolgreich gespeichert.</p>
+        <p>Du kannst jetzt die Android-App herunterladen bzw. öffnen:</p>
+        <p>
+          <a href="android/" target="_blank" rel="noopener">
+            Zur Android-App / Downloadseite
+          </a>
+        </p>
+        <p class="small">Du kannst diese Seite jetzt schließen.</p>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+
+    const SUPABASE_URL = "https://itjcabiibuodkxayhvjq.supabase.co";
+    const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_MxyloeQUew25-qVHG0PJmA_M6egePPd";
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false
+      }
+    });
+
+    const statusEl = document.getElementById("status");
+    const formEl = document.getElementById("pwForm");
+    const downloadEl = document.getElementById("downloadLink");
+    const pw1El = document.getElementById("pw1");
+    const pw2El = document.getElementById("pw2");
+    const submitBtn = document.getElementById("submitBtn");
+
+    const ruleEls = {
+      length: document.getElementById("rule-length"),
+      lower: document.getElementById("rule-lower"),
+      upper: document.getElementById("rule-upper"),
+      digit: document.getElementById("rule-digit"),
+      special: document.getElementById("rule-special"),
+      match: document.getElementById("rule-match")
+    };
+
+    function setStatus(text, cssClass = "muted") {
+      statusEl.className = `status ${cssClass}`;
+      statusEl.textContent = text;
+      statusEl.style.display = "";
+    }
+
+    function markRule(el, isOk) {
+      el.classList.toggle("ok", !!isOk);
+    }
+
+    function getQueryParams() {
+      return new URLSearchParams(window.location.search || "");
+    }
+
+    function getHashParams() {
+      const hash = (window.location.hash || "").replace(/^#/, "");
+      return new URLSearchParams(hash);
+    }
+
+    function getParam(key) {
+      const query = getQueryParams();
+      const hash = getHashParams();
+      return query.get(key) ?? hash.get(key);
+    }
+
+    function clearUrlParams() {
+      const cleanUrl = `${window.location.origin}${window.location.pathname}`;
+      window.history.replaceState({}, document.title, cleanUrl);
+    }
+
+    function normalizeMessage(msg, fallback) {
+      if (!msg) return fallback;
+      try {
+        return decodeURIComponent(String(msg).replace(/\+/g, " "));
+      } catch {
+        return String(msg);
+      }
+    }
+
+    function validatePassword(password, passwordRepeat) {
+      const checks = {
+        length: password.length >= 8,
+        lower: /[a-zäöüß]/.test(password),
+        upper: /[A-ZÄÖÜ]/.test(password),
+        digit: /\d/.test(password),
+        special: /[^A-Za-zÄÖÜäöüß0-9]/.test(password),
+        match: password.length > 0 && password === passwordRepeat
+      };
+
+      markRule(ruleEls.length, checks.length);
+      markRule(ruleEls.lower, checks.lower);
+      markRule(ruleEls.upper, checks.upper);
+      markRule(ruleEls.digit, checks.digit);
+      markRule(ruleEls.special, checks.special);
+      markRule(ruleEls.match, checks.match);
+
+      const allOk = Object.values(checks).every(Boolean);
+      submitBtn.disabled = !allOk;
+      return allOk;
+    }
+
+    function showPasswordForm() {
+      setStatus("Einladung erkannt. Bitte neues Passwort vergeben.", "ok");
+      formEl.style.display = "block";
+      validatePassword(pw1El.value, pw2El.value);
+      pw1El.focus();
+    }
+
+    async function tryVerifyOtpFromTokenHash() {
+      const tokenHash = getParam("token_hash");
+      const type = getParam("type");
+
+      if (!tokenHash || !type) {
+        return null;
+      }
+
+      const allowedTypes = ["invite", "recovery"];
+      if (!allowedTypes.includes(type)) {
+        setStatus("Der Linktyp wird nicht unterstützt.", "err");
+        return false;
+      }
+
+      const { error } = await supabase.auth.verifyOtp({
+        token_hash: tokenHash,
+        type: type
+      });
+
+      if (error) {
+        setStatus(
+          "Der Einladungslink konnte nicht bestätigt werden: " + error.message,
+          "err"
+        );
+        return false;
+      }
+
+      clearUrlParams();
+      return true;
+    }
+
+    async function trySetSessionFromTokens() {
+      const accessToken = getParam("access_token");
+      const refreshToken = getParam("refresh_token");
+      const error = getParam("error");
+      const errorDescription = getParam("error_description");
+
+      if (error) {
+        setStatus(
+          normalizeMessage(errorDescription || error, "Der Einladungslink konnte nicht verarbeitet werden."),
+          "err"
+        );
+        return false;
+      }
+
+      if (!accessToken || !refreshToken) {
+        return null;
+      }
+
+      const { error: sessionError } = await supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken
+      });
+
+      if (sessionError) {
+        setStatus(
+          "Session aus dem Link konnte nicht übernommen werden: " + sessionError.message,
+          "err"
+        );
+        return false;
+      }
+
+      clearUrlParams();
+      return true;
+    }
+
+    async function tryExistingSession() {
+      const { data, error } = await supabase.auth.getSession();
+
+      if (error) {
+        setStatus("Die Session konnte nicht geprüft werden: " + error.message, "err");
+        return false;
+      }
+
+      return !!data?.session;
+    }
+
+    async function init() {
+      try {
+        const otpResult = await tryVerifyOtpFromTokenHash();
+        if (otpResult === true) {
+          showPasswordForm();
+          return;
+        }
+        if (otpResult === false) {
+          return;
+        }
+
+        const tokenResult = await trySetSessionFromTokens();
+        if (tokenResult === true) {
+          showPasswordForm();
+          return;
+        }
+        if (tokenResult === false) {
+          return;
+        }
+
+        const hasSession = await tryExistingSession();
+        if (hasSession) {
+          showPasswordForm();
+          return;
+        }
+
+        setStatus("Kein gültiger Einladungs- oder Recovery-Link gefunden.", "err");
+      } catch (err) {
+        setStatus(
+          "Unerwarteter Fehler beim Verarbeiten des Links: " + (err?.message || String(err)),
+          "err"
+        );
+      }
+    }
+
+    document.querySelectorAll(".toggle-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const targetId = btn.getAttribute("data-target");
+        const input = document.getElementById(targetId);
+        const isHidden = input.type === "password";
+        input.type = isHidden ? "text" : "password";
+        btn.textContent = isHidden ? "Verbergen" : "Anzeigen";
+      });
+    });
+
+    pw1El.addEventListener("input", () => {
+      validatePassword(pw1El.value, pw2El.value);
+    });
+
+    pw2El.addEventListener("input", () => {
+      validatePassword(pw1El.value, pw2El.value);
+    });
+
+    formEl.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const password = pw1El.value;
+      const passwordRepeat = pw2El.value;
+      const isValid = validatePassword(password, passwordRepeat);
+
+      if (!isValid) {
+        setStatus("Bitte erfülle alle Passwortanforderungen.", "err");
+        return;
+      }
+
+      submitBtn.disabled = true;
+      setStatus("Speichere Passwort …", "muted");
+
+      try {
+        const { error } = await supabase.auth.updateUser({
+          password: password
+        });
+
+        if (error) {
+          setStatus("Passwort konnte nicht gespeichert werden: " + error.message, "err");
+          validatePassword(pw1El.value, pw2El.value);
+          return;
+        }
+
+        formEl.style.display = "none";
+        statusEl.style.display = "none";
+        downloadEl.style.display = "block";
+      } catch (err) {
+        setStatus(
+          "Passwort konnte nicht gespeichert werden: " + (err?.message || String(err)),
+          "err"
+        );
+        validatePassword(pw1El.value, pw2El.value);
+      }
+    });
+
+    init();
+  </script>
+</body>
+</html>
