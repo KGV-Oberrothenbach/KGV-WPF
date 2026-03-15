@@ -362,6 +362,73 @@ namespace KGV.Infrastructure.Authentication
             IsAdmin = false;
         }
 
+        public async Task<bool> RequestEmailChangeOtpAsync(string newEmail)
+        {
+            if (string.IsNullOrWhiteSpace(newEmail))
+                return false;
+
+            newEmail = newEmail.Trim();
+
+            try
+            {
+                var client = await GetClientAsync();
+
+                if (client.Auth.CurrentSession == null)
+                    return false;
+
+                await client.Auth.Update(new UserAttributes { Email = newEmail });
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogWarning(ex, "RequestEmailChangeOtpAsync failed for {EmailMasked}", MaskEmail(newEmail));
+                return false;
+            }
+        }
+
+        public async Task<bool> VerifyEmailChangeOtpAsync(string newEmail, string otp)
+        {
+            if (string.IsNullOrWhiteSpace(newEmail) || string.IsNullOrWhiteSpace(otp))
+                return false;
+
+            newEmail = newEmail.Trim();
+            otp = otp.Trim();
+
+            try
+            {
+                var client = await GetClientAsync();
+
+                var session = await client.Auth.VerifyOTP(newEmail, otp, global::Supabase.Gotrue.Constants.EmailOtpType.EmailChange);
+                if (session?.User?.Id == null)
+                    return false;
+
+                try
+                {
+                    _sessionStore?.Save(session);
+                }
+                catch
+                {
+                }
+
+                CurrentUserId = session.User.Id;
+
+                if (Guid.TryParse(CurrentUserId, out var userGuid))
+                    await ResolveRolesAsync(client, userGuid);
+                else
+                {
+                    IsVorstand = false;
+                    IsAdmin = false;
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogWarning(ex, "VerifyEmailChangeOtpAsync failed for {EmailMasked}", MaskEmail(newEmail));
+                return false;
+            }
+        }
+
         public async Task<bool> EnsureValidSessionAsync(bool forceRefresh)
         {
             try

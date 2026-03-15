@@ -2950,7 +2950,8 @@ namespace KGV.Infrastructure.Services
 
                 record.Vorname = dto.Vorname;
                 record.Name = dto.Nachname;
-                record.Email = dto.Email;
+                // E-Mail wird NICHT über normales Stammdaten-Speichern geändert.
+                // Änderung erfolgt ausschließlich über den separaten OTP-Flow „Mailadresse ändern“.
 
                 record.Geburtsdatum = NormalizeDate(dto.Geburtsdatum);
                 record.Adresse = dto.Strasse;
@@ -2989,6 +2990,84 @@ namespace KGV.Infrastructure.Services
             {
                 _logger?.LogError(ex, "UpdateMitgliedAsync failed");
                 return false;
+            }
+        }
+
+        public async Task<bool> UpdateMitgliedEmailAsync(int mitgliedId, string newEmail, string userId)
+        {
+            if (mitgliedId <= 0)
+                return false;
+
+            if (string.IsNullOrWhiteSpace(newEmail) || string.IsNullOrWhiteSpace(userId))
+                return false;
+
+            newEmail = newEmail.Trim();
+
+            if (!Guid.TryParse(userId, out _))
+                return false;
+
+            var locked = false;
+
+            try
+            {
+                await InitializeAsync();
+                if (_client == null) return false;
+
+                if (IsRestrictedToOwnMember(out var ownId))
+                {
+                    if (ownId <= 0) return false;
+                    if (mitgliedId != ownId)
+                    {
+                        _logger?.LogWarning("Denied UpdateMitgliedEmailAsync for MitgliedId {MitgliedId} (own-only mode; own MitgliedId {OwnId})", mitgliedId, ownId);
+                        return false;
+                    }
+                }
+
+                locked = await TryLockMitgliedAsync(mitgliedId, userId, timeoutMinutes: 2);
+                if (!locked)
+                    return false;
+
+                var record = await _client
+                    .From<MitgliedRecord>()
+                    .Where(m => m.Id == mitgliedId)
+                    .Single();
+
+                if (record == null)
+                    return false;
+
+                record.Email = newEmail;
+
+                await _client
+                    .From<MitgliedRecord>()
+                    .Where(m => m.Id == mitgliedId)
+                    .Update(record);
+
+                return true;
+            }
+            catch (PostgrestException pex)
+            {
+                _logger?.LogError(pex, "UpdateMitgliedEmailAsync failed: {Message}", pex.Message);
+                TryAppendErrorLog("UpdateMitgliedEmailAsync", pex);
+                throw new InvalidOperationException(BuildUserFacingSaveError(pex), pex);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "UpdateMitgliedEmailAsync failed");
+                TryAppendErrorLog("UpdateMitgliedEmailAsync", ex);
+                throw;
+            }
+            finally
+            {
+                if (locked)
+                {
+                    try
+                    {
+                        await ReleaseLockMitgliedAsync(mitgliedId, userId, force: false);
+                    }
+                    catch
+                    {
+                    }
+                }
             }
         }
 

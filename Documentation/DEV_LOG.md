@@ -480,3 +480,18 @@
 
 ### Hinweise
 - Supabase Migration als Datei ergänzt (`supabase/migrations/...sql`) – ausführen nur falls die Spalten in der DB noch fehlen.
+
+---
+
+## 2026-03-15 – WPF: E-Mail-Änderung nur über separaten OTP-Flow
+
+### Erledigt
+- Stammdaten: E-Mail-Feld bleibt auch im Bearbeiten-Modus read-only; normales Speichern ändert die E-Mail nicht.
+- Neuer separater Einstieg „Mailadresse ändern“ (Dialog):
+  - neue E-Mail eingeben
+  - OTP-Code anfordern (Supabase Auth `Update(email)`)
+  - OTP in der App eingeben und codebasiert verifizieren (`VerifyOTP` mit `EmailChange`)
+- Nach erfolgreicher Verifikation wird die neue E-Mail zusätzlich im `mitglied.email` gespeichert (dedizierte Service-Methode, nicht über Standard-Save) und die Stammdaten werden neu geladen.
+
+### Hinweise
+- Wenn in Supabase `secure_email_change` aktiv ist, kann zusätzlich eine Bestätigung der alten Adresse nötig sein; der App-Flow ist codebasiert vorbereitet, aber projektseitige Einstellungen müssen geprüft werden.

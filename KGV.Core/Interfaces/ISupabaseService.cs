@@ -19,6 +19,9 @@ namespace KGV.Core.Interfaces
         Task<MitgliedRecord?> GetMitgliedByIdAsync(int mitgliedId);
         Task<bool> UpdateMitgliedAsync(MemberDTO dto, string userId);
 
+        // Separate, kontrollierte E-Mail-Änderung (nicht über normales Stammdaten-Speichern)
+        Task<bool> UpdateMitgliedEmailAsync(int mitgliedId, string newEmail, string userId);
+
         Task<ParzelleRecord?> GetParzelleByNumberAsync(string gartenNr);
         Task<List<ParzelleRecord>> GetAllParzellenAsync();
 

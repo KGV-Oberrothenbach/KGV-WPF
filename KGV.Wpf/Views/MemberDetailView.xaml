@@ -186,6 +186,9 @@
                         Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVisibility}}"
                         Command="{Binding CancelCommand}"/>
 
+                <Button Content="Mailadresse ändern" Width="200" Height="35" Margin="0,0,10,0"
+                        Command="{Binding ChangeEmailCommand}" />
+
                 <Button Width="200" Height="35" Margin="0,0,10,0"
                         Content="{Binding NebenmitgliedButtonText}"
                         Visibility="{Binding ShowNebenmitgliedButton, Converter={StaticResource BoolToVisibility}}"
@@ -306,7 +309,7 @@
 
                         <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" Margin="5">
                             <TextBlock Text="E-Mail"/>
-                            <TextBox Text="{Binding SelectedMember.Email, UpdateSourceTrigger=PropertyChanged}"/>
+                            <TextBox Text="{Binding SelectedMember.Email, UpdateSourceTrigger=PropertyChanged}" IsReadOnly="True" />
                         </StackPanel>
 
                         <StackPanel Grid.Row="2" Grid.Column="0" Margin="5">

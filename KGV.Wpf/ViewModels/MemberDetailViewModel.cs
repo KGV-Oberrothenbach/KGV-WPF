@@ -149,6 +149,7 @@ namespace KGV.Wpf.ViewModels
         public RelayCommand<object?> ToggleEditCommand { get; }
         public RelayCommand<object?> SaveCommand { get; }
         public RelayCommand<object?> CancelCommand { get; }
+        public RelayCommand<object?> ChangeEmailCommand { get; }
         public RelayCommand<object?> NebenmitgliedCommand { get; }
         public RelayCommand<object?> CopyAddressFromHauptmitgliedCommand { get; }
 
@@ -176,6 +177,7 @@ namespace KGV.Wpf.ViewModels
             ToggleEditCommand = new RelayCommand<object?>(_ => _ = ToggleEditAsync());
             SaveCommand = new RelayCommand<object?>(_ => _ = SaveAsync(), _ => CanSave());
             CancelCommand = new RelayCommand<object?>(_ => _ = CancelAsync(), _ => CanCancel());
+            ChangeEmailCommand = new RelayCommand<object?>(_ => _ = ChangeEmailAsync(), _ => CanChangeEmail());
             AssignParzelleCommand = new RelayCommand<object?>(_ => _ = AssignParzelleAsync(), _ => CanAssignParzelle());
             EndBelegungCommand = new RelayCommand<object?>(_ => _ = EndBelegungAsync(), _ => CanEndBelegung());
             OpenSelectedParzelleCommand = new RelayCommand<object?>(_ => OpenSelectedParzelle(), _ => SelectedBelegung != null);
@@ -471,6 +473,59 @@ namespace KGV.Wpf.ViewModels
         private bool CanSave() => IsEditMode && (IsDirty || _parzellenChanged);
         private bool CanCancel() => IsEditMode;
 
+        private bool CanChangeEmail() => !IsEditMode;
+
+        private async Task ChangeEmailAsync()
+        {
+            if (IsEditMode)
+                return;
+
+            var vm = new ChangeEmailViewModel(_authService, SelectedMember.Email);
+            var win = new ChangeEmailWindow
+            {
+                Owner = Application.Current?.MainWindow,
+                DataContext = vm
+            };
+
+            vm.ChangeSucceeded += () => win.DialogResult = true;
+            vm.CancelRequested += () => win.DialogResult = false;
+
+            var ok = win.ShowDialog();
+            if (ok != true)
+                return;
+
+            var newEmail = (vm.NewEmail ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(newEmail))
+                return;
+
+            var userId = _authService.CurrentUserId;
+            if (string.IsNullOrWhiteSpace(userId))
+            {
+                MessageBox.Show("Nicht angemeldet. Bitte erneut einloggen.", "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            try
+            {
+                var saved = await _supabaseService.UpdateMitgliedEmailAsync(SelectedMember.Id, newEmail, userId);
+                if (!saved)
+                {
+                    MessageBox.Show("Mailadresse konnte nicht gespeichert werden.", "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Mailadresse konnte nicht gespeichert werden:\n\n{ex.Message}", "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            await LoadMemberAsync();
+            _originalSnapshot = SelectedMember.Clone();
+            IsDirty = false;
+            InvalidateCommands();
+        }
+
         private async Task SaveAsync()
         {
             try
@@ -664,6 +719,7 @@ namespace KGV.Wpf.ViewModels
         {
             SaveCommand.RaiseCanExecuteChanged();
             CancelCommand.RaiseCanExecuteChanged();
+            ChangeEmailCommand.RaiseCanExecuteChanged();
             AssignParzelleCommand.RaiseCanExecuteChanged();
             EndBelegungCommand.RaiseCanExecuteChanged();
             OpenSelectedParzelleCommand.RaiseCanExecuteChanged();

@@ -73,6 +73,16 @@ namespace KGV.Core.Interfaces
         Task CancelPasswordResetSessionAsync();
 
         /// <summary>
+        /// Startet den E-Mail-Änderungsprozess (Supabase sendet hierfür einen Code/OTP an die neue Adresse).
+        /// </summary>
+        Task<bool> RequestEmailChangeOtpAsync(string newEmail);
+
+        /// <summary>
+        /// Verifiziert die E-Mail-Änderung codebasiert (OTP) und aktualisiert Session/Persistenz.
+        /// </summary>
+        Task<bool> VerifyEmailChangeOtpAsync(string newEmail, string otp);
+
+        /// <summary>
         /// Startet einen Google OAuth Sign-In (liefert Auth-URL + PKCE-Verifier für die Callback-Verarbeitung).
         /// </summary>
         Task<OAuthSignInStartResult?> StartGoogleSignInAsync(string redirectUri);
