@@ -24,5 +24,20 @@ namespace KGV.Core.Interfaces
         /// Current authenticated user's id (supabase auth user id)
         /// </summary>
         string? CurrentUserId { get; }
+
+        /// <summary>
+        /// Versucht eine persistierte Session wiederherzustellen (ohne UI).
+        /// </summary>
+        Task<bool> TryRestoreSessionAsync();
+
+        /// <summary>
+        /// Stellt sicher, dass eine vorhandene Session noch gültig ist (ggf. Refresh).
+        /// </summary>
+        Task<bool> EnsureValidSessionAsync(bool forceRefresh);
+
+        /// <summary>
+        /// Lokale Session verwerfen (Logout / "zurück zum Login").
+        /// </summary>
+        Task SignOutAsync();
     }
 }

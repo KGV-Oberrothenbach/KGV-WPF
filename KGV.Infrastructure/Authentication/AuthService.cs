@@ -8,18 +8,26 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 
+// Alias um Konflikt mit Supabase.Gotrue.Client zu vermeiden
+using SupabaseClient = Supabase.Client;
+
 namespace KGV.Infrastructure.Authentication
 {
     public class AuthService : IAuthService
     {
         private readonly ISupabaseClientFactory _clientFactory;
         private readonly ILogger<AuthService>? _logger;
-        private Client? _client;
+        private readonly ISupabaseSessionStore? _sessionStore;
+        private SupabaseClient? _client;
 
-        public AuthService(ISupabaseClientFactory clientFactory, ILogger<AuthService>? logger = null)
+        public AuthService(
+            ISupabaseClientFactory clientFactory,
+            ILogger<AuthService>? logger = null,
+            ISupabaseSessionStore? sessionStore = null)
         {
             _clientFactory = clientFactory ?? throw new ArgumentNullException(nameof(clientFactory));
             _logger = logger;
+            _sessionStore = sessionStore;
         }
 
         public bool IsVorstand { get; private set; } = false;
@@ -29,13 +37,141 @@ namespace KGV.Infrastructure.Authentication
         /// <summary>
         /// Supabase Client initialisieren oder zurückgeben
         /// </summary>
-        public async Task<Client> GetClientAsync()
+        public async Task<SupabaseClient> GetClientAsync()
         {
             if (_client == null)
             {
                 _client = await _clientFactory.CreateAsync();
             }
             return _client;
+        }
+
+        public async Task<bool> TryRestoreSessionAsync()
+        {
+            try
+            {
+                var client = await GetClientAsync();
+
+                if (client.Auth.CurrentSession == null)
+                    return false;
+
+                var ok = await EnsureValidSessionAsync(forceRefresh: false);
+                if (!ok)
+                {
+                    await SignOutAsync();
+                    return false;
+                }
+
+                var session = client.Auth.CurrentSession;
+                if (session?.User?.Id == null)
+                    return false;
+
+                CurrentUserId = session.User.Id;
+
+                if (Guid.TryParse(CurrentUserId, out var userGuid))
+                    await ResolveRolesAsync(client, userGuid);
+                else
+                {
+                    IsVorstand = false;
+                    IsAdmin = false;
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogInformation(ex, "TryRestoreSessionAsync failed");
+                return false;
+            }
+        }
+
+        public async Task<bool> EnsureValidSessionAsync(bool forceRefresh)
+        {
+            try
+            {
+                var client = await GetClientAsync();
+                var session = client.Auth.CurrentSession;
+
+                if (session == null)
+                    return false;
+
+                var shouldRefresh = forceRefresh;
+
+                try
+                {
+                    if (session.Expired())
+                        shouldRefresh = true;
+                }
+                catch
+                {
+                }
+
+                if (!shouldRefresh)
+                {
+                    try
+                    {
+                        var expiresAtUtc = session.ExpiresAt();
+                        if (expiresAtUtc <= DateTime.UtcNow.AddMinutes(2))
+                            shouldRefresh = true;
+                    }
+                    catch
+                    {
+                    }
+                }
+
+                if (!shouldRefresh)
+                    return true;
+
+                try
+                {
+                    var refreshed = await client.Auth.RefreshSession();
+                    if (refreshed != null)
+                    {
+                        try
+                        {
+                            _sessionStore?.Save(refreshed);
+                        }
+                        catch
+                        {
+                        }
+                    }
+
+                    return client.Auth.CurrentSession != null && !(client.Auth.CurrentSession?.Expired() ?? false);
+                }
+                catch (Exception ex)
+                {
+                    _logger?.LogWarning(ex, "Supabase session refresh failed");
+                    return false;
+                }
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public async Task SignOutAsync()
+        {
+            try
+            {
+                var client = await GetClientAsync();
+                await client.Auth.SignOut(global::Supabase.Gotrue.Constants.SignOutScope.Local);
+            }
+            catch
+            {
+            }
+
+            try
+            {
+                _sessionStore?.Clear();
+            }
+            catch
+            {
+            }
+
+            CurrentUserId = null;
+            IsVorstand = false;
+            IsAdmin = false;
         }
 
         public async Task<bool> LoginAsync(string email, string password)
@@ -66,6 +202,14 @@ namespace KGV.Infrastructure.Authentication
                     return false;
                 }
 
+                try
+                {
+                    _sessionStore?.Save(session);
+                }
+                catch
+                {
+                }
+
                 var user = session.User;
                 if (user == null || string.IsNullOrEmpty(user.Id))
                 {
@@ -78,9 +222,6 @@ namespace KGV.Infrastructure.Authentication
                 CurrentUserId = user.Id;
 
                 // Rollen setzen – app_user.role ist ab jetzt die führende Rollenquelle
-                AppUserRecord? appUser = null;
-
-                // user.Id ist string -> in Guid umwandeln, weil app_user.user_id = uuid
                 if (!Guid.TryParse(user.Id, out var userGuid))
                 {
                     _logger?.LogWarning("User.Id is not a valid Guid: {UserId}", user.Id);
@@ -89,40 +230,7 @@ namespace KGV.Infrastructure.Authentication
                     return true; // Login ist trotzdem ok, nur keine Rollen
                 }
 
-                try
-                {
-                    appUser = await client
-                        .From<AppUserRecord>()
-                        .Where(x => x.UserId == userGuid)
-                        .Single();
-                }
-                catch (Exception ex)
-                {
-                    _logger?.LogInformation(ex, "No app_user record found or error while querying for user {UserId}", user.Id);
-                }
-
-                // Übergangs-Phase: app_user.role ist führend; wenn app_user fehlt, defensiv auf mitglied.role fallbacken.
-                var role = (appUser?.Role ?? string.Empty).Trim();
-
-                if (string.IsNullOrWhiteSpace(role))
-                {
-                    try
-                    {
-                        var memberFallback = await client
-                            .From<MitgliedRecord>()
-                            .Where(m => m.AuthUserId == userGuid)
-                            .Single();
-
-                        role = (memberFallback?.Role ?? string.Empty).Trim();
-                    }
-                    catch
-                    {
-                        // ignore
-                    }
-                }
-
-                IsVorstand = string.Equals(role, "vorstand", StringComparison.OrdinalIgnoreCase);
-                IsAdmin = string.Equals(role, "admin", StringComparison.OrdinalIgnoreCase);
+                await ResolveRolesAsync(client, userGuid);
 
                 return true;
             }
@@ -136,6 +244,46 @@ namespace KGV.Infrastructure.Authentication
                 _logger?.LogError(ex, "Unexpected error during SignIn for {EmailMasked}", MaskEmail(email));
                 throw new InvalidOperationException($"Login fehlgeschlagen: {ex.Message}", ex);
             }
+        }
+
+        private async Task ResolveRolesAsync(SupabaseClient client, Guid userGuid)
+        {
+            AppUserRecord? appUser = null;
+
+            try
+            {
+                appUser = await client
+                    .From<AppUserRecord>()
+                    .Where(x => x.UserId == userGuid)
+                    .Single();
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogInformation(ex, "No app_user record found or error while querying for user {UserId}", userGuid);
+            }
+
+            // Übergangs-Phase: app_user.role ist führend; wenn app_user fehlt, defensiv auf mitglied.role fallbacken.
+            var role = (appUser?.Role ?? string.Empty).Trim();
+
+            if (string.IsNullOrWhiteSpace(role))
+            {
+                try
+                {
+                    var memberFallback = await client
+                        .From<MitgliedRecord>()
+                        .Where(m => m.AuthUserId == userGuid)
+                        .Single();
+
+                    role = (memberFallback?.Role ?? string.Empty).Trim();
+                }
+                catch
+                {
+                    // ignore
+                }
+            }
+
+            IsVorstand = string.Equals(role, "vorstand", StringComparison.OrdinalIgnoreCase);
+            IsAdmin = string.Equals(role, "admin", StringComparison.OrdinalIgnoreCase);
         }
 
         private static string MaskEmail(string? email)

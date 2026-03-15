@@ -1,6 +1,8 @@
+using KGV.Core.Interfaces;
 using KGV.Core.Security;
 using KGV.Infrastructure.DependencyInjection;
 using KGV.Maui.Pages;
+using KGV.Maui.Security;
 using KGV.Maui.Settings;
 using KGV.Maui.State;
 using KGV.Maui.Services;
@@ -30,6 +32,8 @@ public static class MauiProgram
         AppSettings.Load();
 
         builder.Services.AddSingleton<IConfiguration>(builder.Configuration);
+
+        builder.Services.AddSingleton<ISupabaseSessionStore, SecureStorageSupabaseSessionStore>();
 
         builder.Services.AddSingleton<UserContextState>();
         builder.Services.AddSingleton<IUserContextAccessor>(sp => sp.GetRequiredService<UserContextState>());

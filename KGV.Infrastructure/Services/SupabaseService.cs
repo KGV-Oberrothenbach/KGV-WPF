@@ -31,6 +31,7 @@ namespace KGV.Infrastructure.Services
         private const short ZaehlerTypStrom = 1;
         private const short ZaehlerTypWasser = 2;
         private readonly ISupabaseClientFactory _clientFactory;
+        private readonly IAuthService _authService;
         private readonly ILogger<SupabaseService>? _logger;
         private readonly Func<UserContext?>? _userContextAccessor;
         private readonly bool _enableLegacyRoleBefreiung;
@@ -38,11 +39,13 @@ namespace KGV.Infrastructure.Services
 
         public SupabaseService(
             ISupabaseClientFactory clientFactory,
+            IAuthService authService,
             ILogger<SupabaseService>? logger = null,
             Func<UserContext?>? userContextAccessor = null,
             IConfiguration? configuration = null)
         {
             _clientFactory = clientFactory;
+            _authService = authService;
             _logger = logger;
             _userContextAccessor = userContextAccessor;
 
@@ -827,7 +830,7 @@ namespace KGV.Infrastructure.Services
                     && !string.IsNullOrWhiteSpace(body)
                     && body.Contains("Invalid JWT", StringComparison.OrdinalIgnoreCase))
                 {
-                    await EnsureValidSessionAsync(forceRefresh: true);
+                    await _authService.EnsureValidSessionAsync(forceRefresh: true);
 
                     var refreshedToken = _client?.Auth?.CurrentSession?.AccessToken;
                     if (!string.IsNullOrWhiteSpace(refreshedToken) && !string.Equals(refreshedToken, token, StringComparison.Ordinal))
@@ -961,7 +964,7 @@ namespace KGV.Infrastructure.Services
                     && !string.IsNullOrWhiteSpace(body)
                     && body.Contains("Invalid JWT", StringComparison.OrdinalIgnoreCase))
                 {
-                    await EnsureValidSessionAsync(forceRefresh: true);
+                    await _authService.EnsureValidSessionAsync(forceRefresh: true);
 
                     var refreshedToken = _client?.Auth?.CurrentSession?.AccessToken;
                     if (!string.IsNullOrWhiteSpace(refreshedToken) && !string.Equals(refreshedToken, token, StringComparison.Ordinal))
@@ -1072,7 +1075,7 @@ namespace KGV.Infrastructure.Services
         {
             try
             {
-                await EnsureValidSessionAsync(forceRefresh: false);
+                await _authService.EnsureValidSessionAsync(forceRefresh: false);
 
                 var token = _client?.Auth?.CurrentSession?.AccessToken;
                 if (!string.IsNullOrWhiteSpace(token))
@@ -1085,7 +1088,7 @@ namespace KGV.Infrastructure.Services
 
                 try
                 {
-                    await EnsureValidSessionAsync(forceRefresh: true);
+                    await _authService.EnsureValidSessionAsync(forceRefresh: true);
                     token = _client?.Auth?.CurrentSession?.AccessToken;
                     if (!string.IsNullOrWhiteSpace(token))
                         return token;
@@ -1888,7 +1891,7 @@ namespace KGV.Infrastructure.Services
                     && !string.IsNullOrWhiteSpace(body)
                     && body.Contains("Invalid JWT", StringComparison.OrdinalIgnoreCase))
                 {
-                    await EnsureValidSessionAsync(forceRefresh: true);
+                    await _authService.EnsureValidSessionAsync(forceRefresh: true);
                     var token2 = await TryGetCurrentAccessTokenAsync();
                     if (string.IsNullOrWhiteSpace(token2) || string.Equals(token2, token, StringComparison.Ordinal))
                         return (false, false);
@@ -2638,68 +2641,8 @@ namespace KGV.Infrastructure.Services
             }
 
             // Zentraler Punkt: vor geschützten Requests sicherstellen, dass die Session (JWT) noch gültig ist.
-            // So vermeiden wir "App-Neustart nötig" nach Leerlauf/Token-Expiry.
-            await EnsureValidSessionAsync(forceRefresh: false);
-        }
-
-        private async Task EnsureValidSessionAsync(bool forceRefresh)
-        {
-            try
-            {
-                if (_client?.Auth?.CurrentSession == null)
-                    return;
-
-                // Wenn wir keine Expires-Info auslesen können, refreshen wir NICHT aggressiv.
-                // (sonst würde jede Anfrage ein Refresh auslösen).
-                var shouldRefresh = forceRefresh;
-
-                try
-                {
-                    dynamic session = _client.Auth.CurrentSession;
-
-                    // Supabase .NET Session hat je nach Version unterschiedliche Properties.
-                    // Wir versuchen defensiv, `ExpiresAt` (Unix seconds) zu lesen.
-                    long? expiresAt = null;
-
-                    try
-                    {
-                        expiresAt = (long?)session.ExpiresAt;
-                    }
-                    catch
-                    {
-                    }
-
-                    if (expiresAt.HasValue)
-                    {
-                        var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-                        var secondsLeft = expiresAt.Value - now;
-
-                        // Refresh 2 Minuten bevor der Token abläuft (oder wenn schon abgelaufen)
-                        if (secondsLeft <= 120)
-                            shouldRefresh = true;
-                    }
-                }
-                catch
-                {
-                }
-
-                if (!shouldRefresh)
-                    return;
-
-                try
-                {
-                    dynamic auth = _client.Auth;
-                    _ = await auth.RefreshSession();
-                }
-                catch (Exception ex)
-                {
-                    _logger?.LogWarning(ex, "Supabase session refresh failed");
-                }
-            }
-            catch
-            {
-                // never throw from here; callers handle via failing requests
-            }
+            // Damit gibt es genau eine Session-Quelle (AuthService) und keine Doppelzuständigkeiten.
+            await _authService.EnsureValidSessionAsync(forceRefresh: false);
         }
 
         // =========================

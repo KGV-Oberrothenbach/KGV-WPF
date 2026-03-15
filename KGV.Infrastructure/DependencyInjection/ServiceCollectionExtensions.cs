@@ -17,7 +17,10 @@ namespace KGV.Infrastructure.DependencyInjection
             if (services == null) throw new ArgumentNullException(nameof(services));
             if (configuration == null) throw new ArgumentNullException(nameof(configuration));
 
-            services.AddSingleton<ISupabaseClientFactory>(_ => new SupabaseClientFactory(configuration));
+            services.AddSingleton<ISupabaseClientFactory>(sp =>
+                new SupabaseClientFactory(
+                    configuration,
+                    sp.GetService<ISupabaseSessionStore>()));
 
             services.AddSingleton<IPermissionService, PermissionService>();
 
@@ -30,11 +33,13 @@ namespace KGV.Infrastructure.DependencyInjection
             services.AddSingleton<IAuthService>(sp =>
                 new AuthService(
                     sp.GetRequiredService<ISupabaseClientFactory>(),
-                    sp.GetService<ILogger<AuthService>>()));
+                    sp.GetService<ILogger<AuthService>>(),
+                    sp.GetService<ISupabaseSessionStore>()));
 
             services.AddSingleton<ISupabaseService>(sp =>
                 new SupabaseService(
                     sp.GetRequiredService<ISupabaseClientFactory>(),
+                    sp.GetRequiredService<IAuthService>(),
                     sp.GetService<ILogger<SupabaseService>>(),
                     () => sp.GetService<IUserContextAccessor>()?.CurrentUserContext,
                     configuration));

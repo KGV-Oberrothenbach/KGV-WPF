@@ -419,3 +419,21 @@
 
 ### Hinweise
 - Hard-Delete kann je nach DB-Regeln (RLS/FKs) fehlschlagen; UI zeigt dann „Löschen fehlgeschlagen.“ an (Deaktivieren bleibt als Alternative bestehen).
+
+---
+
+## 2026-03-15 – Fundament: Supabase Session-Persistenz & Session-Restore (WPF + MAUI)
+
+### Erledigt
+- Zentrale Session-Verantwortung in `AuthService` ergänzt: `TryRestoreSessionAsync`, `EnsureValidSessionAsync`, `SignOutAsync`.
+- Supabase-Client so konfiguriert, dass Session-Persistenz über den Supabase-.NET-Mechanismus (`SupabaseOptions.SessionHandler`) möglich ist + `AutoRefreshToken=true`.
+- Lokale Session-Speicherung:
+  - WPF: DPAPI-geschützt (`DpapiSupabaseSessionStore`).
+  - MAUI/Android: SecureStorage (`SecureStorageSupabaseSessionStore`).
+- App-Start angepasst:
+  - WPF: versucht Session-Restore vor dem Login-Dialog; nur bei ungültiger Session fällt es auf Login zurück.
+  - MAUI: versucht Session-Restore im Hintergrund und wechselt bei Erfolg direkt in die passende Shell; Logout löscht jetzt auch die persistierte Session.
+
+### Hinweise
+- Noch kein Umbau des OTP-Dialogs; Passwort-Login bleibt bestehen.
+- Session-Restore ist defensiv: bei Fehlern wird lokal auf Login zurückgefallen.

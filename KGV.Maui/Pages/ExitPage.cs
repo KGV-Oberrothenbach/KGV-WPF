@@ -1,3 +1,4 @@
+using KGV.Core.Interfaces;
 using KGV.Maui;
 
 namespace KGV.Maui.Pages;
@@ -5,15 +6,17 @@ namespace KGV.Maui.Pages;
 public sealed class ExitPage : FooterContentPage
 {
     private readonly IServiceProvider _services;
+    private readonly IAuthService? _authService;
 
     public ExitPage(IServiceProvider services)
     {
         _services = services;
+        _authService = services.GetService<IAuthService>();
 
         Title = "Abmelden";
 
         var logoutButton = new Button { Text = "Abmelden" };
-        logoutButton.Clicked += (_, _) => AppFlow.ResetToLogin(_services);
+        logoutButton.Clicked += OnLogoutClicked;
 
         Content = new VerticalStackLayout
         {
@@ -26,5 +29,19 @@ public sealed class ExitPage : FooterContentPage
                 logoutButton
             }
         };
+    }
+
+    private async void OnLogoutClicked(object? sender, EventArgs e)
+    {
+        try
+        {
+            if (_authService != null)
+                await _authService.SignOutAsync();
+        }
+        catch
+        {
+        }
+
+        AppFlow.ResetToLogin(_services);
     }
 }

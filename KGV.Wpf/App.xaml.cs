@@ -5,6 +5,7 @@ using KGV.Core.Security;
 using KGV.Infrastructure.Authentication;
 using KGV.Infrastructure.Services;
 using KGV.Infrastructure.Supabase;
+using KGV.Wpf.Security;
 using KGV.Wpf.Infrastructure.Services;
 using KGV.Wpf.Infrastructure.Configuration;
 using KGV.Wpf.Infrastructure.Updates;
@@ -58,42 +59,52 @@ namespace KGV.Wpf
                 return;
             }
 
-            // ⚡ SupabaseClientFactory erstellen (für AuthService & SupabaseService)
-            var clientFactory = new SupabaseClientFactory(config);
+            // ⚡ Session-Persistenz (DPAPI) + SupabaseClientFactory erstellen (für AuthService & SupabaseService)
+            var sessionStore = new DpapiSupabaseSessionStore();
+            var clientFactory = new SupabaseClientFactory(config, sessionStore);
 
             var permissionService = new PermissionService();
             var userContextService = new UserContextService(clientFactory, permissionService, null);
 
             // Services initialisieren
-            var authService = new AuthService(clientFactory, null); // Logger optional
-            var supabaseService = new SupabaseService(clientFactory, null, () => AppState.CurrentUserContext);
+            var authService = new AuthService(clientFactory, null, sessionStore); // Logger optional
+            var supabaseService = new SupabaseService(clientFactory, authService, null, () => AppState.CurrentUserContext, config);
 
-            // Letzte Email laden
-            string lastEmail = AppSettings.LastEmail ?? string.Empty;
+            // 1) Beim Start zuerst versuchen, eine vorhandene Session wiederherzustellen.
+            var restored = await authService.TryRestoreSessionAsync();
 
-            // LoginViewModel erstellen
-            var loginViewModel = new LoginViewModel(authService)
+            if (!restored || string.IsNullOrWhiteSpace(authService.CurrentUserId) || !Guid.TryParse(authService.CurrentUserId, out _))
             {
-                Email = lastEmail
-            };
+                if (restored)
+                    await authService.SignOutAsync();
 
-            var loginWindow = new LoginWindow
-            {
-                DataContext = loginViewModel
-            };
+                // Letzte Email laden
+                string lastEmail = AppSettings.LastEmail ?? string.Empty;
 
-            // Event bei erfolgreichem Login (Dialog schließen)
-            loginViewModel.LoginSucceeded += () =>
-            {
-                // Setting DialogResult schließt das Window automatisch (bei ShowDialog)
-                loginWindow.DialogResult = true;
-            };
+                // LoginViewModel erstellen
+                var loginViewModel = new LoginViewModel(authService)
+                {
+                    Email = lastEmail
+                };
 
-            var loginOk = loginWindow.ShowDialog();
-            if (loginOk != true)
-            {
-                Shutdown();
-                return;
+                var loginWindow = new LoginWindow
+                {
+                    DataContext = loginViewModel
+                };
+
+                // Event bei erfolgreichem Login (Dialog schließen)
+                loginViewModel.LoginSucceeded += () =>
+                {
+                    // Setting DialogResult schließt das Window automatisch (bei ShowDialog)
+                    loginWindow.DialogResult = true;
+                };
+
+                var loginOk = loginWindow.ShowDialog();
+                if (loginOk != true)
+                {
+                    Shutdown();
+                    return;
+                }
             }
 
             if (string.IsNullOrWhiteSpace(authService.CurrentUserId) || !Guid.TryParse(authService.CurrentUserId, out var userId))

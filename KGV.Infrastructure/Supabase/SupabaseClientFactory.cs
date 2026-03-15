@@ -12,14 +12,16 @@ namespace KGV.Infrastructure.Supabase
     public class SupabaseClientFactory : ISupabaseClientFactory
     {
         private readonly IConfiguration _config;
+        private readonly ISupabaseSessionStore? _sessionStore;
         private SupabaseClient? _client;
 
         public string Url { get; }
         public string Key { get; }
 
-        public SupabaseClientFactory(IConfiguration config)
+        public SupabaseClientFactory(IConfiguration config, ISupabaseSessionStore? sessionStore = null)
         {
             _config = config;
+            _sessionStore = sessionStore;
 
             Url = _config["Supabase:Url"]
                   ?? throw new InvalidOperationException("Supabase URL fehlt in appsettings.json");
@@ -31,7 +33,15 @@ namespace KGV.Infrastructure.Supabase
         {
             if (_client != null) return _client;
 
-            _client = new SupabaseClient(Url, Key);
+            var options = new SupabaseOptions
+            {
+                AutoRefreshToken = true,
+                SessionHandler = _sessionStore != null
+                    ? new KgvSupabaseSessionHandler(_sessionStore)
+                    : new DefaultSupabaseSessionHandler()
+            };
+
+            _client = new SupabaseClient(Url, Key, options);
             await _client.InitializeAsync();
 
             return _client;
