@@ -3003,7 +3003,7 @@ namespace KGV.Infrastructure.Services
 
             newEmail = newEmail.Trim();
 
-            if (!Guid.TryParse(userId, out _))
+            if (!Guid.TryParse(userId, out var userGuid))
                 return false;
 
             var locked = false;
@@ -3034,6 +3034,11 @@ namespace KGV.Infrastructure.Services
 
                 if (record == null)
                     return false;
+
+                // Fachliche Absicherung: Auth-E-Mail-Änderung betrifft immer nur den aktuell eingeloggten User.
+                // Daher darf `mitglied.email` hier nur für den eigenen Datensatz angepasst werden.
+                if (record.AuthUserId != userGuid)
+                    throw new InvalidOperationException("Mailadresse kann nur für das eigene Konto geändert werden.");
 
                 record.Email = newEmail;
 

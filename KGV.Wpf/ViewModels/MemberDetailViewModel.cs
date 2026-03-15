@@ -37,6 +37,22 @@ namespace KGV.Wpf.ViewModels
             private set => SetProperty(ref _isHauptmitglied, value);
         }
 
+        private bool _isOwnMember;
+        public bool IsOwnMember
+        {
+            get => _isOwnMember;
+            private set
+            {
+                if (SetProperty(ref _isOwnMember, value))
+                {
+                    OnPropertyChanged(nameof(ShowChangeEmailButton));
+                    ChangeEmailCommand?.RaiseCanExecuteChanged();
+                }
+            }
+        }
+
+        public bool ShowChangeEmailButton => IsOwnMember;
+
         public bool ShowGoToHauptmitgliedButton => false;
         public RelayCommand<object?> GoToHauptmitgliedCommand { get; } = new RelayCommand<object?>(_ => { }, _ => false);
 
@@ -270,7 +286,8 @@ namespace KGV.Wpf.ViewModels
                 WhatsappEinwilligung = rec.WhatsappEinwilligung,
                 MitgliedSeit = rec.MitgliedSeit,
                 MitgliedEnde = rec.MitgliedEnde,
-                Role = rec.Role ?? string.Empty
+                Role = rec.Role ?? string.Empty,
+                AuthUserId = rec.AuthUserId
             };
         }
 
@@ -369,10 +386,37 @@ namespace KGV.Wpf.ViewModels
 
             SelectedMember.Role = rec.Role ?? "";
             SelectedMember.ArbeitsstundenAltersregelTyp = rec.ArbeitsstundenAltersregelTyp ?? "keine";
+            SelectedMember.AuthUserId = rec.AuthUserId;
 
             IsHauptmitglied = rec.HauptmitgliedId == null;
+            UpdateIsOwnMember();
 
             _originalSnapshot = SelectedMember.Clone();
+        }
+
+        private void UpdateIsOwnMember()
+        {
+            try
+            {
+                if (SelectedMember.AuthUserId == null)
+                {
+                    IsOwnMember = false;
+                    return;
+                }
+
+                var currentUserId = _authService.CurrentUserId;
+                if (string.IsNullOrWhiteSpace(currentUserId) || !Guid.TryParse(currentUserId, out var guid))
+                {
+                    IsOwnMember = false;
+                    return;
+                }
+
+                IsOwnMember = SelectedMember.AuthUserId == guid;
+            }
+            catch
+            {
+                IsOwnMember = false;
+            }
         }
 
         private async Task LoadParzellenAsync()
@@ -473,11 +517,11 @@ namespace KGV.Wpf.ViewModels
         private bool CanSave() => IsEditMode && (IsDirty || _parzellenChanged);
         private bool CanCancel() => IsEditMode;
 
-        private bool CanChangeEmail() => !IsEditMode;
+        private bool CanChangeEmail() => !IsEditMode && IsOwnMember;
 
         private async Task ChangeEmailAsync()
         {
-            if (IsEditMode)
+            if (IsEditMode || !IsOwnMember)
                 return;
 
             var vm = new ChangeEmailViewModel(_authService, SelectedMember.Email);

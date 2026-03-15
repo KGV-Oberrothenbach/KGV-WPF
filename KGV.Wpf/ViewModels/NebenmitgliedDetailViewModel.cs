@@ -57,9 +57,12 @@ namespace KGV.Wpf.ViewModels
         public RelayCommand<object?> ToggleEditCommand { get; }
         public RelayCommand<object?> SaveCommand { get; }
         public RelayCommand<object?> CancelCommand { get; }
+        public RelayCommand<object?> ChangeEmailCommand { get; }
         public RelayCommand<object?> CopyAddressFromHauptmitgliedCommand { get; }
 
         public RelayCommand<object?> NebenmitgliedCommand { get; }
+
+        public bool ShowChangeEmailButton => false;
 
         public NebenmitgliedDetailViewModel(ISupabaseService supabaseService, IAuthService authService, NebenmitgliedContext context)
         {
@@ -83,6 +86,7 @@ namespace KGV.Wpf.ViewModels
             ToggleEditCommand = new RelayCommand<object?>(_ => _ = ToggleEditAsync());
             SaveCommand = new RelayCommand<object?>(_ => _ = SaveAsync(), _ => CanSave());
             CancelCommand = new RelayCommand<object?>(_ => _ = CancelAsync(), _ => CanCancel());
+            ChangeEmailCommand = new RelayCommand<object?>(_ => { }, _ => false);
             CopyAddressFromHauptmitgliedCommand = new RelayCommand<object?>(_ => CopyAddressFromHauptmitglied(), _ => IsEditMode);
 
             GoToHauptmitgliedCommand = new RelayCommand<object?>(_ =>
@@ -141,6 +145,7 @@ namespace KGV.Wpf.ViewModels
 
             SelectedMember.Role = rec.Role ?? "";
             SelectedMember.ArbeitsstundenAltersregelTyp = rec.ArbeitsstundenAltersregelTyp ?? "keine";
+            SelectedMember.AuthUserId = rec.AuthUserId;
             _originalSnapshot = SelectedMember.Clone();
         }
 

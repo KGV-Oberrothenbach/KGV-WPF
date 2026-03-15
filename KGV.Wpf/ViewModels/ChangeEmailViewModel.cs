@@ -66,10 +66,18 @@ namespace KGV.Wpf.ViewModels
                 return;
             }
 
-            var ok = await _authService.RequestEmailChangeOtpAsync(NewEmail);
-            if (!ok)
+            try
             {
-                StatusMessage = "Code konnte nicht angefordert werden.";
+                var ok = await _authService.RequestEmailChangeOtpAsync(NewEmail);
+                if (!ok)
+                {
+                    StatusMessage = "Code konnte nicht angefordert werden.";
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = ex.Message;
                 return;
             }
 
@@ -87,10 +95,18 @@ namespace KGV.Wpf.ViewModels
                 return;
             }
 
-            var ok = await _authService.VerifyEmailChangeOtpAsync(NewEmail, OtpCode);
-            if (!ok)
+            try
             {
-                StatusMessage = "Code ist ungültig oder abgelaufen.";
+                var ok = await _authService.VerifyEmailChangeOtpAsync(NewEmail, OtpCode);
+                if (!ok)
+                {
+                    StatusMessage = "Code ist ungültig oder abgelaufen.";
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = ex.Message;
                 return;
             }
 

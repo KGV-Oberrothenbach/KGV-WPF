@@ -493,5 +493,11 @@
   - OTP in der App eingeben und codebasiert verifizieren (`VerifyOTP` mit `EmailChange`)
 - Nach erfolgreicher Verifikation wird die neue E-Mail zusätzlich im `mitglied.email` gespeichert (dedizierte Service-Methode, nicht über Standard-Save) und die Stammdaten werden neu geladen.
 
+### Absicherung / Korrektheit
+- Button/Flow ist nur sichtbar/aktiv, wenn das angezeigte Mitglied dem aktuell eingeloggten Auth-User entspricht (`mitglied.auth_user_id == current user id`).
+  - verhindert den fachlich falschen Eindruck, man könne die Auth-Mail eines fremden Mitglieds ändern.
+- Verifikation gilt nur dann als erfolgreich, wenn Supabase nach `VerifyOTP(EmailChange)` die neue E-Mail im Session-User auch tatsächlich zurückliefert.
+  - andernfalls wird ein klarer Hinweis angezeigt (typisch: `secure_email_change` / zusätzliche Bestätigung erforderlich).
+
 ### Hinweise
 - Wenn in Supabase `secure_email_change` aktiv ist, kann zusätzlich eine Bestätigung der alten Adresse nötig sein; der App-Flow ist codebasiert vorbereitet, aber projektseitige Einstellungen müssen geprüft werden.

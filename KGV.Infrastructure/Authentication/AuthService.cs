@@ -402,6 +402,11 @@ namespace KGV.Infrastructure.Authentication
                 if (session?.User?.Id == null)
                     return false;
 
+                // Absicherung gegen Secure-Email-Change / doppelte Bestätigung:
+                // Wenn Supabase die Änderung noch nicht final übernommen hat, darf die App keinen Erfolg melden.
+                if (!string.Equals(session.User.Email ?? string.Empty, newEmail, StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidOperationException("E-Mail-Änderung wurde noch nicht final bestätigt (ggf. ist in Supabase 'secure_email_change' aktiv und es ist eine zusätzliche Bestätigung nötig).");
+
                 try
                 {
                     _sessionStore?.Save(session);
@@ -421,6 +426,10 @@ namespace KGV.Infrastructure.Authentication
                 }
 
                 return true;
+            }
+            catch (InvalidOperationException)
+            {
+                throw;
             }
             catch (Exception ex)
             {

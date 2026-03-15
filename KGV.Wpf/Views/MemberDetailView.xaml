@@ -187,6 +187,7 @@
                         Command="{Binding CancelCommand}"/>
 
                 <Button Content="Mailadresse ändern" Width="200" Height="35" Margin="0,0,10,0"
+                        Visibility="{Binding ShowChangeEmailButton, Converter={StaticResource BoolToVisibility}}"
                         Command="{Binding ChangeEmailCommand}" />
 
                 <Button Width="200" Height="35" Margin="0,0,10,0"
