@@ -251,7 +251,13 @@ public partial class MainWindow : Window
             var includesWpf = WpfOnlyRadioButton.IsChecked == true || BothRadioButton.IsChecked == true;
             var includesAndroid = AndroidOnlyRadioButton.IsChecked == true || BothRadioButton.IsChecked == true;
 
-            var androidBuild = includesAndroid ? ReadBuildVersion(AndroidBuildTextBox.Text) : (int?)null;
+            // Beim reinen Speichern (Entwurf) darf kein fertiger Android-Build/VersionCode vorausgesetzt werden.
+            int? androidBuild = null;
+            if (includesAndroid)
+            {
+                if (int.TryParse(AndroidBuildTextBox.Text, out var parsed) && parsed > 0)
+                    androidBuild = parsed;
+            }
 
             var windowsPlatform = PlatformReleaseDefaults.CreateWindows(enabled: includesWpf, status: "Entwurf");
 
