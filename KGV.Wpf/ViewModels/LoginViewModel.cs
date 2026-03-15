@@ -10,6 +10,7 @@ namespace KGV.Wpf.ViewModels
     {
         public event Action? LoginSucceeded;
         public event Func<Task<bool>>? PasswordResetRequired;
+        public event Func<Task<bool>>? GoogleLoginRequired;
 
         private readonly IAuthService _authService;
 
@@ -23,6 +24,8 @@ namespace KGV.Wpf.ViewModels
             ResendCodeCommand = new AsyncRelayCommand(ResendCodeAsync, CanResendCode);
             VerifyCodeCommand = new AsyncRelayCommand(VerifyCodeAsync, CanVerifyCode);
             CancelAssistanceFlowCommand = new RelayCommand(CancelAssistanceFlow);
+
+            GoogleLoginCommand = new AsyncRelayCommand(GoogleLoginAsync, CanGoogleLogin);
         }
 
         [ObservableProperty]
@@ -63,6 +66,7 @@ namespace KGV.Wpf.ViewModels
         public IAsyncRelayCommand ResendCodeCommand { get; }
         public IAsyncRelayCommand VerifyCodeCommand { get; }
         public IRelayCommand CancelAssistanceFlowCommand { get; }
+        public IAsyncRelayCommand GoogleLoginCommand { get; }
 
         private bool CanLogin()
         {
@@ -86,6 +90,11 @@ namespace KGV.Wpf.ViewModels
             return ActiveAssistanceFlow != AssistanceFlow.None &&
                    !string.IsNullOrWhiteSpace(Email) &&
                    !string.IsNullOrWhiteSpace(OtpCode);
+        }
+
+        private bool CanGoogleLogin()
+        {
+            return ActiveAssistanceFlow == AssistanceFlow.None;
         }
 
         private async Task LoginAsync()
@@ -237,6 +246,38 @@ namespace KGV.Wpf.ViewModels
             StatusMessage = "";
         }
 
+        private async Task GoogleLoginAsync()
+        {
+            StatusMessage = "";
+
+            var handler = GoogleLoginRequired;
+            if (handler == null)
+            {
+                StatusMessage = "Google-Login ist nicht verfügbar.";
+                return;
+            }
+
+            bool ok;
+            try
+            {
+                ok = await handler();
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Fehler: {ex.Message}";
+                return;
+            }
+
+            if (!ok)
+            {
+                StatusMessage = "Google-Login fehlgeschlagen oder abgebrochen.";
+                return;
+            }
+
+            StatusMessage = "Login erfolgreich!";
+            LoginSucceeded?.Invoke();
+        }
+
         partial void OnEmailChanged(string value)
         {
             LoginCommand.NotifyCanExecuteChanged();
@@ -263,6 +304,7 @@ namespace KGV.Wpf.ViewModels
             OnPropertyChanged(nameof(AssistanceHeader));
             ResendCodeCommand.NotifyCanExecuteChanged();
             VerifyCodeCommand.NotifyCanExecuteChanged();
+            GoogleLoginCommand.NotifyCanExecuteChanged();
         }
     }
 }

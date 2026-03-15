@@ -86,6 +86,79 @@ namespace KGV.Infrastructure.Authentication
             }
         }
 
+        public async Task<OAuthSignInStartResult?> StartGoogleSignInAsync(string redirectUri)
+        {
+            if (string.IsNullOrWhiteSpace(redirectUri))
+                return null;
+
+            redirectUri = redirectUri.Trim();
+
+            try
+            {
+                var client = await GetClientAsync();
+
+                var state = await client.Auth.SignIn(
+                    global::Supabase.Gotrue.Constants.Provider.Google,
+                    new SignInOptions
+                    {
+                        RedirectTo = redirectUri,
+                        FlowType = global::Supabase.Gotrue.Constants.OAuthFlowType.PKCE
+                    });
+
+                if (state?.Uri == null || string.IsNullOrWhiteSpace(state.PKCEVerifier))
+                    return null;
+
+                return new OAuthSignInStartResult(state.Uri, state.PKCEVerifier);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogWarning(ex, "StartGoogleSignInAsync failed");
+                return null;
+            }
+        }
+
+        public async Task<bool> CompleteGoogleSignInAsync(string authCode, string pkceVerifier)
+        {
+            if (string.IsNullOrWhiteSpace(authCode) || string.IsNullOrWhiteSpace(pkceVerifier))
+                return false;
+
+            authCode = authCode.Trim();
+            pkceVerifier = pkceVerifier.Trim();
+
+            try
+            {
+                var client = await GetClientAsync();
+                var session = await client.Auth.ExchangeCodeForSession(pkceVerifier, authCode);
+                if (session?.User?.Id == null)
+                    return false;
+
+                try
+                {
+                    _sessionStore?.Save(session);
+                }
+                catch
+                {
+                }
+
+                CurrentUserId = session.User.Id;
+
+                if (Guid.TryParse(CurrentUserId, out var userGuid))
+                    await ResolveRolesAsync(client, userGuid);
+                else
+                {
+                    IsVorstand = false;
+                    IsAdmin = false;
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogWarning(ex, "CompleteGoogleSignInAsync failed");
+                return false;
+            }
+        }
+
         private void SuppressSessionPersistence(SupabaseClient client)
         {
             try

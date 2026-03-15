@@ -1,4 +1,6 @@
+using KGV.Core.Models;
 using Supabase;
+using System;
 using System.Threading.Tasks;
 
 namespace KGV.Core.Interfaces
@@ -69,5 +71,15 @@ namespace KGV.Core.Interfaces
         /// Bricht den Reset-Flow ab und räumt die temporäre Session kontrolliert auf.
         /// </summary>
         Task CancelPasswordResetSessionAsync();
+
+        /// <summary>
+        /// Startet einen Google OAuth Sign-In (liefert Auth-URL + PKCE-Verifier für die Callback-Verarbeitung).
+        /// </summary>
+        Task<OAuthSignInStartResult?> StartGoogleSignInAsync(string redirectUri);
+
+        /// <summary>
+        /// Finalisiert Google OAuth Sign-In anhand Authorization Code + PKCE-Verifier.
+        /// </summary>
+        Task<bool> CompleteGoogleSignInAsync(string authCode, string pkceVerifier);
     }
 }

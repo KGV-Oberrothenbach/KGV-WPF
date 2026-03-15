@@ -65,6 +65,9 @@
                 <Button Content="Passwort vergessen" Command="{Binding StartRecoveryFlowCommand}" />
             </StackPanel>
 
+            <Button Content="Mit Google anmelden" Command="{Binding GoogleLoginCommand}" Margin="0,10,0,0"
+                    Visibility="{Binding IsPasswordLoginVisible, Converter={StaticResource BoolToVisibility}}" />
+
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center"
                         Visibility="{Binding IsAssistanceFlowVisible, Converter={StaticResource BoolToVisibility}}">
                 <Button Content="Code prüfen" Style="{StaticResource PrimaryButton}"

@@ -452,3 +452,15 @@
 
 ### Hinweise
 - OTP-/Recovery-Verify wird bewusst ohne Persistenz ausgeführt, damit ein abgebrochener Reset-Flow nicht beim nächsten Start in eine wiederhergestellte Session „durchmarschiert“.
+
+---
+
+## 2026-03-15 – WPF Auth Abschluss: Inaktivität, Resume-Sessioncheck, optionaler Google-Login
+
+### Erledigt
+- Inaktivitätslogik: nach 15 Minuten ohne Benutzeraktivität wird die App geschlossen (ohne `SignOut`, Session bleibt persistiert).
+- Reaktivierung/Resume: bei Fokus-Rückkehr bzw. nach Standby wird die Session zentral geprüft/ggf. refreshed; bei endgültig ungültiger Session kontrolliert zurück zum Login.
+- Optionaler Direkt-Login „Mit Google anmelden“ (PKCE): Browser-Redirect auf Loopback-Callback, Exchange-Code zu Session, Rollen/UserContext wie beim Passwort-Login.
+
+### Hinweise
+- Für Google OAuth muss die Redirect-URL in Supabase/Google-Konfiguration erlaubt sein (siehe ToDos im Prompt 3/3 Ergebnis).
