@@ -1,9 +1,12 @@
 {
   "platform": "android",
-  "version": "0.1.10",
-  "build": 8,
-  "fileName": "KGV-android-v0.1.10.apk",
-  "downloadUrl": "https://kgv-oberrothenbach.github.io/KGV-WPF/android/KGV-android-v0.1.10.apk",
-  "mandatory": false,
-  "notes": "Neue Android-Version"
+  "distribution": "PlayStore",
+  "version": "0.2.0",
+  "versionCode": 9,
+  "packageName": "de.kgv.oberrothenbach",
+  "playTrack": "internal",
+  "publishingStatus": "draft",
+  "storeUrl": null,
+  "releaseName": "0.2.0 - internal",
+  "notes": "Neue Android-Version (Google Play Store)"
 }
