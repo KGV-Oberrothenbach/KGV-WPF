@@ -521,5 +521,6 @@
 - Gemeinsame Versionsführung im Workflow:
   - Bei „Beide“ gilt die Windows-Version als Master-Version und wird auch für Android verwendet.
 - Zusätzlich: Warnung im ReleaseManager, wenn die aktuell eingelesenen Windows-/Android-Versionen auseinanderlaufen.
+- UI: Fenster breiter/kompakter + vertikales Scrollen, damit alle Bereiche auch bei kleiner Fensterhöhe erreichbar bleiben.
 - Android-Build im ReleaseManager: Umstellung auf **AAB** und Play-Store-orientiertes `version.json` (kein Endnutzerdownload-Link für Android).
 - Plattform-Status kann nach erfolgreichem Build im Release-Katalog aktualisiert werden (z.B. „gebaut“, „AAB erstellt“).
