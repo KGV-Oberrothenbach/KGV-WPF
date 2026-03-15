@@ -48,8 +48,8 @@ public sealed class JsonManifestService
         string packageName,
         string playTrack,
         string publishingStatus,
-        string storeUrl,
-        string releaseName)
+        string? storeUrl,
+        string? releaseName)
     {
         var payload = new
         {

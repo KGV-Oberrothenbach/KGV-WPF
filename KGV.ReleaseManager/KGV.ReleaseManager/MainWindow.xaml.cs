@@ -1,4 +1,5 @@
 using System.IO;
+using System.Text.RegularExpressions;
 using System.Windows;
 using KGV.ReleaseManager.Models;
 using KGV.ReleaseManager.Services;
@@ -7,6 +8,10 @@ namespace KGV.ReleaseManager;
 
 public partial class MainWindow : Window
 {
+    private static readonly Regex AndroidPackageNameRegex = new(
+        @"^[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z][a-zA-Z0-9_]*)+$",
+        RegexOptions.Compiled);
+
     private readonly CsprojVersionService _csprojVersionService = new();
     private readonly GitService _gitService = new();
     private readonly GitRepositoryService _gitRepositoryService = new();
@@ -21,11 +26,20 @@ public partial class MainWindow : Window
     private VersionInfo? _currentAndroidVersion;
     private int _currentAndroidBuild;
 
+    private bool _androidReleaseNameManuallyEdited;
+    private bool _isUpdatingAndroidReleaseName;
+
     public MainWindow()
     {
         InitializeComponent();
         InitializeDefaultPaths();
         Loaded += (_, _) => LoadVersionsSafe();
+    }
+
+    private static string? TrimOrNull(string? value)
+    {
+        var trimmed = (value ?? string.Empty).Trim();
+        return string.IsNullOrWhiteSpace(trimmed) ? null : trimmed;
     }
 
     private void InitializeDefaultPaths()
@@ -263,11 +277,11 @@ public partial class MainWindow : Window
 
             var androidData = includesAndroid
                 ? new AndroidPlatformReleaseData(
-                    PackageName: (AndroidPackageNameTextBox.Text ?? string.Empty).Trim(),
-                    PlayTrack: GetComboValue(AndroidPlayTrackComboBox),
-                    PublishingStatus: GetComboValue(AndroidPublishingStatusComboBox),
-                    StoreUrl: (AndroidStoreUrlTextBox.Text ?? string.Empty).Trim(),
-                    ReleaseName: (AndroidReleaseNameTextBox.Text ?? string.Empty).Trim(),
+                    PackageName: TrimOrNull(AndroidPackageNameTextBox.Text),
+                    PlayTrack: TrimOrNull(GetComboValue(AndroidPlayTrackComboBox)),
+                    PublishingStatus: TrimOrNull(GetComboValue(AndroidPublishingStatusComboBox)),
+                    StoreUrl: TrimOrNull(AndroidStoreUrlTextBox.Text),
+                    ReleaseName: TrimOrNull(AndroidReleaseNameTextBox.Text) ?? TrimOrNull(BuildAutoAndroidReleaseNameOrEmpty()),
                     VersionCode: androidBuild,
                     AabArtifactPath: null)
                 : null;
@@ -360,6 +374,8 @@ public partial class MainWindow : Window
 
     private void LoadVersions()
     {
+        var repoRoot = RepoRootTextBox.Text.Trim();
+
         if (!File.Exists(WpfCsprojPath))
         {
             throw new FileNotFoundException("WPF-csproj nicht gefunden.", WpfCsprojPath);
@@ -394,6 +410,9 @@ public partial class MainWindow : Window
         AndroidMinorTextBox.Text = nextAndroid.Minor.ToString();
         AndroidPatchTextBox.Text = nextAndroid.Patch.ToString();
         AndroidBuildTextBox.Text = nextAndroid.AndroidBuildVersion.ToString();
+
+        TryPrefillAndroidDefaults(repoRoot);
+        UpdateAndroidReleaseNameIfAuto();
     }
 
     private async void StartRelease_Click(object sender, RoutedEventArgs e)
@@ -443,11 +462,11 @@ public partial class MainWindow : Window
             if (includesAndroid)
             {
                 androidPlayStore = new AndroidPlatformReleaseData(
-                    PackageName: (AndroidPackageNameTextBox.Text ?? string.Empty).Trim(),
-                    PlayTrack: GetComboValue(AndroidPlayTrackComboBox),
-                    PublishingStatus: GetComboValue(AndroidPublishingStatusComboBox),
-                    StoreUrl: (AndroidStoreUrlTextBox.Text ?? string.Empty).Trim(),
-                    ReleaseName: (AndroidReleaseNameTextBox.Text ?? string.Empty).Trim(),
+                    PackageName: TrimOrNull(AndroidPackageNameTextBox.Text),
+                    PlayTrack: TrimOrNull(GetComboValue(AndroidPlayTrackComboBox)),
+                    PublishingStatus: TrimOrNull(GetComboValue(AndroidPublishingStatusComboBox)),
+                    StoreUrl: TrimOrNull(AndroidStoreUrlTextBox.Text),
+                    ReleaseName: TrimOrNull(AndroidReleaseNameTextBox.Text) ?? TrimOrNull(BuildAutoAndroidReleaseNameOrEmpty()),
                     VersionCode: androidVersionCode,
                     AabArtifactPath: null);
 
@@ -648,15 +667,139 @@ public partial class MainWindow : Window
         if (string.IsNullOrWhiteSpace(playStore.PackageName))
             throw new InvalidOperationException("Android aktiviert: PackageName / ApplicationId fehlt.");
 
+        if (!AndroidPackageNameRegex.IsMatch(playStore.PackageName.Trim()))
+            throw new InvalidOperationException($"Android aktiviert: PackageName / ApplicationId ist ungültig: '{playStore.PackageName}'.");
+
         if (string.IsNullOrWhiteSpace(playStore.PlayTrack))
             throw new InvalidOperationException("Android aktiviert: Play Track fehlt.");
 
         var track = playStore.PlayTrack.Trim().ToLowerInvariant();
         if (track is not ("internal" or "closed" or "open" or "production"))
             throw new InvalidOperationException($"Android aktiviert: Play Track ist ungültig: '{playStore.PlayTrack}'.");
+    }
 
-        if (string.IsNullOrWhiteSpace(playStore.StoreUrl))
-            throw new InvalidOperationException("Android aktiviert: Store URL fehlt.");
+    private void TryPrefillAndroidDefaults(string repoRoot)
+    {
+        var draft = _releaseNotesService.TryReadLatestAndroidPlatformDraft(repoRoot);
+
+        var projectId = _csprojVersionService.TryReadAndroidApplicationId(AndroidCsprojPath);
+
+        if (string.IsNullOrWhiteSpace(AndroidPackageNameTextBox.Text))
+        {
+            var candidate = projectId ?? draft?.PackageName;
+            if (!string.IsNullOrWhiteSpace(candidate))
+                AndroidPackageNameTextBox.Text = candidate.Trim();
+        }
+
+        if (draft is not null)
+        {
+            TrySelectComboBoxValue(AndroidPlayTrackComboBox, draft.PlayTrack);
+            TrySelectComboBoxValue(AndroidPublishingStatusComboBox, draft.PublishingStatus);
+
+            if (string.IsNullOrWhiteSpace(AndroidReleaseNameTextBox.Text) && !string.IsNullOrWhiteSpace(draft.ReleaseName))
+            {
+                var auto = BuildAutoAndroidReleaseNameOrEmpty();
+                var isManual = string.IsNullOrWhiteSpace(auto)
+                               || !string.Equals(draft.ReleaseName.Trim(), auto, StringComparison.OrdinalIgnoreCase);
+
+                SetAndroidReleaseName(draft.ReleaseName.Trim(), isManual);
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(AndroidReleaseNameTextBox.Text))
+        {
+            var auto = BuildAutoAndroidReleaseNameOrEmpty();
+            if (!string.IsNullOrWhiteSpace(auto))
+                SetAndroidReleaseName(auto, isManual: false);
+        }
+    }
+
+    private static void TrySelectComboBoxValue(System.Windows.Controls.ComboBox comboBox, string? value)
+    {
+        value = (value ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(value))
+            return;
+
+        foreach (var item in comboBox.Items)
+        {
+            if (item is System.Windows.Controls.ComboBoxItem cbi
+                && string.Equals((cbi.Content?.ToString() ?? string.Empty).Trim(), value, StringComparison.OrdinalIgnoreCase))
+            {
+                comboBox.SelectedItem = cbi;
+                return;
+            }
+        }
+    }
+
+    private void AndroidPlayTrackComboBox_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    {
+        UpdateAndroidReleaseNameIfAuto();
+    }
+
+    private void VersionFields_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+    {
+        UpdateAndroidReleaseNameIfAuto();
+    }
+
+    private void AndroidReleaseNameTextBox_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+    {
+        if (_isUpdatingAndroidReleaseName)
+            return;
+
+        var current = (AndroidReleaseNameTextBox.Text ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(current))
+        {
+            _androidReleaseNameManuallyEdited = false;
+            return;
+        }
+
+        var auto = BuildAutoAndroidReleaseNameOrEmpty();
+        _androidReleaseNameManuallyEdited = string.IsNullOrWhiteSpace(auto)
+                                            || !string.Equals(current, auto, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void UpdateAndroidReleaseNameIfAuto()
+    {
+        if (_androidReleaseNameManuallyEdited)
+            return;
+
+        var auto = BuildAutoAndroidReleaseNameOrEmpty();
+        if (string.IsNullOrWhiteSpace(auto))
+            return;
+
+        var current = (AndroidReleaseNameTextBox.Text ?? string.Empty).Trim();
+        if (string.Equals(current, auto, StringComparison.OrdinalIgnoreCase))
+            return;
+
+        SetAndroidReleaseName(auto, isManual: false);
+    }
+
+    private string BuildAutoAndroidReleaseNameOrEmpty()
+    {
+        try
+        {
+            var version = GetReleaseNotesTargetVersion();
+            var track = GetComboValue(AndroidPlayTrackComboBox);
+            if (string.IsNullOrWhiteSpace(version))
+                return string.Empty;
+
+            if (string.IsNullOrWhiteSpace(track))
+                return version;
+
+            return $"{version} - {track}";
+        }
+        catch
+        {
+            return string.Empty;
+        }
+    }
+
+    private void SetAndroidReleaseName(string value, bool isManual)
+    {
+        _isUpdatingAndroidReleaseName = true;
+        AndroidReleaseNameTextBox.Text = value;
+        _isUpdatingAndroidReleaseName = false;
+        _androidReleaseNameManuallyEdited = isManual;
     }
 
     private void SetUiEnabled(bool enabled)

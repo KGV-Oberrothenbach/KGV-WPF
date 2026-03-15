@@ -23,8 +23,8 @@ public sealed class AndroidReleaseService
             throw new FileNotFoundException("MAUI-csproj nicht gefunden.", project);
         }
 
-        if (string.IsNullOrWhiteSpace(playStore.PackageName) || string.IsNullOrWhiteSpace(playStore.PlayTrack) || string.IsNullOrWhiteSpace(playStore.StoreUrl))
-            throw new InvalidOperationException("Android Play Store Metadaten unvollständig (PackageName/Track/StoreUrl).");
+        if (string.IsNullOrWhiteSpace(playStore.PackageName) || string.IsNullOrWhiteSpace(playStore.PlayTrack))
+            throw new InvalidOperationException("Android Play Store Metadaten unvollständig (PackageName/Track).");
 
         var localAndroidRoot = Path.Combine(context.PublishRoot, "android");
         var versionDir = Path.Combine(localAndroidRoot, version.DisplayVersion);
@@ -82,6 +82,11 @@ public sealed class AndroidReleaseService
 
         File.Copy(builtAab, localAabPath, overwrite: true);
 
+        var storeUrl = string.IsNullOrWhiteSpace(playStore.StoreUrl) ? null : playStore.StoreUrl.Trim();
+        var releaseName = string.IsNullOrWhiteSpace(playStore.ReleaseName)
+            ? $"{version.DisplayVersion} - {playStore.PlayTrack}"
+            : playStore.ReleaseName.Trim();
+
         _jsonManifestService.WriteAndroidPlayStoreVersionJson(
             localJsonPath,
             version.DisplayVersion,
@@ -89,8 +94,8 @@ public sealed class AndroidReleaseService
             playStore.PackageName!,
             playStore.PlayTrack!,
             playStore.PublishingStatus ?? "unknown",
-            playStore.StoreUrl!,
-            playStore.ReleaseName ?? $"KGV {version.DisplayVersion}");
+            storeUrl,
+            releaseName);
 
         _jsonManifestService.WriteAndroidPlayStoreVersionJson(
             gitJsonPath,
@@ -99,8 +104,8 @@ public sealed class AndroidReleaseService
             playStore.PackageName!,
             playStore.PlayTrack!,
             playStore.PublishingStatus ?? "unknown",
-            playStore.StoreUrl!,
-            playStore.ReleaseName ?? $"KGV {version.DisplayVersion}");
+            storeUrl,
+            releaseName);
 
         TryCopyReleasesJson(context, log);
 

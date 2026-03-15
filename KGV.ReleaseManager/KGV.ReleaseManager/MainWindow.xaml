@@ -113,9 +113,9 @@
                             <TextBlock Grid.Row="0" Grid.Column="2" Margin="0,0,8,6" Text="Patch" />
                             <TextBlock Grid.Row="0" Grid.Column="3" Margin="8,0,0,6" Text="Aktuell" />
 
-                            <TextBox x:Name="WpfMajorTextBox" Grid.Row="1" Grid.Column="0" Margin="0,0,8,0" Padding="6" />
-                            <TextBox x:Name="WpfMinorTextBox" Grid.Row="1" Grid.Column="1" Margin="0,0,8,0" Padding="6" />
-                            <TextBox x:Name="WpfPatchTextBox" Grid.Row="1" Grid.Column="2" Margin="0,0,8,0" Padding="6" />
+                            <TextBox x:Name="WpfMajorTextBox" Grid.Row="1" Grid.Column="0" Margin="0,0,8,0" Padding="6" TextChanged="VersionFields_TextChanged" />
+                            <TextBox x:Name="WpfMinorTextBox" Grid.Row="1" Grid.Column="1" Margin="0,0,8,0" Padding="6" TextChanged="VersionFields_TextChanged" />
+                            <TextBox x:Name="WpfPatchTextBox" Grid.Row="1" Grid.Column="2" Margin="0,0,8,0" Padding="6" TextChanged="VersionFields_TextChanged" />
                             <TextBlock x:Name="CurrentWpfVersionTextBlock" Grid.Row="1" Grid.Column="3" Margin="8,6,0,0" Foreground="#5E6F62" />
                         </Grid>
                     </GroupBox>
@@ -142,9 +142,9 @@
                             <TextBlock Grid.Row="0" Grid.Column="3" Margin="0,0,8,6" Text="Build" />
                             <TextBlock Grid.Row="0" Grid.Column="4" Margin="8,0,0,6" Text="Aktuell" />
 
-                            <TextBox x:Name="AndroidMajorTextBox" Grid.Row="1" Grid.Column="0" Margin="0,0,8,0" Padding="6" />
-                            <TextBox x:Name="AndroidMinorTextBox" Grid.Row="1" Grid.Column="1" Margin="0,0,8,0" Padding="6" />
-                            <TextBox x:Name="AndroidPatchTextBox" Grid.Row="1" Grid.Column="2" Margin="0,0,8,0" Padding="6" />
+                            <TextBox x:Name="AndroidMajorTextBox" Grid.Row="1" Grid.Column="0" Margin="0,0,8,0" Padding="6" TextChanged="VersionFields_TextChanged" />
+                            <TextBox x:Name="AndroidMinorTextBox" Grid.Row="1" Grid.Column="1" Margin="0,0,8,0" Padding="6" TextChanged="VersionFields_TextChanged" />
+                            <TextBox x:Name="AndroidPatchTextBox" Grid.Row="1" Grid.Column="2" Margin="0,0,8,0" Padding="6" TextChanged="VersionFields_TextChanged" />
                             <TextBox x:Name="AndroidBuildTextBox" Grid.Row="1" Grid.Column="3" Margin="0,0,8,0" Padding="6" />
                             <TextBlock x:Name="CurrentAndroidVersionTextBlock" Grid.Row="1" Grid.Column="4" Margin="8,6,0,0" Foreground="#5E6F62" />
 
@@ -168,7 +168,7 @@
                                 <TextBox x:Name="AndroidPackageNameTextBox" Grid.Row="0" Grid.Column="1" Margin="8,0,0,8" Padding="6" />
 
                                 <TextBlock Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Text="Play Track" />
-                                <ComboBox x:Name="AndroidPlayTrackComboBox" Grid.Row="1" Grid.Column="1" Margin="8,0,0,8" Padding="6">
+                                <ComboBox x:Name="AndroidPlayTrackComboBox" Grid.Row="1" Grid.Column="1" Margin="8,0,0,8" Padding="6" SelectionChanged="AndroidPlayTrackComboBox_SelectionChanged">
                                     <ComboBoxItem Content="internal" IsSelected="True" />
                                     <ComboBoxItem Content="closed" />
                                     <ComboBoxItem Content="open" />
@@ -186,7 +186,7 @@
                                 <TextBox x:Name="AndroidStoreUrlTextBox" Grid.Row="3" Grid.Column="1" Margin="8,0,0,8" Padding="6" />
 
                                 <TextBlock Grid.Row="4" Grid.Column="0" VerticalAlignment="Center" Text="Release Name" />
-                                <TextBox x:Name="AndroidReleaseNameTextBox" Grid.Row="4" Grid.Column="1" Margin="8,0,0,0" Padding="6" />
+                                <TextBox x:Name="AndroidReleaseNameTextBox" Grid.Row="4" Grid.Column="1" Margin="8,0,0,0" Padding="6" TextChanged="AndroidReleaseNameTextBox_TextChanged" />
                             </Grid>
                         </Grid>
                     </GroupBox>

@@ -23,6 +23,28 @@ public sealed class CsprojVersionService
         return info;
     }
 
+    public string? TryReadAndroidApplicationId(string csprojPath)
+    {
+        try
+        {
+            var document = XDocument.Load(csprojPath, LoadOptions.PreserveWhitespace);
+            var root = document.Root;
+            if (root is null)
+                return null;
+
+            // MAUI single-project: <ApplicationId>de.kgv.oberrothenbach</ApplicationId>
+            var id = FindFirstValue(root, "ApplicationId")
+                     ?? FindFirstValue(root, "PackageName")
+                     ?? FindFirstValue(root, "AndroidPackageName");
+
+            return string.IsNullOrWhiteSpace(id) ? null : id.Trim();
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     public (VersionInfo DisplayVersion, int BuildVersion) ReadAndroidVersion(string csprojPath)
     {
         var document = XDocument.Load(csprojPath, LoadOptions.PreserveWhitespace);

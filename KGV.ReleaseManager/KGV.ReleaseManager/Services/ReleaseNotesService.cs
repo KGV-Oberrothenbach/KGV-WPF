@@ -84,6 +84,50 @@ public sealed class ReleaseNotesService
         return sb.ToString();
     }
 
+    public AndroidPlatformReleaseData? TryReadLatestAndroidPlatformDraft(string repoRoot)
+    {
+        try
+        {
+            var jsonPath = GetReleasesJsonPath(repoRoot);
+            if (!File.Exists(jsonPath))
+                return null;
+
+            var text = File.ReadAllText(jsonPath, Encoding.UTF8);
+            var entries = TryDeserializeMasterReleases(text)
+                          ?? TryDeserializeLegacyReleases(text)?.Select(MapLegacyRelease).ToList();
+
+            if (entries == null || entries.Count == 0)
+                return null;
+
+            var ordered = entries
+                .Where(e => e is not null && !string.IsNullOrWhiteSpace(e.Version))
+                .OrderByDescending(e => e.ReleaseDate, StringComparer.Ordinal)
+                .ThenByDescending(e => e.Version, StringComparer.Ordinal)
+                .ToList();
+
+            foreach (var entry in ordered)
+            {
+                var android = entry.Platforms?.FirstOrDefault(p => string.Equals(p.Platform, "android", StringComparison.OrdinalIgnoreCase));
+                var data = android?.Android;
+                if (data == null)
+                    continue;
+
+                if (!string.IsNullOrWhiteSpace(data.PackageName)
+                    || !string.IsNullOrWhiteSpace(data.ReleaseName)
+                    || !string.IsNullOrWhiteSpace(data.PlayTrack))
+                {
+                    return data;
+                }
+            }
+
+            return null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     public bool ReleaseEntryExists(string repoRoot, string version)
     {
         try
