@@ -46,12 +46,19 @@ namespace KGV.Wpf.ViewModels
                 if (SetProperty(ref _isOwnMember, value))
                 {
                     OnPropertyChanged(nameof(ShowChangeEmailButton));
+                    OnPropertyChanged(nameof(ShowGoogleEmailHint));
                     ChangeEmailCommand?.RaiseCanExecuteChanged();
                 }
             }
         }
 
-        public bool ShowChangeEmailButton => IsOwnMember;
+        public bool ShowChangeEmailButton => IsOwnMember && !_authService.IsGoogleLogin;
+
+        public bool ShowGoogleEmailHint => IsOwnMember && _authService.IsGoogleLogin;
+
+        public bool CanEditEmailInStammdaten => SelectedMember.AuthUserId == null;
+
+        public bool EmailIsReadOnly => !IsEditMode || !CanEditEmailInStammdaten;
 
         public bool ShowGoToHauptmitgliedButton => false;
         public RelayCommand<object?> GoToHauptmitgliedCommand { get; } = new RelayCommand<object?>(_ => { }, _ => false);
@@ -132,7 +139,13 @@ namespace KGV.Wpf.ViewModels
         public bool IsEditMode
         {
             get => _isEditMode;
-            private set => SetProperty(ref _isEditMode, value);
+            private set
+            {
+                if (SetProperty(ref _isEditMode, value))
+                {
+                    OnPropertyChanged(nameof(EmailIsReadOnly));
+                }
+            }
         }
 
         private bool _isDirty;
@@ -391,6 +404,11 @@ namespace KGV.Wpf.ViewModels
             IsHauptmitglied = rec.HauptmitgliedId == null;
             UpdateIsOwnMember();
 
+            OnPropertyChanged(nameof(CanEditEmailInStammdaten));
+            OnPropertyChanged(nameof(EmailIsReadOnly));
+            OnPropertyChanged(nameof(ShowChangeEmailButton));
+            OnPropertyChanged(nameof(ShowGoogleEmailHint));
+
             _originalSnapshot = SelectedMember.Clone();
         }
 
@@ -517,12 +535,19 @@ namespace KGV.Wpf.ViewModels
         private bool CanSave() => IsEditMode && (IsDirty || _parzellenChanged);
         private bool CanCancel() => IsEditMode;
 
-        private bool CanChangeEmail() => !IsEditMode && IsOwnMember;
+        private bool CanChangeEmail() => !IsEditMode && ShowChangeEmailButton;
 
         private async Task ChangeEmailAsync()
         {
             if (IsEditMode || !IsOwnMember)
                 return;
+
+            if (_authService.IsGoogleLogin)
+            {
+                MessageBox.Show("Dieses Konto nutzt Google/OAuth. Die Login-Mailadresse wird über den Provider verwaltet.", "Hinweis",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
 
             var vm = new ChangeEmailViewModel(_authService, SelectedMember.Email);
             var win = new ChangeEmailWindow

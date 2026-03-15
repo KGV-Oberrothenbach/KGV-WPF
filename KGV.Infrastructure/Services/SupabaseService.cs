@@ -2950,8 +2950,11 @@ namespace KGV.Infrastructure.Services
 
                 record.Vorname = dto.Vorname;
                 record.Name = dto.Nachname;
-                // E-Mail wird NICHT über normales Stammdaten-Speichern geändert.
-                // Änderung erfolgt ausschließlich über den separaten OTP-Flow „Mailadresse ändern“.
+                // E-Mail: fachlich differenzieren
+                // - kein Nutzerzugang (`auth_user_id` == null): Admin darf Kontakt-Mail normal über Stammdaten ändern
+                // - Nutzerzugang vorhanden: Änderung nur über separaten OTP-Flow „Mailadresse ändern“
+                if (record.AuthUserId == null)
+                    record.Email = dto.Email;
 
                 record.Geburtsdatum = NormalizeDate(dto.Geburtsdatum);
                 record.Adresse = dto.Strasse;

@@ -44,8 +44,19 @@ namespace KGV.Wpf.ViewModels
         public bool IsEditMode
         {
             get => _isEditMode;
-            private set => SetProperty(ref _isEditMode, value);
+            private set
+            {
+                if (SetProperty(ref _isEditMode, value))
+                {
+                    OnPropertyChanged(nameof(EmailIsReadOnly));
+                }
+            }
         }
+
+        public bool CanEditEmailInStammdaten => SelectedMember.AuthUserId == null;
+        public bool EmailIsReadOnly => !IsEditMode || !CanEditEmailInStammdaten;
+
+        public bool ShowGoogleEmailHint => false;
 
         private bool _isDirty;
         public bool IsDirty
@@ -146,6 +157,9 @@ namespace KGV.Wpf.ViewModels
             SelectedMember.Role = rec.Role ?? "";
             SelectedMember.ArbeitsstundenAltersregelTyp = rec.ArbeitsstundenAltersregelTyp ?? "keine";
             SelectedMember.AuthUserId = rec.AuthUserId;
+
+            OnPropertyChanged(nameof(CanEditEmailInStammdaten));
+            OnPropertyChanged(nameof(EmailIsReadOnly));
             _originalSnapshot = SelectedMember.Clone();
         }
 

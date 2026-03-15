@@ -285,6 +285,7 @@
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
                         <Grid.ColumnDefinitions>
@@ -310,7 +311,15 @@
 
                         <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" Margin="5">
                             <TextBlock Text="E-Mail"/>
-                            <TextBox Text="{Binding SelectedMember.Email, UpdateSourceTrigger=PropertyChanged}" IsReadOnly="True" />
+                            <TextBox Text="{Binding SelectedMember.Email, UpdateSourceTrigger=PropertyChanged}"
+                                     IsReadOnly="{Binding EmailIsReadOnly}" />
+
+                            <TextBlock Margin="0,6,0,0"
+                                       Foreground="DarkOrange"
+                                       FontWeight="SemiBold"
+                                       TextWrapping="Wrap"
+                                       Visibility="{Binding ShowGoogleEmailHint, Converter={StaticResource BoolToVisibility}}"
+                                       Text="Hinweis: Dieses Konto nutzt Google/OAuth. Die Login-Mailadresse wird über den Provider verwaltet." />
                         </StackPanel>
 
                         <StackPanel Grid.Row="2" Grid.Column="0" Margin="5">

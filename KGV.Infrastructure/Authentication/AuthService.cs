@@ -7,6 +7,7 @@ using Supabase.Gotrue.Exceptions;
 using Supabase.Gotrue;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 
 // Alias um Konflikt mit Supabase.Gotrue.Client zu vermeiden
@@ -33,7 +34,24 @@ namespace KGV.Infrastructure.Authentication
 
         public bool IsVorstand { get; private set; } = false;
         public bool IsAdmin { get; private set; } = false;
+        public bool IsGoogleLogin { get; private set; } = false;
         public string? CurrentUserId { get; private set; }
+
+        private static bool DetectGoogleLogin(global::Supabase.Gotrue.Session? session)
+        {
+            try
+            {
+                var identities = session?.User?.Identities;
+                if (identities == null || identities.Count == 0)
+                    return false;
+
+                return identities.Any(i => string.Equals(i.Provider, "google", StringComparison.OrdinalIgnoreCase));
+            }
+            catch
+            {
+                return false;
+            }
+        }
 
         /// <summary>
         /// Supabase Client initialisieren oder zurückgeben
@@ -68,6 +86,7 @@ namespace KGV.Infrastructure.Authentication
                     return false;
 
                 CurrentUserId = session.User.Id;
+                IsGoogleLogin = DetectGoogleLogin(session);
 
                 if (Guid.TryParse(CurrentUserId, out var userGuid))
                     await ResolveRolesAsync(client, userGuid);
@@ -141,6 +160,7 @@ namespace KGV.Infrastructure.Authentication
                 }
 
                 CurrentUserId = session.User.Id;
+                IsGoogleLogin = DetectGoogleLogin(session);
 
                 if (Guid.TryParse(CurrentUserId, out var userGuid))
                     await ResolveRolesAsync(client, userGuid);
@@ -416,6 +436,7 @@ namespace KGV.Infrastructure.Authentication
                 }
 
                 CurrentUserId = session.User.Id;
+                IsGoogleLogin = DetectGoogleLogin(session);
 
                 if (Guid.TryParse(CurrentUserId, out var userGuid))
                     await ResolveRolesAsync(client, userGuid);
@@ -525,6 +546,7 @@ namespace KGV.Infrastructure.Authentication
             CurrentUserId = null;
             IsVorstand = false;
             IsAdmin = false;
+            IsGoogleLogin = false;
         }
 
         public async Task<bool> LoginAsync(string email, string password)
@@ -573,6 +595,7 @@ namespace KGV.Infrastructure.Authentication
                 _logger?.LogInformation("SignIn successful for {EmailMasked}", MaskEmail(email));
 
                 CurrentUserId = user.Id;
+                IsGoogleLogin = DetectGoogleLogin(session);
 
                 // Rollen setzen – app_user.role ist ab jetzt die führende Rollenquelle
                 if (!Guid.TryParse(user.Id, out var userGuid))

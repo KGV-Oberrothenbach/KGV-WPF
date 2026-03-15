@@ -22,6 +22,11 @@ namespace KGV.Core.Interfaces
         /// </summary>
         bool IsVorstand { get; }
         bool IsAdmin { get; }
+
+        /// <summary>
+        /// True if the current session indicates Google/OAuth login (used to avoid misleading email-change UI).
+        /// </summary>
+        bool IsGoogleLogin { get; }
         /// <summary>
         /// Current authenticated user's id (supabase auth user id)
         /// </summary>

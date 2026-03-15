@@ -494,10 +494,16 @@
 - Nach erfolgreicher Verifikation wird die neue E-Mail zusätzlich im `mitglied.email` gespeichert (dedizierte Service-Methode, nicht über Standard-Save) und die Stammdaten werden neu geladen.
 
 ### Absicherung / Korrektheit
+- Fachliche Differenzierung Kontakt-Mail vs. Login-Mail:
+  - `auth_user_id == null`: E-Mail ist wieder normal in den Stammdaten editierbar und wird über `UpdateMitgliedAsync` gespeichert.
+  - `auth_user_id != null`: E-Mail bleibt im normalen Bearbeiten gesperrt (keine Stammdaten-Änderung).
 - Button/Flow ist nur sichtbar/aktiv, wenn das angezeigte Mitglied dem aktuell eingeloggten Auth-User entspricht (`mitglied.auth_user_id == current user id`).
   - verhindert den fachlich falschen Eindruck, man könne die Auth-Mail eines fremden Mitglieds ändern.
 - Verifikation gilt nur dann als erfolgreich, wenn Supabase nach `VerifyOTP(EmailChange)` die neue E-Mail im Session-User auch tatsächlich zurückliefert.
   - andernfalls wird ein klarer Hinweis angezeigt (typisch: `secure_email_change` / zusätzliche Bestätigung erforderlich).
+
+- Google/OAuth:
+  - Falls das eigene Konto via Google/OAuth erkannt wird, wird der OTP-Mailänderungs-Flow nicht angeboten (Hinweis in der UI), um keinen falschen Eindruck zu erzeugen.
 
 ### Hinweise
 - Wenn in Supabase `secure_email_change` aktiv ist, kann zusätzlich eine Bestätigung der alten Adresse nötig sein; der App-Flow ist codebasiert vorbereitet, aber projektseitige Einstellungen müssen geprüft werden.
