@@ -9,6 +9,7 @@ namespace KGV.Wpf.ViewModels
     public partial class LoginViewModel : ObservableObject
     {
         public event Action? LoginSucceeded;
+        public event Func<Task<bool>>? PasswordResetRequired;
 
         private readonly IAuthService _authService;
 
@@ -17,6 +18,11 @@ namespace KGV.Wpf.ViewModels
             _authService = authService;
 
             LoginCommand = new AsyncRelayCommand(LoginAsync, CanLogin);
+            StartOtpFlowCommand = new AsyncRelayCommand(StartOtpFlowAsync, CanStartFlow);
+            StartRecoveryFlowCommand = new AsyncRelayCommand(StartRecoveryFlowAsync, CanStartFlow);
+            ResendCodeCommand = new AsyncRelayCommand(ResendCodeAsync, CanResendCode);
+            VerifyCodeCommand = new AsyncRelayCommand(VerifyCodeAsync, CanVerifyCode);
+            CancelAssistanceFlowCommand = new RelayCommand(CancelAssistanceFlow);
         }
 
         [ObservableProperty]
@@ -28,12 +34,58 @@ namespace KGV.Wpf.ViewModels
         [ObservableProperty]
         private string statusMessage = "";
 
+        [ObservableProperty]
+        private string otpCode = "";
+
+        public enum AssistanceFlow
+        {
+            None,
+            Otp,
+            Recovery
+        }
+
+        [ObservableProperty]
+        private AssistanceFlow activeAssistanceFlow = AssistanceFlow.None;
+
+        public bool IsPasswordLoginVisible => ActiveAssistanceFlow == AssistanceFlow.None;
+        public bool IsAssistanceFlowVisible => ActiveAssistanceFlow != AssistanceFlow.None;
+
+        public string AssistanceHeader => ActiveAssistanceFlow switch
+        {
+            AssistanceFlow.Recovery => "Passwort vergessen – Code eingeben",
+            AssistanceFlow.Otp => "OTP – Code eingeben",
+            _ => string.Empty
+        };
+
         public IAsyncRelayCommand LoginCommand { get; }
+        public IAsyncRelayCommand StartOtpFlowCommand { get; }
+        public IAsyncRelayCommand StartRecoveryFlowCommand { get; }
+        public IAsyncRelayCommand ResendCodeCommand { get; }
+        public IAsyncRelayCommand VerifyCodeCommand { get; }
+        public IRelayCommand CancelAssistanceFlowCommand { get; }
 
         private bool CanLogin()
         {
             return !string.IsNullOrWhiteSpace(Email) &&
                    !string.IsNullOrWhiteSpace(Password);
+        }
+
+        private bool CanStartFlow()
+        {
+            return !string.IsNullOrWhiteSpace(Email);
+        }
+
+        private bool CanResendCode()
+        {
+            return ActiveAssistanceFlow != AssistanceFlow.None &&
+                   !string.IsNullOrWhiteSpace(Email);
+        }
+
+        private bool CanVerifyCode()
+        {
+            return ActiveAssistanceFlow != AssistanceFlow.None &&
+                   !string.IsNullOrWhiteSpace(Email) &&
+                   !string.IsNullOrWhiteSpace(OtpCode);
         }
 
         private async Task LoginAsync()
@@ -75,6 +127,142 @@ namespace KGV.Wpf.ViewModels
             {
                 StatusMessage = $"Fehler: {ex.Message}";
             }
+
+        }
+
+        private async Task StartOtpFlowAsync()
+        {
+            StatusMessage = "";
+            ActiveAssistanceFlow = AssistanceFlow.Otp;
+            OtpCode = "";
+
+            var emailTrim = Email.Trim();
+            var ok = await _authService.RequestLoginOtpAsync(emailTrim);
+            StatusMessage = ok
+                ? "OTP wurde per E-Mail gesendet. Bitte Code eingeben."
+                : "OTP konnte nicht gesendet werden.";
+        }
+
+        private async Task StartRecoveryFlowAsync()
+        {
+            StatusMessage = "";
+            ActiveAssistanceFlow = AssistanceFlow.Recovery;
+            OtpCode = "";
+
+            var emailTrim = Email.Trim();
+            var ok = await _authService.RequestRecoveryOtpAsync(emailTrim);
+            StatusMessage = ok
+                ? "Recovery-Code wurde per E-Mail gesendet. Bitte Code eingeben."
+                : "Recovery-Code konnte nicht gesendet werden.";
+        }
+
+        private async Task ResendCodeAsync()
+        {
+            if (ActiveAssistanceFlow == AssistanceFlow.None)
+                return;
+
+            StatusMessage = "";
+            var emailTrim = Email.Trim();
+
+            var ok = ActiveAssistanceFlow == AssistanceFlow.Recovery
+                ? await _authService.RequestRecoveryOtpAsync(emailTrim)
+                : await _authService.RequestLoginOtpAsync(emailTrim);
+
+            StatusMessage = ok ? "Code wurde erneut gesendet." : "Code konnte nicht erneut gesendet werden.";
+        }
+
+        private async Task VerifyCodeAsync()
+        {
+            StatusMessage = "";
+
+            var emailTrim = Email.Trim();
+            var otpTrim = OtpCode.Trim();
+
+            if (string.IsNullOrWhiteSpace(emailTrim) || string.IsNullOrWhiteSpace(otpTrim))
+            {
+                StatusMessage = "E‑Mail oder Code leer.";
+                return;
+            }
+
+            bool verified;
+            try
+            {
+                verified = ActiveAssistanceFlow == AssistanceFlow.Recovery
+                    ? await _authService.BeginPasswordResetFromRecoveryOtpAsync(emailTrim, otpTrim)
+                    : await _authService.BeginPasswordResetFromLoginOtpAsync(emailTrim, otpTrim);
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Fehler: {ex.Message}";
+                return;
+            }
+
+            if (!verified)
+            {
+                StatusMessage = "Code ist ungültig oder abgelaufen.";
+                return;
+            }
+
+            var handler = PasswordResetRequired;
+            if (handler == null)
+            {
+                await _authService.CancelPasswordResetSessionAsync();
+                StatusMessage = "Reset-Dialog ist nicht verfügbar.";
+                return;
+            }
+
+            bool resetOk;
+            try
+            {
+                resetOk = await handler();
+            }
+            finally
+            {
+                // In jedem Fall sicherstellen, dass keine temporäre Session „liegen bleibt“.
+                await _authService.CancelPasswordResetSessionAsync();
+            }
+
+            OtpCode = "";
+            ActiveAssistanceFlow = AssistanceFlow.None;
+
+            StatusMessage = resetOk
+                ? "Passwort wurde gesetzt. Bitte mit neuem Passwort anmelden."
+                : "Passwort-Reset abgebrochen.";
+        }
+
+        private void CancelAssistanceFlow()
+        {
+            OtpCode = "";
+            ActiveAssistanceFlow = AssistanceFlow.None;
+            StatusMessage = "";
+        }
+
+        partial void OnEmailChanged(string value)
+        {
+            LoginCommand.NotifyCanExecuteChanged();
+            StartOtpFlowCommand.NotifyCanExecuteChanged();
+            StartRecoveryFlowCommand.NotifyCanExecuteChanged();
+            ResendCodeCommand.NotifyCanExecuteChanged();
+            VerifyCodeCommand.NotifyCanExecuteChanged();
+        }
+
+        partial void OnPasswordChanged(string value)
+        {
+            LoginCommand.NotifyCanExecuteChanged();
+        }
+
+        partial void OnOtpCodeChanged(string value)
+        {
+            VerifyCodeCommand.NotifyCanExecuteChanged();
+        }
+
+        partial void OnActiveAssistanceFlowChanged(AssistanceFlow value)
+        {
+            OnPropertyChanged(nameof(IsPasswordLoginVisible));
+            OnPropertyChanged(nameof(IsAssistanceFlowVisible));
+            OnPropertyChanged(nameof(AssistanceHeader));
+            ResendCodeCommand.NotifyCanExecuteChanged();
+            VerifyCodeCommand.NotifyCanExecuteChanged();
         }
     }
 }

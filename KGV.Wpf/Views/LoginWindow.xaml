@@ -3,11 +3,17 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:KGV.Wpf.Helpers"
         xmlns:vm="clr-namespace:KGV.Wpf.ViewModels"
-        Title="Login" Height="250" Width="400"
+        Title="Login" Height="360" Width="400"
         KeyDown="Window_KeyDown">
+
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+    </Window.Resources>
 
     <Grid Margin="20">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto" MinHeight="41"/>
@@ -20,7 +26,8 @@
                  Text="{Binding Email, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
 
         <!-- PasswordBox + TextBox Overlay -->
-        <Grid Grid.Row="1" Margin="0,0,0,10">
+        <Grid Grid.Row="1" Margin="0,0,0,10"
+              Visibility="{Binding IsPasswordLoginVisible, Converter={StaticResource BoolToVisibility}}">
             <PasswordBox x:Name="PasswordBox"
                          PasswordChanged="PasswordBox_PasswordChanged"
                          Width="Auto" Height="30" />
@@ -36,12 +43,38 @@
                     Click="TogglePasswordVisibility_Click"/>
         </Grid>
 
-        <!-- Login Button -->
-        <Button Grid.Row="2" Content="Login"
-                Style="{StaticResource PrimaryButton}"
-                Command="{Binding LoginCommand}" Margin="0,2,0,3" />
+        <TextBlock Grid.Row="2" Margin="0,0,0,5"
+                   Text="{Binding AssistanceHeader}"
+                   Visibility="{Binding IsAssistanceFlowVisible, Converter={StaticResource BoolToVisibility}}" />
+
+        <TextBox Grid.Row="3" Margin="0,0,0,10"
+                 local:WatermarkHelper.Watermark="Code"
+                 Text="{Binding OtpCode, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                 Visibility="{Binding IsAssistanceFlowVisible, Converter={StaticResource BoolToVisibility}}" />
+
+        <!-- Buttons -->
+        <StackPanel Grid.Row="4" Orientation="Vertical">
+            <Button Content="Login"
+                    Style="{StaticResource PrimaryButton}"
+                    Command="{Binding LoginCommand}" Margin="0,2,0,3"
+                    Visibility="{Binding IsPasswordLoginVisible, Converter={StaticResource BoolToVisibility}}" />
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center"
+                        Visibility="{Binding IsPasswordLoginVisible, Converter={StaticResource BoolToVisibility}}">
+                <Button Content="Mit OTP-Code" Command="{Binding StartOtpFlowCommand}" Margin="0,0,10,0" />
+                <Button Content="Passwort vergessen" Command="{Binding StartRecoveryFlowCommand}" />
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center"
+                        Visibility="{Binding IsAssistanceFlowVisible, Converter={StaticResource BoolToVisibility}}">
+                <Button Content="Code prüfen" Style="{StaticResource PrimaryButton}"
+                        Command="{Binding VerifyCodeCommand}" Margin="0,0,10,0" />
+                <Button Content="Code erneut senden" Command="{Binding ResendCodeCommand}" Margin="0,0,10,0" />
+                <Button Content="Zurück" Command="{Binding CancelAssistanceFlowCommand}" />
+            </StackPanel>
+        </StackPanel>
 
         <!-- Optional Status / Fehlermeldung -->
-        <TextBlock Grid.Row="3" Text="{Binding StatusMessage}" Foreground="Red"/>
+        <TextBlock Grid.Row="5" Text="{Binding StatusMessage}" Foreground="Red"/>
     </Grid>
 </Window>

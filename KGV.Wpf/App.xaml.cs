@@ -16,6 +16,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.IO;
+using System.Threading.Tasks;
 using System.Windows;
 
 namespace KGV.Wpf
@@ -97,6 +98,20 @@ namespace KGV.Wpf
                 {
                     // Setting DialogResult schließt das Window automatisch (bei ShowDialog)
                     loginWindow.DialogResult = true;
+                };
+
+                // OTP/Recovery darf NICHT direkt in die App führen -> immer zuerst Passwort setzen, dann zurück zum Login.
+                loginViewModel.PasswordResetRequired += () =>
+                {
+                    var resetVm = new ResetPasswordViewModel(authService);
+                    var resetWindow = new ResetPasswordWindow
+                    {
+                        Owner = loginWindow,
+                        DataContext = resetVm
+                    };
+
+                    var ok = resetWindow.ShowDialog();
+                    return Task.FromResult(ok == true);
                 };
 
                 var loginOk = loginWindow.ShowDialog();

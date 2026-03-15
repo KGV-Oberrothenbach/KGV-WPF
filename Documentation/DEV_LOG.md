@@ -437,3 +437,18 @@
 ### Hinweise
 - Noch kein Umbau des OTP-Dialogs; Passwort-Login bleibt bestehen.
 - Session-Restore ist defensiv: bei Fehlern wird lokal auf Login zurückgefallen.
+
+---
+
+## 2026-03-15 – WPF Login: OTP/Recovery nur für Passwort-Neusetzen (kein App-Einstieg)
+
+### Erledigt
+- WPF Login-Flow erweitert:
+  - Regulärer Hauptweg bleibt E-Mail + Passwort.
+  - Alternativer OTP-Weg: Code anfordern + Code verifizieren.
+  - „Passwort vergessen“: Recovery-Code anfordern + Code verifizieren.
+- Nach erfolgreicher OTP-/Recovery-Verifikation wird **sofort** ein Passwort-Neusetzen-Dialog geöffnet.
+- Nach erfolgreichem Passwortsetzen wird die Session kontrolliert bereinigt und zum Login zurückgekehrt (keine automatische Weiterleitung ins `MainWindow`).
+
+### Hinweise
+- OTP-/Recovery-Verify wird bewusst ohne Persistenz ausgeführt, damit ein abgebrochener Reset-Flow nicht beim nächsten Start in eine wiederhergestellte Session „durchmarschiert“.

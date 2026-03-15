@@ -18,8 +18,16 @@ namespace KGV.Views
         {
             if (e.Key == Key.Enter && DataContext is LoginViewModel vm)
             {
-                if (vm.LoginCommand.CanExecute(null))
-                    vm.LoginCommand.Execute(null);
+                if (vm.IsAssistanceFlowVisible)
+                {
+                    if (vm.VerifyCodeCommand.CanExecute(null))
+                        vm.VerifyCodeCommand.Execute(null);
+                }
+                else
+                {
+                    if (vm.LoginCommand.CanExecute(null))
+                        vm.LoginCommand.Execute(null);
+                }
             }
         }
 

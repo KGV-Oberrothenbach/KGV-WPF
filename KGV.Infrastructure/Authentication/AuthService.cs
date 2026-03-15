@@ -4,6 +4,7 @@ using KGV.Infrastructure.Models;
 using KGV.Infrastructure.Supabase;
 using Supabase;
 using Supabase.Gotrue.Exceptions;
+using Supabase.Gotrue;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
@@ -83,6 +84,209 @@ namespace KGV.Infrastructure.Authentication
                 _logger?.LogInformation(ex, "TryRestoreSessionAsync failed");
                 return false;
             }
+        }
+
+        private void SuppressSessionPersistence(SupabaseClient client)
+        {
+            try
+            {
+                // Verhindert, dass OTP-/Recovery-Verify eine Session persistent ablegt.
+                client.Auth.SetPersistence(new global::Supabase.DefaultSupabaseSessionHandler());
+            }
+            catch
+            {
+            }
+        }
+
+        private void RestoreSessionPersistence(SupabaseClient client)
+        {
+            try
+            {
+                if (_sessionStore != null)
+                    client.Auth.SetPersistence(new KgvSupabaseSessionHandler(_sessionStore));
+                else
+                    client.Auth.SetPersistence(new global::Supabase.DefaultSupabaseSessionHandler());
+            }
+            catch
+            {
+            }
+        }
+
+        public async Task<bool> RequestLoginOtpAsync(string email)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+                return false;
+
+            email = email.Trim();
+
+            try
+            {
+                var client = await GetClientAsync();
+
+                await client.Auth.SignInWithOtp(new SignInWithPasswordlessEmailOptions(email)
+                {
+                    ShouldCreateUser = false
+                });
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogWarning(ex, "RequestLoginOtpAsync failed for {EmailMasked}", MaskEmail(email));
+                return false;
+            }
+        }
+
+        public async Task<bool> RequestRecoveryOtpAsync(string email)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+                return false;
+
+            email = email.Trim();
+
+            try
+            {
+                var client = await GetClientAsync();
+                await client.Auth.ResetPasswordForEmail(email);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogWarning(ex, "RequestRecoveryOtpAsync failed for {EmailMasked}", MaskEmail(email));
+                return false;
+            }
+        }
+
+        public async Task<bool> BeginPasswordResetFromLoginOtpAsync(string email, string otp)
+        {
+            return await BeginPasswordResetWithOtpAsync(email, otp, global::Supabase.Gotrue.Constants.EmailOtpType.MagicLink);
+        }
+
+        public async Task<bool> BeginPasswordResetFromRecoveryOtpAsync(string email, string otp)
+        {
+            return await BeginPasswordResetWithOtpAsync(email, otp, global::Supabase.Gotrue.Constants.EmailOtpType.Recovery);
+        }
+
+        private async Task<bool> BeginPasswordResetWithOtpAsync(string email, string otp, global::Supabase.Gotrue.Constants.EmailOtpType otpType)
+        {
+            if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(otp))
+                return false;
+
+            email = email.Trim();
+            otp = otp.Trim();
+
+            try
+            {
+                var client = await GetClientAsync();
+
+                SuppressSessionPersistence(client);
+
+                var session = await client.Auth.VerifyOTP(email, otp, otpType);
+                if (session == null)
+                {
+                    RestoreSessionPersistence(client);
+                    return false;
+                }
+
+                // Wichtig: Hier KEINE Rollenauflösung/CurrentUserId setzen.
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogWarning(ex, "BeginPasswordResetWithOtpAsync failed for {EmailMasked}", MaskEmail(email));
+
+                try
+                {
+                    var client = await GetClientAsync();
+                    await client.Auth.SignOut(global::Supabase.Gotrue.Constants.SignOutScope.Local);
+                    RestoreSessionPersistence(client);
+                }
+                catch
+                {
+                }
+
+                return false;
+            }
+        }
+
+        public async Task<bool> CompletePasswordResetAsync(string newPassword)
+        {
+            if (string.IsNullOrWhiteSpace(newPassword))
+                return false;
+
+            newPassword = newPassword.Trim();
+
+            try
+            {
+                var client = await GetClientAsync();
+
+                if (client.Auth.CurrentSession == null)
+                    return false;
+
+                await client.Auth.Update(new UserAttributes { Password = newPassword });
+
+                try
+                {
+                    await client.Auth.SignOut(global::Supabase.Gotrue.Constants.SignOutScope.Local);
+                }
+                catch
+                {
+                }
+
+                try
+                {
+                    _sessionStore?.Clear();
+                }
+                catch
+                {
+                }
+
+                RestoreSessionPersistence(client);
+
+                CurrentUserId = null;
+                IsVorstand = false;
+                IsAdmin = false;
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogWarning(ex, "CompletePasswordResetAsync failed");
+                return false;
+            }
+        }
+
+        public async Task CancelPasswordResetSessionAsync()
+        {
+            try
+            {
+                var client = await GetClientAsync();
+
+                try
+                {
+                    await client.Auth.SignOut(global::Supabase.Gotrue.Constants.SignOutScope.Local);
+                }
+                catch
+                {
+                }
+
+                try
+                {
+                    _sessionStore?.Clear();
+                }
+                catch
+                {
+                }
+
+                RestoreSessionPersistence(client);
+            }
+            catch
+            {
+            }
+
+            CurrentUserId = null;
+            IsVorstand = false;
+            IsAdmin = false;
         }
 
         public async Task<bool> EnsureValidSessionAsync(bool forceRefresh)
