@@ -369,6 +369,11 @@ public partial class MainWindow : Window
         _currentAndroidVersion = android.DisplayVersion;
         _currentAndroidBuild = android.BuildVersion;
 
+        if (!string.Equals(_currentWpfVersion.DisplayVersion, _currentAndroidVersion.DisplayVersion, StringComparison.OrdinalIgnoreCase))
+        {
+            AppendLog($"WARNUNG: Windows/Android Versionsstände laufen auseinander: Windows={_currentWpfVersion.DisplayVersion}, Android={_currentAndroidVersion.DisplayVersion}.");
+        }
+
         var nextWpf = _currentWpfVersion.IncrementPatch();
         var nextAndroid = _currentAndroidVersion.IncrementPatch(_currentAndroidBuild + 1);
 
