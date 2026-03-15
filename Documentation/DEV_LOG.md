@@ -507,3 +507,18 @@
 
 ### Hinweise
 - Wenn in Supabase `secure_email_change` aktiv ist, kann zusätzlich eine Bestätigung der alten Adresse nötig sein; der App-Flow ist codebasiert vorbereitet, aber projektseitige Einstellungen müssen geprüft werden.
+
+---
+
+## 2026-03-15 – Release Manager: gemeinsamer Windows/Android Master-Release (Umbau)
+
+### Erledigt
+- `Documentation/releases.json` wird durch den ReleaseManager nun als **Master-Release-Liste** gelesen/geschrieben (1 Release-Version, mehrere Plattformen).
+  - Abwärtskompatibel: altes JSON-Format (nur Release Notes) wird beim Lesen weiterhin akzeptiert und mit Default-Plattformen gemappt.
+- ReleaseManager speichert beim „Release-Text speichern“ zusätzlich Plattform-Metadaten:
+  - Windows: DirectDownload (wie bisher)
+  - Android: PlayStore (PackageName, Track, PublishingStatus, StoreUrl, ReleaseName, optional VersionCode)
+- Gemeinsame Versionsführung im Workflow:
+  - Bei „Beide“ gilt die Windows-Version als Master-Version und wird auch für Android verwendet.
+- Android-Build im ReleaseManager: Umstellung auf **AAB** und Play-Store-orientiertes `version.json` (kein Endnutzerdownload-Link für Android).
+- Plattform-Status kann nach erfolgreichem Build im Release-Katalog aktualisiert werden (z.B. „gebaut“, „AAB erstellt“).

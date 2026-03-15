@@ -4,6 +4,7 @@
 
 ### Hinzugefügt
 - Release-Workflow im ReleaseManager: finaler Release-Text kann versioniert abgelegt werden (Historie + maschinenlesbare Release-Liste).
+- ReleaseManager: gemeinsamer Master-Release für Windows + Android (Play Store Metadaten, gemeinsame Versionsführung).
 
 ### Geändert
 - Startseite-Verwaltung (Arbeitseinsätze, Termine, Bekanntmachungen): Bearbeiten nur im Neu-/Bearbeiten-Modus, Speichern/Abbrechen am Formularende, Rückfrage bei ungespeicherten Änderungen.

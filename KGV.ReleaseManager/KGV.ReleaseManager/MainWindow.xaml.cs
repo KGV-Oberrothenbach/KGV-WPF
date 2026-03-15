@@ -247,7 +247,31 @@ public partial class MainWindow : Window
             }
 
             var (entry, _) = _releaseNotesService.ParseReleaseNotesText(version, DateTime.Today, fullText);
-            _releaseNotesService.SaveReleaseNotes(repoRoot, entry);
+
+            var includesWpf = WpfOnlyRadioButton.IsChecked == true || BothRadioButton.IsChecked == true;
+            var includesAndroid = AndroidOnlyRadioButton.IsChecked == true || BothRadioButton.IsChecked == true;
+
+            var androidBuild = includesAndroid ? ReadBuildVersion(AndroidBuildTextBox.Text) : (int?)null;
+
+            var windowsPlatform = PlatformReleaseDefaults.CreateWindows(enabled: includesWpf, status: "Entwurf");
+
+            var androidData = includesAndroid
+                ? new AndroidPlatformReleaseData(
+                    PackageName: (AndroidPackageNameTextBox.Text ?? string.Empty).Trim(),
+                    PlayTrack: GetComboValue(AndroidPlayTrackComboBox),
+                    PublishingStatus: GetComboValue(AndroidPublishingStatusComboBox),
+                    StoreUrl: (AndroidStoreUrlTextBox.Text ?? string.Empty).Trim(),
+                    ReleaseName: (AndroidReleaseNameTextBox.Text ?? string.Empty).Trim(),
+                    VersionCode: androidBuild,
+                    AabArtifactPath: null)
+                : null;
+
+            var androidPlatform = PlatformReleaseDefaults.CreateAndroidPlayStore(
+                enabled: includesAndroid,
+                data: androidData,
+                status: includesAndroid ? "Entwurf" : "deaktiviert");
+
+            _releaseNotesService.SaveReleaseNotes(repoRoot, entry, new[] { windowsPlatform, androidPlatform }, masterStatus: "Entwurf");
 
             System.Windows.MessageBox.Show(this, "Release-Text gespeichert.", "Release-Text speichern", MessageBoxButton.OK, MessageBoxImage.Information);
         }
@@ -395,9 +419,27 @@ public partial class MainWindow : Window
                 throw new InvalidOperationException("Der GitHub-Ordner ist ungültig oder existiert nicht.");
             }
 
-            var wpfVersion = includesWpf ? ReadTargetVersion(WpfMajorTextBox.Text, WpfMinorTextBox.Text, WpfPatchTextBox.Text) : null;
-            var androidVersion = includesAndroid ? ReadTargetVersion(AndroidMajorTextBox.Text, AndroidMinorTextBox.Text, AndroidPatchTextBox.Text) : null;
+            // Gemeinsame Versionsführung: Wenn beide Plattformen aktiv sind, gilt die WPF-Version als Master-Version.
+            var masterVersion = includesWpf
+                ? ReadTargetVersion(WpfMajorTextBox.Text, WpfMinorTextBox.Text, WpfPatchTextBox.Text)
+                : ReadTargetVersion(AndroidMajorTextBox.Text, AndroidMinorTextBox.Text, AndroidPatchTextBox.Text);
+
+            var wpfVersion = includesWpf ? masterVersion : null;
+            var androidVersion = includesAndroid ? masterVersion : null;
             var androidBuild = includesAndroid ? ReadBuildVersion(AndroidBuildTextBox.Text) : 0;
+
+            AndroidPlatformReleaseData? androidPlayStore = null;
+            if (includesAndroid)
+            {
+                androidPlayStore = new AndroidPlatformReleaseData(
+                    PackageName: (AndroidPackageNameTextBox.Text ?? string.Empty).Trim(),
+                    PlayTrack: GetComboValue(AndroidPlayTrackComboBox),
+                    PublishingStatus: GetComboValue(AndroidPublishingStatusComboBox),
+                    StoreUrl: (AndroidStoreUrlTextBox.Text ?? string.Empty).Trim(),
+                    ReleaseName: (AndroidReleaseNameTextBox.Text ?? string.Empty).Trim(),
+                    VersionCode: androidBuild,
+                    AabArtifactPath: null);
+            }
 
             var context = new ReleaseContext(
                 RepoRoot: repoRoot,
@@ -418,7 +460,7 @@ public partial class MainWindow : Window
 
             if (includesAndroid)
             {
-                AppendLog($"Android-Version wird auf {androidVersion!.DisplayVersion} (Build {androidBuild}) gesetzt.");
+                AppendLog($"Android-Version wird auf {androidVersion!.DisplayVersion} (VersionCode {androidBuild}) gesetzt.");
                 _csprojVersionService.UpdateAndroidVersion(AndroidCsprojPath, androidVersion, androidBuild);
             }
 
@@ -431,12 +473,44 @@ public partial class MainWindow : Window
             {
                 AppendLog("Windows-Release wird gestartet...");
                 await _wpfReleaseService.RunAsync(context, wpfVersion!, AppendLog);
+
+                try
+                {
+                    var downloadUrl = context.BaseUrl.TrimEnd('/') + "/KGV-Setup.exe";
+                    _releaseNotesService.UpdatePlatformRelease(
+                        repoRoot,
+                        masterVersion.DisplayVersion,
+                        PlatformReleaseDefaults.CreateWindows(
+                            enabled: true,
+                            data: new WindowsPlatformReleaseData(downloadUrl, "KGV-Setup.exe", null, null),
+                            status: "gebaut"));
+                }
+                catch
+                {
+                }
             }
 
             if (includesAndroid)
             {
                 AppendLog("Android-Release wird gestartet...");
-                await _androidReleaseService.RunAsync(context, androidVersion!, androidBuild, AppendLog);
+                if (androidPlayStore == null)
+                    throw new InvalidOperationException("Android Play Store Metadaten fehlen.");
+
+                var androidResult = await _androidReleaseService.RunAsync(context, androidVersion!, androidBuild, androidPlayStore, AppendLog);
+
+                try
+                {
+                    _releaseNotesService.UpdatePlatformRelease(
+                        repoRoot,
+                        masterVersion.DisplayVersion,
+                        PlatformReleaseDefaults.CreateAndroidPlayStore(
+                            enabled: true,
+                            data: androidPlayStore with { AabArtifactPath = androidResult.AabPath },
+                            status: "AAB erstellt"));
+                }
+                catch
+                {
+                }
             }
 
             AppendLog("GitHub-Ordner committen und pushen...");
@@ -468,7 +542,7 @@ public partial class MainWindow : Window
     {
         if (includesWpf && includesAndroid && wpfVersion is not null && androidVersion is not null)
         {
-            return $"Release WPF {wpfVersion.DisplayVersion} + Android {androidVersion.DisplayVersion}";
+            return $"Release {wpfVersion.DisplayVersion} (Windows+Android)";
         }
 
         if (includesWpf && wpfVersion is not null)
@@ -478,10 +552,18 @@ public partial class MainWindow : Window
 
         if (includesAndroid && androidVersion is not null)
         {
-            return $"Android {androidVersion.DisplayVersion} veroeffentlicht";
+            return $"Android {androidVersion.DisplayVersion} (Play Store)";
         }
 
         return "Release aktualisiert";
+    }
+
+    private static string GetComboValue(System.Windows.Controls.ComboBox comboBox)
+    {
+        if (comboBox.SelectedItem is System.Windows.Controls.ComboBoxItem item)
+            return (item.Content?.ToString() ?? string.Empty).Trim();
+
+        return (comboBox.Text ?? string.Empty).Trim();
     }
 
     private static VersionInfo ReadTargetVersion(string majorText, string minorText, string patchText)

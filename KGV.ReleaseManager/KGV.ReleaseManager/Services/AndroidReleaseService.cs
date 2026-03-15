@@ -9,7 +9,13 @@ public sealed class AndroidReleaseService
     private readonly ProcessRunner _processRunner = new();
     private readonly JsonManifestService _jsonManifestService = new();
 
-    public async Task RunAsync(ReleaseContext context, VersionInfo version, int buildNumber, Action<string> log, CancellationToken cancellationToken = default)
+    public async Task<AndroidBuildResult> RunAsync(
+        ReleaseContext context,
+        VersionInfo version,
+        int versionCode,
+        AndroidPlatformReleaseData playStore,
+        Action<string> log,
+        CancellationToken cancellationToken = default)
     {
         var project = Path.Combine(context.RepoRoot, "KGV.Maui", "KGV.Maui.csproj");
         if (!File.Exists(project))
@@ -17,15 +23,17 @@ public sealed class AndroidReleaseService
             throw new FileNotFoundException("MAUI-csproj nicht gefunden.", project);
         }
 
+        if (string.IsNullOrWhiteSpace(playStore.PackageName) || string.IsNullOrWhiteSpace(playStore.PlayTrack) || string.IsNullOrWhiteSpace(playStore.StoreUrl))
+            throw new InvalidOperationException("Android Play Store Metadaten unvollständig (PackageName/Track/StoreUrl).");
+
         var localAndroidRoot = Path.Combine(context.PublishRoot, "android");
         var versionDir = Path.Combine(localAndroidRoot, version.DisplayVersion);
-        var apkName = $"KGV-android-v{version.DisplayVersion}.apk";
+        var aabName = $"KGV-android-v{version.DisplayVersion}.aab";
 
-        var localApkPath = Path.Combine(versionDir, apkName);
+        var localAabPath = Path.Combine(versionDir, aabName);
         var localJsonPath = Path.Combine(versionDir, "version.json");
 
         var gitAndroidDir = Path.Combine(context.GitHubRoot, "android");
-        var gitApkPath = Path.Combine(gitAndroidDir, apkName);
         var gitJsonPath = Path.Combine(gitAndroidDir, "version.json");
 
         var buildOutput = Path.Combine(context.RepoRoot, "artifacts", "android", "publish", version.DisplayVersion);
@@ -42,7 +50,7 @@ public sealed class AndroidReleaseService
         await RunDotnetAsync(context.RepoRoot, $"restore \"{project}\"", log, cancellationToken);
 
         log("dotnet publish (Android)...");
-        var publishArgs = $"publish \"{project}\" -c Release -f net9.0-android -p:AndroidPackageFormat=apk -o \"{buildOutput}\"";
+        var publishArgs = $"publish \"{project}\" -c Release -f net9.0-android -p:AndroidPackageFormat=aab -o \"{buildOutput}\"";
 
         var keystorePath = Environment.GetEnvironmentVariable("KGV_ANDROID_KEYSTORE_PATH");
         if (!string.IsNullOrWhiteSpace(keystorePath))
@@ -66,23 +74,42 @@ public sealed class AndroidReleaseService
 
         await RunDotnetAsync(context.RepoRoot, publishArgs, log, cancellationToken);
 
-        log("APK suchen...");
-        var builtApk = LocateApk(buildOutput);
-        log($"APK gefunden: {builtApk}");
+        log("AAB suchen...");
+        var builtAab = LocateAab(buildOutput);
+        log($"AAB gefunden: {builtAab}");
 
         RecreateDirectory(versionDir);
 
-        File.Copy(builtApk, localApkPath, overwrite: true);
-        File.Copy(builtApk, gitApkPath, overwrite: true);
+        File.Copy(builtAab, localAabPath, overwrite: true);
 
-        var downloadUrl = context.BaseUrl.TrimEnd('/') + "/android/" + apkName;
-        _jsonManifestService.WriteAndroidVersionJson(localJsonPath, version.DisplayVersion, buildNumber, apkName, downloadUrl);
-        _jsonManifestService.WriteAndroidVersionJson(gitJsonPath, version.DisplayVersion, buildNumber, apkName, downloadUrl);
+        _jsonManifestService.WriteAndroidPlayStoreVersionJson(
+            localJsonPath,
+            version.DisplayVersion,
+            versionCode,
+            playStore.PackageName!,
+            playStore.PlayTrack!,
+            playStore.PublishingStatus ?? "unknown",
+            playStore.StoreUrl!,
+            playStore.ReleaseName ?? $"KGV {version.DisplayVersion}");
+
+        _jsonManifestService.WriteAndroidPlayStoreVersionJson(
+            gitJsonPath,
+            version.DisplayVersion,
+            versionCode,
+            playStore.PackageName!,
+            playStore.PlayTrack!,
+            playStore.PublishingStatus ?? "unknown",
+            playStore.StoreUrl!,
+            playStore.ReleaseName ?? $"KGV {version.DisplayVersion}");
 
         TryCopyReleasesJson(context, log);
 
         CleanupOldVersionDirectories(localAndroidRoot, context.KeepCount);
-        CleanupOldGitApks(gitAndroidDir, context.KeepCount);
+
+        return new AndroidBuildResult(
+            DisplayVersion: version.DisplayVersion,
+            VersionCode: versionCode,
+            AabPath: localAabPath);
     }
 
     private static void TryCopyReleasesJson(ReleaseContext context, Action<string> log)
@@ -125,17 +152,15 @@ public sealed class AndroidReleaseService
         Directory.CreateDirectory(path);
     }
 
-    private static string LocateApk(string buildOutput)
+    private static string LocateAab(string buildOutput)
     {
         static string? FindFirst(string root, string pattern)
         {
             return Directory.EnumerateFiles(root, pattern, SearchOption.AllDirectories).FirstOrDefault();
         }
 
-        return FindFirst(buildOutput, "*-Signed.apk")
-               ?? FindFirst(buildOutput, "*Signed.apk")
-               ?? FindFirst(buildOutput, "*.apk")
-               ?? throw new FileNotFoundException("Keine APK im Build-Output gefunden.");
+        return FindFirst(buildOutput, "*.aab")
+               ?? throw new FileNotFoundException("Keine AAB im Build-Output gefunden.");
     }
 
     private static void CleanupOldVersionDirectories(string localAndroidRoot, int keepCount)
@@ -161,41 +186,5 @@ public sealed class AndroidReleaseService
         }
     }
 
-    private static void CleanupOldGitApks(string gitAndroidDir, int keepCount)
-    {
-        var files = Directory.EnumerateFiles(gitAndroidDir, "KGV-android-v*.apk", SearchOption.TopDirectoryOnly)
-            .Select(f => new FileInfo(f))
-            .Select(f => new
-            {
-                File = f,
-                Version = TryParseVersionFromFileName(f),
-            })
-            .Where(x => x.Version is not null)
-            .OrderByDescending(x => x.Version)
-            .ToList();
-
-        foreach (var item in files.Skip(keepCount))
-        {
-            try
-            {
-                item.File.Delete();
-            }
-            catch
-            {
-                // ignore cleanup errors
-            }
-        }
-    }
-
-    private static Version? TryParseVersionFromFileName(FileInfo file)
-    {
-        var name = Path.GetFileNameWithoutExtension(file.Name);
-        if (!name.StartsWith("KGV-android-v", StringComparison.OrdinalIgnoreCase))
-        {
-            return null;
-        }
-
-        var versionPart = name["KGV-android-v".Length..];
-        return Version.TryParse(versionPart, out var parsed) ? parsed : null;
-    }
+    // Android: keine AABs in GitHubRoot aufräumen, da AAB kein Endnutzer-Download mehr ist.
 }

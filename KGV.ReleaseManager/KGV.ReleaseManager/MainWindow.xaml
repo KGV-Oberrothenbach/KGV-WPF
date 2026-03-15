@@ -98,6 +98,7 @@
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="90" />
@@ -121,6 +122,44 @@
 
                     <TextBlock Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="5" Margin="0,8,0,0" Foreground="#5E6F62"
                                Text="Patch und Build werden beim Laden automatisch auf die nächste Version gesetzt, können aber manuell geändert werden." />
+
+                    <Grid Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="5" Margin="0,14,0,0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="190" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Text="PackageName / ApplicationId" />
+                        <TextBox x:Name="AndroidPackageNameTextBox" Grid.Row="0" Grid.Column="1" Margin="8,0,0,8" Padding="6" />
+
+                        <TextBlock Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Text="Play Track" />
+                        <ComboBox x:Name="AndroidPlayTrackComboBox" Grid.Row="1" Grid.Column="1" Margin="8,0,0,8" Padding="6">
+                            <ComboBoxItem Content="internal" IsSelected="True" />
+                            <ComboBoxItem Content="closed" />
+                            <ComboBoxItem Content="open" />
+                            <ComboBoxItem Content="production" />
+                        </ComboBox>
+
+                        <TextBlock Grid.Row="2" Grid.Column="0" VerticalAlignment="Center" Text="Publishing Status" />
+                        <ComboBox x:Name="AndroidPublishingStatusComboBox" Grid.Row="2" Grid.Column="1" Margin="8,0,0,8" Padding="6">
+                            <ComboBoxItem Content="draft" IsSelected="True" />
+                            <ComboBoxItem Content="inReview" />
+                            <ComboBoxItem Content="published" />
+                        </ComboBox>
+
+                        <TextBlock Grid.Row="3" Grid.Column="0" VerticalAlignment="Center" Text="Store URL" />
+                        <TextBox x:Name="AndroidStoreUrlTextBox" Grid.Row="3" Grid.Column="1" Margin="8,0,0,8" Padding="6" />
+
+                        <TextBlock Grid.Row="4" Grid.Column="0" VerticalAlignment="Center" Text="Release Name" />
+                        <TextBox x:Name="AndroidReleaseNameTextBox" Grid.Row="4" Grid.Column="1" Margin="8,0,0,0" Padding="6" />
+                    </Grid>
                 </Grid>
             </GroupBox>
         </Grid>

@@ -13,6 +13,16 @@ public sealed class ReleaseNotesService
     private const string ReleaseNotesHistoryFileName = "RELEASE_NOTES_HISTORY.md";
     private const string ReleasesJsonFileName = "releases.json";
 
+    private static readonly JsonSerializerOptions JsonReadOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
+
+    private static readonly JsonSerializerOptions JsonWriteOptions = new()
+    {
+        WriteIndented = true
+    };
+
     public string GetDocumentationRoot(string repoRoot)
         => Path.Combine(repoRoot, DocumentationFolderName);
 
@@ -83,10 +93,9 @@ public sealed class ReleaseNotesService
                 return false;
 
             var json = File.ReadAllText(path, Encoding.UTF8);
-            var list = JsonSerializer.Deserialize<List<ReleaseNotesEntry>>(json, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
+
+            var list = TryDeserializeMasterReleases(json)
+                       ?? TryDeserializeLegacyReleases(json)?.Select(MapLegacyRelease).ToList();
 
             return list?.Any(x => string.Equals(x.Version, version, StringComparison.OrdinalIgnoreCase)) == true;
         }
@@ -213,10 +222,9 @@ public sealed class ReleaseNotesService
                 return null;
 
             var text = File.ReadAllText(jsonPath, Encoding.UTF8);
-            var entries = JsonSerializer.Deserialize<List<ReleaseNotesEntry>>(text, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
+
+            var entries = TryDeserializeMasterReleases(text)
+                          ?? TryDeserializeLegacyReleases(text)?.Select(MapLegacyRelease).ToList();
 
             var last = entries?
                 .Where(e => e is not null && !string.IsNullOrWhiteSpace(e.Version))
@@ -232,6 +240,48 @@ public sealed class ReleaseNotesService
         {
             return null;
         }
+    }
+
+    private static List<MasterReleaseEntry>? TryDeserializeMasterReleases(string json)
+    {
+        try
+        {
+            return JsonSerializer.Deserialize<List<MasterReleaseEntry>>(json, JsonReadOptions);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static List<ReleaseNotesEntry>? TryDeserializeLegacyReleases(string json)
+    {
+        try
+        {
+            return JsonSerializer.Deserialize<List<ReleaseNotesEntry>>(json, JsonReadOptions);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static MasterReleaseEntry MapLegacyRelease(ReleaseNotesEntry legacy)
+    {
+        // Legacy-Format kann keine Plattformdaten enthalten. Default: Windows aktiviert, Android deaktiviert.
+        return new MasterReleaseEntry(
+            Version: legacy.Version,
+            ReleaseDate: legacy.ReleaseDate,
+            Title: legacy.Title,
+            ShortText: legacy.ShortText,
+            FullText: legacy.FullText,
+            Categories: legacy.Categories,
+            Status: "veröffentlicht",
+            Platforms: new[]
+            {
+                PlatformReleaseDefaults.CreateWindows(enabled: true, status: "veröffentlicht"),
+                PlatformReleaseDefaults.CreateAndroidPlayStore(enabled: false, status: "deaktiviert")
+            });
     }
 
     public void OpenChangelogInEditor(string repoRoot)
@@ -283,7 +333,45 @@ public sealed class ReleaseNotesService
         Directory.CreateDirectory(docRoot);
 
         UpdateReleaseNotesHistory(repoRoot, entry);
-        UpsertReleasesJson(repoRoot, entry);
+        // Legacy-Aufruf: Plattforminfos sind unbekannt. Default: Windows aktiviert, Android deaktiviert.
+        var master = new MasterReleaseEntry(
+            Version: entry.Version,
+            ReleaseDate: entry.ReleaseDate,
+            Title: entry.Title,
+            ShortText: entry.ShortText,
+            FullText: entry.FullText,
+            Categories: entry.Categories,
+            Status: "Entwurf",
+            Platforms: new[]
+            {
+                PlatformReleaseDefaults.CreateWindows(enabled: true, status: "Entwurf"),
+                PlatformReleaseDefaults.CreateAndroidPlayStore(enabled: false, status: "deaktiviert"),
+            });
+
+        UpsertReleasesJson(repoRoot, master);
+    }
+
+    public void SaveReleaseNotes(string repoRoot, ReleaseNotesEntry entry, PlatformReleaseEntry[] platforms, string masterStatus)
+    {
+        if (string.IsNullOrWhiteSpace(repoRoot) || !Directory.Exists(repoRoot))
+            throw new InvalidOperationException("RepoRoot ist ungültig.");
+
+        var docRoot = GetDocumentationRoot(repoRoot);
+        Directory.CreateDirectory(docRoot);
+
+        UpdateReleaseNotesHistory(repoRoot, entry);
+
+        var master = new MasterReleaseEntry(
+            Version: entry.Version,
+            ReleaseDate: entry.ReleaseDate,
+            Title: entry.Title,
+            ShortText: entry.ShortText,
+            FullText: entry.FullText,
+            Categories: entry.Categories,
+            Status: string.IsNullOrWhiteSpace(masterStatus) ? "Entwurf" : masterStatus.Trim(),
+            Platforms: platforms ?? Array.Empty<PlatformReleaseEntry>());
+
+        UpsertReleasesJson(repoRoot, master);
     }
 
     private void UpdateReleaseNotesHistory(string repoRoot, ReleaseNotesEntry entry)
@@ -301,20 +389,19 @@ public sealed class ReleaseNotesService
         File.WriteAllText(path, updated, Encoding.UTF8);
     }
 
-    private void UpsertReleasesJson(string repoRoot, ReleaseNotesEntry entry)
+    private void UpsertReleasesJson(string repoRoot, MasterReleaseEntry entry)
     {
         var path = GetReleasesJsonPath(repoRoot);
-        List<ReleaseNotesEntry> list;
+        List<MasterReleaseEntry> list;
 
         if (File.Exists(path))
         {
             var json = File.ReadAllText(path, Encoding.UTF8);
             try
             {
-                list = JsonSerializer.Deserialize<List<ReleaseNotesEntry>>(json, new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                }) ?? new List<ReleaseNotesEntry>();
+                list = TryDeserializeMasterReleases(json)
+                       ?? TryDeserializeLegacyReleases(json)?.Select(MapLegacyRelease).ToList()
+                       ?? new List<MasterReleaseEntry>();
             }
             catch (Exception ex)
             {
@@ -323,12 +410,19 @@ public sealed class ReleaseNotesService
         }
         else
         {
-            list = new List<ReleaseNotesEntry>();
+            list = new List<MasterReleaseEntry>();
         }
 
         var index = list.FindIndex(x => string.Equals(x.Version, entry.Version, StringComparison.OrdinalIgnoreCase));
         if (index >= 0)
-            list[index] = entry;
+        {
+            var existing = list[index];
+
+            // Plattformdaten möglichst erhalten, wenn der neue Eintrag keine/zu wenige Plattformen mitbringt.
+            var platforms = (entry.Platforms?.Length ?? 0) > 0 ? entry.Platforms : existing.Platforms;
+
+            list[index] = entry with { Platforms = platforms };
+        }
         else
             list.Add(entry);
 
@@ -338,12 +432,45 @@ public sealed class ReleaseNotesService
             .ThenByDescending(x => x.Version, StringComparer.Ordinal)
             .ToList();
 
-        var outJson = JsonSerializer.Serialize(list, new JsonSerializerOptions
-        {
-            WriteIndented = true
-        });
+        var outJson = JsonSerializer.Serialize(list, JsonWriteOptions);
 
         File.WriteAllText(path, outJson + "\n", Encoding.UTF8);
+    }
+
+    public void UpdatePlatformRelease(string repoRoot, string version, PlatformReleaseEntry platformRelease)
+    {
+        if (string.IsNullOrWhiteSpace(repoRoot) || !Directory.Exists(repoRoot))
+            throw new InvalidOperationException("RepoRoot ist ungültig.");
+
+        if (string.IsNullOrWhiteSpace(version))
+            throw new InvalidOperationException("Version fehlt.");
+
+        var path = GetReleasesJsonPath(repoRoot);
+        if (!File.Exists(path))
+            return;
+
+        var json = File.ReadAllText(path, Encoding.UTF8);
+        var list = TryDeserializeMasterReleases(json)
+                   ?? TryDeserializeLegacyReleases(json)?.Select(MapLegacyRelease).ToList();
+
+        if (list == null)
+            return;
+
+        var idx = list.FindIndex(x => string.Equals(x.Version, version, StringComparison.OrdinalIgnoreCase));
+        if (idx < 0)
+            return;
+
+        var existing = list[idx];
+        var updatedPlatforms = (existing.Platforms ?? Array.Empty<PlatformReleaseEntry>()).ToList();
+        var pIdx = updatedPlatforms.FindIndex(p => string.Equals(p.Platform, platformRelease.Platform, StringComparison.OrdinalIgnoreCase));
+        if (pIdx >= 0)
+            updatedPlatforms[pIdx] = platformRelease;
+        else
+            updatedPlatforms.Add(platformRelease);
+
+        list[idx] = existing with { Platforms = updatedPlatforms.ToArray() };
+
+        File.WriteAllText(path, JsonSerializer.Serialize(list, JsonWriteOptions) + "\n", Encoding.UTF8);
     }
 
     private static string UpsertMarkdownSection(string markdown, string sectionHeader, string newSection)

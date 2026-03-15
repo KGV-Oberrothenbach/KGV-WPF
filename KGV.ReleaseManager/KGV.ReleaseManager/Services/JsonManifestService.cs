@@ -29,12 +29,40 @@ public sealed class JsonManifestService
         var payload = new
         {
             platform = "android",
+            distribution = "DirectDownload",
             version,
             build,
             fileName,
             downloadUrl,
             mandatory = false,
             notes = "Neue Android-Version",
+        };
+
+        WriteJson(outputPath, payload);
+    }
+
+    public void WriteAndroidPlayStoreVersionJson(
+        string outputPath,
+        string version,
+        int versionCode,
+        string packageName,
+        string playTrack,
+        string publishingStatus,
+        string storeUrl,
+        string releaseName)
+    {
+        var payload = new
+        {
+            platform = "android",
+            distribution = "PlayStore",
+            version,
+            versionCode,
+            packageName,
+            playTrack,
+            publishingStatus,
+            storeUrl,
+            releaseName,
+            notes = "Neue Android-Version (Google Play Store)",
         };
 
         WriteJson(outputPath, payload);
