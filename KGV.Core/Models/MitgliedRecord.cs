@@ -14,6 +14,12 @@ namespace KGV.Core.Models
         [Column("email")]
         public string? Email { get; set; }
 
+        [Column("email_info_einwilligung")]
+        public bool EmailInfoEinwilligung { get; set; }
+
+        [Column("email_rechnung_einwilligung")]
+        public bool EmailRechnungEinwilligung { get; set; }
+
         [Column("vorname")]
         public string? Vorname { get; set; }
 

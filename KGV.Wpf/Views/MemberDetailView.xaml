@@ -244,6 +244,7 @@
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
                         <StackPanel Grid.Row="0" Margin="5">
@@ -306,6 +307,14 @@
                         <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" Margin="5">
                             <TextBlock Text="E-Mail"/>
                             <TextBox Text="{Binding SelectedMember.Email, UpdateSourceTrigger=PropertyChanged}"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="2" Grid.Column="0" Margin="5">
+                            <CheckBox Content="E-Mail-Info" IsChecked="{Binding SelectedMember.EmailInfoEinwilligung, UpdateSourceTrigger=PropertyChanged}" />
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="2" Grid.Column="1" Margin="5">
+                            <CheckBox Content="E-Mail-Rechnung" IsChecked="{Binding SelectedMember.EmailRechnungEinwilligung, UpdateSourceTrigger=PropertyChanged}" />
                         </StackPanel>
                     </Grid>
                 </GroupBox>

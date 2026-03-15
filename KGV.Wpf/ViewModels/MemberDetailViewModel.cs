@@ -262,6 +262,8 @@ namespace KGV.Wpf.ViewModels
                 Telefon = rec.Telefon ?? string.Empty,
                 Mobilnummer = rec.Handy ?? string.Empty,
                 Email = rec.Email ?? string.Empty,
+                EmailInfoEinwilligung = rec.EmailInfoEinwilligung,
+                EmailRechnungEinwilligung = rec.EmailRechnungEinwilligung,
                 Bemerkungen = rec.Bemerkung ?? string.Empty,
                 WhatsappEinwilligung = rec.WhatsappEinwilligung,
                 MitgliedSeit = rec.MitgliedSeit,
@@ -308,10 +310,20 @@ namespace KGV.Wpf.ViewModels
                 return;
             }
 
-            var created = await _supabaseService.CreateNebenmitgliedAsync(SelectedMember.Id, dlg.Vorname.Trim(), dlg.Nachname.Trim(), dlg.AdresseUebernehmen);
+            MitgliedRecord? created;
+            try
+            {
+                created = await _supabaseService.CreateNebenmitgliedAsync(SelectedMember.Id, dlg.Vorname.Trim(), dlg.Nachname.Trim(), dlg.AdresseUebernehmen);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Nebenmitglied konnte nicht angelegt werden:\n\n{ex.Message}", "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
             if (created == null)
             {
-                MessageBox.Show("Nebenmitglied konnte nicht angelegt werden.", "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show("Nebenmitglied konnte nicht angelegt werden (kein Datensatz zurückgegeben).", "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
 
@@ -344,6 +356,8 @@ namespace KGV.Wpf.ViewModels
             SelectedMember.Telefon = rec.Telefon ?? "";
             SelectedMember.Mobilnummer = rec.Handy ?? "";   // ✅ FIX
             SelectedMember.Email = rec.Email ?? "";
+            SelectedMember.EmailInfoEinwilligung = rec.EmailInfoEinwilligung;
+            SelectedMember.EmailRechnungEinwilligung = rec.EmailRechnungEinwilligung;
 
             SelectedMember.Bemerkungen = rec.Bemerkung ?? "";
             SelectedMember.WhatsappEinwilligung = rec.WhatsappEinwilligung;
@@ -352,7 +366,7 @@ namespace KGV.Wpf.ViewModels
             SelectedMember.MitgliedEnde = rec.MitgliedEnde;
 
             SelectedMember.Role = rec.Role ?? "";
-                SelectedMember.ArbeitsstundenAltersregelTyp = rec.ArbeitsstundenAltersregelTyp ?? "keine";
+            SelectedMember.ArbeitsstundenAltersregelTyp = rec.ArbeitsstundenAltersregelTyp ?? "keine";
 
             IsHauptmitglied = rec.HauptmitgliedId == null;
 

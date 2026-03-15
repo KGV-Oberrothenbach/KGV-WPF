@@ -130,6 +130,8 @@ namespace KGV.Wpf.ViewModels
 
             SelectedMember.Telefon = rec.Telefon ?? "";
             SelectedMember.Email = rec.Email ?? "";
+            SelectedMember.EmailInfoEinwilligung = rec.EmailInfoEinwilligung;
+            SelectedMember.EmailRechnungEinwilligung = rec.EmailRechnungEinwilligung;
 
             SelectedMember.Bemerkungen = rec.Bemerkung ?? "";
             SelectedMember.WhatsappEinwilligung = rec.WhatsappEinwilligung;

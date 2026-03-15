@@ -12,6 +12,7 @@ using Supabase.Postgrest.Exceptions;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -1951,6 +1952,15 @@ namespace KGV.Infrastructure.Services
                 await InitializeAsync();
                 if (_client == null) return null;
 
+                if (hauptmitgliedId <= 0)
+                    throw new InvalidOperationException("HauptmitgliedId fehlt.");
+
+                if (string.IsNullOrWhiteSpace(vorname) || string.IsNullOrWhiteSpace(nachname))
+                    throw new InvalidOperationException("Vorname/Nachname fehlen.");
+
+                vorname = vorname.Trim();
+                nachname = nachname.Trim();
+
                 var main = await _client
                     .From<MitgliedRecord>()
                     .Where(m => m.Id == hauptmitgliedId)
@@ -1964,6 +1974,8 @@ namespace KGV.Infrastructure.Services
                     Name = nachname,
                     HauptmitgliedId = hauptmitgliedId,
                     WhatsappEinwilligung = false,
+                    EmailInfoEinwilligung = false,
+                    EmailRechnungEinwilligung = false,
                     Aktiv = true,
                     Role = "user",
                     MitgliedSeit = DateTime.SpecifyKind(DateTime.Today.AddHours(12), DateTimeKind.Unspecified)
@@ -1976,16 +1988,31 @@ namespace KGV.Infrastructure.Services
                     rec.Ort = main.Ort;
                     rec.Telefon = main.Telefon;
                     rec.Handy = main.Handy;
-                    rec.Email = main.Email;
                 }
 
                 var insertResp = await _client.From<MitgliedRecord>().Insert(rec);
-                return insertResp?.Models?.FirstOrDefault();
+
+                var created = insertResp?.Models?.FirstOrDefault();
+                if (created == null)
+                    throw new InvalidOperationException("Nebenmitglied konnte nicht angelegt werden (Insert lieferte keinen Datensatz zurück).");
+
+                return created;
+            }
+            catch (PostgrestException pex)
+            {
+                _logger?.LogError(pex, "CreateNebenmitgliedAsync failed: {Message}", pex.Message);
+                TryAppendErrorLog("CreateNebenmitgliedAsync", pex);
+                throw new InvalidOperationException(BuildUserFacingSaveError(pex), pex);
+            }
+            catch (InvalidOperationException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
                 _logger?.LogError(ex, "CreateNebenmitgliedAsync failed");
-                return null;
+                TryAppendErrorLog("CreateNebenmitgliedAsync", ex);
+                throw new InvalidOperationException("Nebenmitglied konnte nicht angelegt werden.", ex);
             }
         }
 
@@ -2933,6 +2960,8 @@ namespace KGV.Infrastructure.Services
                 record.Handy = dto.Mobilnummer;
                 record.Bemerkung = dto.Bemerkungen;
                 record.WhatsappEinwilligung = dto.WhatsappEinwilligung;
+                record.EmailInfoEinwilligung = dto.EmailInfoEinwilligung;
+                record.EmailRechnungEinwilligung = dto.EmailRechnungEinwilligung;
 
                 // Pflichtstunden-/Altersregel läuft fachlich über das Hauptmitglied.
                 // UI steuert, ob das Feld beim Nebenmitglied editierbar ist; Service mappt es nur durch.
@@ -2960,6 +2989,22 @@ namespace KGV.Infrastructure.Services
             {
                 _logger?.LogError(ex, "UpdateMitgliedAsync failed");
                 return false;
+            }
+        }
+
+        private static void TryAppendErrorLog(string context, Exception ex)
+        {
+            try
+            {
+                var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "KGV");
+                Directory.CreateDirectory(dir);
+                var file = Path.Combine(dir, "error.log");
+
+                var text = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {context}\n{ex}\n\n";
+                File.AppendAllText(file, text);
+            }
+            catch
+            {
             }
         }
 

@@ -117,6 +117,20 @@ namespace KGV.Core.Models
             set => SetField(ref _email, value ?? "", nameof(Email), nameof(DisplayName));
         }
 
+        private bool _emailInfoEinwilligung;
+        public bool EmailInfoEinwilligung
+        {
+            get => _emailInfoEinwilligung;
+            set => SetField(ref _emailInfoEinwilligung, value, nameof(EmailInfoEinwilligung));
+        }
+
+        private bool _emailRechnungEinwilligung;
+        public bool EmailRechnungEinwilligung
+        {
+            get => _emailRechnungEinwilligung;
+            set => SetField(ref _emailRechnungEinwilligung, value, nameof(EmailRechnungEinwilligung));
+        }
+
         private string _bemerkungen = "";
         public string Bemerkungen
         {
@@ -221,6 +235,8 @@ namespace KGV.Core.Models
                 Telefon = other.Telefon;
                 Mobilnummer = other.Mobilnummer;
                 Email = other.Email;
+                EmailInfoEinwilligung = other.EmailInfoEinwilligung;
+                EmailRechnungEinwilligung = other.EmailRechnungEinwilligung;
 
                 Bemerkungen = other.Bemerkungen;
                 WhatsappEinwilligung = other.WhatsappEinwilligung;
@@ -256,6 +272,8 @@ namespace KGV.Core.Models
                 string.Equals(Telefon ?? "", other.Telefon ?? "", StringComparison.Ordinal) &&
                 string.Equals(Mobilnummer ?? "", other.Mobilnummer ?? "", StringComparison.Ordinal) &&
                 string.Equals(Email ?? "", other.Email ?? "", StringComparison.Ordinal) &&
+                EmailInfoEinwilligung == other.EmailInfoEinwilligung &&
+                EmailRechnungEinwilligung == other.EmailRechnungEinwilligung &&
                 string.Equals(Bemerkungen ?? "", other.Bemerkungen ?? "", StringComparison.Ordinal) &&
                 WhatsappEinwilligung == other.WhatsappEinwilligung &&
                 MitgliedSeit == other.MitgliedSeit &&

@@ -464,3 +464,19 @@
 
 ### Hinweise
 - Für Google OAuth muss die Redirect-URL in Supabase/Google-Konfiguration erlaubt sein (siehe ToDos im Prompt 3/3 Ergebnis).
+
+---
+
+## 2026-03-15 – Stammdaten Kontakt erweitert + Nebenmitglied-Anlage repariert
+
+### Erledigt
+- Stammdaten → Kontakt: zwei neue Felder ergänzt und End-to-End durchgezogen:
+  - `email_info_einwilligung` (Checkbox „E-Mail-Info“)
+  - `email_rechnung_einwilligung` (Checkbox „E-Mail-Rechnung“)
+  - Default jeweils `false`.
+- Nebenmitglied anlegen: Root-Cause sichtbar gemacht und Flow stabilisiert.
+  - Keine Übernahme der E-Mail-Adresse vom Hauptmitglied beim Anlegen (vermeidet typische Unique-Constraint Probleme).
+  - Fehler werden im Service detailliert geloggt (zusätzlich lokale `error.log`) und in der UI als konkrete Ursache angezeigt.
+
+### Hinweise
+- Supabase Migration als Datei ergänzt (`supabase/migrations/...sql`) – ausführen nur falls die Spalten in der DB noch fehlen.
