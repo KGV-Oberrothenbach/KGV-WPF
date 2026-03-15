@@ -523,5 +523,6 @@
 - Zusätzlich: Warnung im ReleaseManager, wenn die aktuell eingelesenen Windows-/Android-Versionen auseinanderlaufen.
 - UI: Fenster breiter/kompakter + vertikales Scrollen, damit alle Bereiche auch bei kleiner Fensterhöhe erreichbar bleiben.
 - Save-Validierung getrennt: „Release-Text speichern“ erzwingt keine Android-Build/VersionCode-Validierung mehr (Android kann als Entwurf ohne AAB gespeichert werden).
+- Start-Validierung getrennt: „Release starten“ leitet fehlenden Android-VersionCode (Build) bei Bedarf automatisch aus der aktuellen csproj ab (Current+1) und startet dann den AAB-Build; keine Prüfung auf bereits vorhandene Artefakte.
 - Android-Build im ReleaseManager: Umstellung auf **AAB** und Play-Store-orientiertes `version.json` (kein Endnutzerdownload-Link für Android).
 - Plattform-Status kann nach erfolgreichem Build im Release-Katalog aktualisiert werden (z.B. „gebaut“, „AAB erstellt“).

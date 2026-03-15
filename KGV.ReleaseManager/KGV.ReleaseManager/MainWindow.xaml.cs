@@ -437,7 +437,7 @@ public partial class MainWindow : Window
 
             var wpfVersion = includesWpf ? masterVersion : null;
             var androidVersion = includesAndroid ? masterVersion : null;
-            var androidBuild = includesAndroid ? ReadBuildVersion(AndroidBuildTextBox.Text) : 0;
+            var androidVersionCode = includesAndroid ? ResolveAndroidVersionCode() : 0;
 
             AndroidPlatformReleaseData? androidPlayStore = null;
             if (includesAndroid)
@@ -448,9 +448,18 @@ public partial class MainWindow : Window
                     PublishingStatus: GetComboValue(AndroidPublishingStatusComboBox),
                     StoreUrl: (AndroidStoreUrlTextBox.Text ?? string.Empty).Trim(),
                     ReleaseName: (AndroidReleaseNameTextBox.Text ?? string.Empty).Trim(),
-                    VersionCode: androidBuild,
+                    VersionCode: androidVersionCode,
                     AabArtifactPath: null);
+
+                ValidateAndroidPreBuild(androidPlayStore);
             }
+
+            var request = new ReleaseStartRequest(
+                IncludesWindows: includesWpf,
+                IncludesAndroid: includesAndroid,
+                MasterVersion: masterVersion,
+                Windows: includesWpf ? new WindowsBuildRequest(wpfVersion!) : null,
+                Android: includesAndroid ? new AndroidBuildRequest(androidVersion!, androidVersionCode, androidPlayStore!) : null);
 
             var context = new ReleaseContext(
                 RepoRoot: repoRoot,
@@ -463,16 +472,16 @@ public partial class MainWindow : Window
                 GitUserEmail: null,
                 KeepCount: 3);
 
-            if (includesWpf)
+            if (request.IncludesWindows)
             {
                 AppendLog($"WPF-Version wird auf {wpfVersion!.DisplayVersion} gesetzt.");
                 _csprojVersionService.UpdateWpfVersion(WpfCsprojPath, wpfVersion);
             }
 
-            if (includesAndroid)
+            if (request.IncludesAndroid)
             {
-                AppendLog($"Android-Version wird auf {androidVersion!.DisplayVersion} (VersionCode {androidBuild}) gesetzt.");
-                _csprojVersionService.UpdateAndroidVersion(AndroidCsprojPath, androidVersion, androidBuild);
+                AppendLog($"Android-Version wird auf {androidVersion!.DisplayVersion} (VersionCode {androidVersionCode}) gesetzt.");
+                _csprojVersionService.UpdateAndroidVersion(AndroidCsprojPath, androidVersion, androidVersionCode);
             }
 
             AppendLog("GitHub-Ordner synchronisieren...");
@@ -480,7 +489,7 @@ public partial class MainWindow : Window
             await _gitRepositoryService.EnsureCleanWorkingTreeAsync(context.GitHubRoot, AppendLog);
             await _gitRepositoryService.PullRebaseAsync(context.GitHubRoot, "origin", "main", AppendLog);
 
-            if (includesWpf)
+            if (request.IncludesWindows)
             {
                 AppendLog("Windows-Release wird gestartet...");
                 await _wpfReleaseService.RunAsync(context, wpfVersion!, AppendLog);
@@ -501,13 +510,13 @@ public partial class MainWindow : Window
                 }
             }
 
-            if (includesAndroid)
+            if (request.IncludesAndroid)
             {
                 AppendLog("Android-Release wird gestartet...");
                 if (androidPlayStore == null)
                     throw new InvalidOperationException("Android Play Store Metadaten fehlen.");
 
-                var androidResult = await _androidReleaseService.RunAsync(context, androidVersion!, androidBuild, androidPlayStore, AppendLog);
+                var androidResult = await _androidReleaseService.RunAsync(context, androidVersion!, androidVersionCode, androidPlayStore, AppendLog);
 
                 try
                 {
@@ -525,13 +534,13 @@ public partial class MainWindow : Window
             }
 
             AppendLog("GitHub-Ordner committen und pushen...");
-            var gitHubCommitMessage = BuildGitHubCommitMessage(includesWpf, includesAndroid, wpfVersion, androidVersion);
+            var gitHubCommitMessage = BuildGitHubCommitMessage(request.IncludesWindows, request.IncludesAndroid, wpfVersion, androidVersion);
             await _gitRepositoryService.CommitAndPushIfNeededAsync(context.GitHubRoot, gitHubCommitMessage, "origin", "main", AppendLog);
 
             if (CommitProjectCheckBox.IsChecked == true)
             {
                 AppendLog("KGV-Projekt wird committed.");
-                await _gitService.CommitAllAsync(repoRoot, includesWpf, includesAndroid, wpfVersion, androidVersion, AppendLog);
+                await _gitService.CommitAllAsync(repoRoot, request.IncludesWindows, request.IncludesAndroid, wpfVersion, androidVersion, AppendLog);
             }
 
             AppendLog("Release erfolgreich abgeschlossen.");
@@ -605,6 +614,49 @@ public partial class MainWindow : Window
         }
 
         return build;
+    }
+
+    private int ResolveAndroidVersionCode()
+    {
+        if (int.TryParse(AndroidBuildTextBox.Text, out var parsed) && parsed > 0)
+            return parsed;
+
+        try
+        {
+            var current = _currentAndroidBuild;
+            if (current <= 0)
+            {
+                var android = _csprojVersionService.ReadAndroidVersion(AndroidCsprojPath);
+                _currentAndroidVersion = android.DisplayVersion;
+                _currentAndroidBuild = android.BuildVersion;
+                current = _currentAndroidBuild;
+            }
+
+            var next = Math.Max(1, current + 1);
+            AndroidBuildTextBox.Text = next.ToString();
+            AppendLog($"Android VersionCode war leer/ungültig – automatisch auf {next} gesetzt.");
+            return next;
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException("Android VersionCode ist ungültig und konnte nicht automatisch ermittelt werden.", ex);
+        }
+    }
+
+    private static void ValidateAndroidPreBuild(AndroidPlatformReleaseData playStore)
+    {
+        if (string.IsNullOrWhiteSpace(playStore.PackageName))
+            throw new InvalidOperationException("Android aktiviert: PackageName / ApplicationId fehlt.");
+
+        if (string.IsNullOrWhiteSpace(playStore.PlayTrack))
+            throw new InvalidOperationException("Android aktiviert: Play Track fehlt.");
+
+        var track = playStore.PlayTrack.Trim().ToLowerInvariant();
+        if (track is not ("internal" or "closed" or "open" or "production"))
+            throw new InvalidOperationException($"Android aktiviert: Play Track ist ungültig: '{playStore.PlayTrack}'.");
+
+        if (string.IsNullOrWhiteSpace(playStore.StoreUrl))
+            throw new InvalidOperationException("Android aktiviert: Store URL fehlt.");
     }
 
     private void SetUiEnabled(bool enabled)
