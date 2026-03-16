@@ -235,6 +235,9 @@
 - Supabase Edge Function `kgv-invite-user` so korrigiert, dass Admin-Einladungen ausschließlich über den OTP-/E-Mail-Invite laufen.
 - Provider-/Google-/OAuth-Logik aus dem Admin-Invite entfernt; `inviteMethod="otp"` wird ausgewertet.
 - Logging/Fehlerantworten fachlich bereinigt (keine technischen Rohmeldungen nach außen).
+
+### Ergänzt
+- Serverseitiges Diagnoselogging für OTP-Invites ausgebaut (Request-Payload gekürzt/maskiert, gewählter Codepfad, Supabase-Error klassifiziert), ohne technische Rohmeldungen an den Client zu geben.
 - Android Icon
   - `KGV.Maui/Resources/AppIcon/appicon.png` (Quelle: `Logo.png`)
   - `KGV.Maui/Resources/AppIcon/appicon.svg` (entfernt)
