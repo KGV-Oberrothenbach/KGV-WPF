@@ -448,8 +448,18 @@ namespace KGV.Wpf.ViewModels
                                     MessageBoxImage.Error);
                                 break;
 
+                            case InviteUserAccountOutcome.Error:
+                                MessageBox.Show(
+                                    string.IsNullOrWhiteSpace(invite.Message)
+                                        ? "Das Nutzerkonto konnte nicht per OTP eingeladen werden."
+                                        : invite.Message,
+                                    "Nutzer hinzufügen",
+                                    MessageBoxButton.OK,
+                                    MessageBoxImage.Error);
+                                break;
+
                             default:
-                                MessageBox.Show(invite.Message, "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+                                MessageBox.Show("Das Nutzerkonto konnte nicht per OTP eingeladen werden.", "Nutzer hinzufügen", MessageBoxButton.OK, MessageBoxImage.Error);
                                 break;
                         }
 

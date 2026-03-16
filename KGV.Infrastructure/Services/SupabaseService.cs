@@ -796,6 +796,8 @@ namespace KGV.Infrastructure.Services
 
                 var requestUrl = $"{urlBase}/functions/v1/kgv-invite-user";
 
+                Debug.WriteLine($"[kgv-invite-user] RequestUrl={requestUrl} mitgliedId={mitgliedId} role={role}");
+
                 using var req = new HttpRequestMessage(HttpMethod.Post, requestUrl);
 
                 // Access Token aus der aktuellen Supabase-Session (JWT) ermitteln.
@@ -816,7 +818,9 @@ namespace KGV.Infrastructure.Services
 
                 req.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
-                var payload = JsonSerializer.Serialize(new { mitgliedId, role });
+                // Admin-Flow: ausschließlich OTP/E-Mail – kein Google/OAuth in diesem Pfad.
+                // Das Feld wird serverseitig optional ausgewertet; unbekannte Felder werden ignoriert.
+                var payload = JsonSerializer.Serialize(new { mitgliedId, role, inviteMethod = "otp" });
                 req.Content = new StringContent(payload, Encoding.UTF8, "application/json");
 
                 using var resp = await _http.SendAsync(req);
@@ -824,6 +828,9 @@ namespace KGV.Infrastructure.Services
                 var body = await resp.Content.ReadAsStringAsync();
                 var statusCode = resp.StatusCode;
                 var reasonPhrase = resp.ReasonPhrase;
+
+                Debug.WriteLine($"[kgv-invite-user] HTTP {(int)statusCode} {reasonPhrase}");
+                Debug.WriteLine($"[kgv-invite-user] RawBody={body}");
 
                 // Minimaler Selbstheilungsversuch: wenn der Server explizit "Invalid JWT" meldet,
                 // einmal Session refreshen und Request erneut senden.
@@ -863,14 +870,17 @@ namespace KGV.Infrastructure.Services
 
                 if (string.IsNullOrWhiteSpace(body))
                 {
+                    _logger?.LogWarning("kgv-invite-user returned empty body. HTTP {StatusCode} {ReasonPhrase}", (int)statusCode, reasonPhrase);
                     return new InviteUserAccountResult(
                         InviteUserAccountOutcome.Error,
-                        $"Leere Antwort vom Server. HTTP {(int)statusCode} {reasonPhrase}",
+                        "Das Nutzerkonto konnte nicht per OTP eingeladen werden.",
                         MitgliedId: mitgliedId);
                 }
 
                 if ((int)statusCode < 200 || (int)statusCode >= 300)
                 {
+                    _logger?.LogWarning("kgv-invite-user failed. HTTP {StatusCode} {ReasonPhrase}. Body: {Body}", (int)statusCode, reasonPhrase, body);
+
                     // try to parse structured error
                     try
                     {
@@ -878,11 +888,12 @@ namespace KGV.Infrastructure.Services
                         if (parsed != null)
                         {
                             var parsedModel = parsed.ToModel() with { MitgliedId = mitgliedId };
-                            // minimale Diagnose: HTTP Status + Response Body
-                            return parsedModel with
-                            {
-                                Message = $"HTTP {(int)statusCode} {reasonPhrase}: {parsedModel.Message} | Body: {body}"
-                            };
+
+                            Debug.WriteLine($"[kgv-invite-user] ErrorDTO outcome='{parsed.Outcome}' message='{parsed.Message}' authUserId='{parsed.AuthUserId}'");
+
+                            // UI-Text fachlich sauber halten (keine Rohmeldungen / keine Provider-Details).
+                            var userFacing = BuildUserFacingInviteError(parsedModel.Message, body);
+                            return parsedModel with { Message = userFacing };
                         }
                     }
                     catch
@@ -891,19 +902,43 @@ namespace KGV.Infrastructure.Services
 
                     return new InviteUserAccountResult(
                         InviteUserAccountOutcome.Error,
-                        $"HTTP {(int)statusCode} {reasonPhrase} | Body: {body}",
+                        BuildUserFacingInviteError(null, body),
                         MitgliedId: mitgliedId);
                 }
 
                 var dto = JsonSerializer.Deserialize<InviteUserAccountResultDto>(body, JsonOpts);
                 var model = dto?.ToModel() ?? new InviteUserAccountResult(InviteUserAccountOutcome.Error, "Unerwartete Antwort vom Server.");
+
+                if (dto == null || string.IsNullOrWhiteSpace(dto.Outcome))
+                {
+                    _logger?.LogWarning("Unexpected kgv-invite-user response (missing outcome). Body: {Body}", body);
+                    Debug.WriteLine($"[kgv-invite-user] DTO missing outcome. DTO.Message='{dto?.Message}' AuthUserId='{dto?.AuthUserId}'");
+                }
+                else
+                {
+                    Debug.WriteLine($"[kgv-invite-user] DTO outcome='{dto.Outcome}' message='{dto.Message}' authUserId='{dto.AuthUserId}'");
+                }
+
                 return model with { MitgliedId = mitgliedId };
             }
             catch (Exception ex)
             {
                 _logger?.LogError(ex, "InviteUserAccountForMitgliedAsync failed");
-                return new InviteUserAccountResult(InviteUserAccountOutcome.Error, $"Fehler: {ex.Message}", MitgliedId: mitgliedId);
+                return new InviteUserAccountResult(InviteUserAccountOutcome.Error, "Das Nutzerkonto konnte nicht per OTP eingeladen werden.", MitgliedId: mitgliedId);
             }
+        }
+
+        private static string BuildUserFacingInviteError(string? message, string? rawBody)
+        {
+            var combined = $"{message} {rawBody}";
+
+            if (!string.IsNullOrWhiteSpace(combined)
+                && combined.Contains("not enabled for this sign-in method", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Das Nutzerkonto konnte nicht per OTP eingeladen werden.";
+            }
+
+            return "Das Nutzerkonto konnte nicht per OTP eingeladen werden.";
         }
 
         public async Task<DeleteUserAccountResult> DeleteUserAccountForMitgliedAsync(int mitgliedId)

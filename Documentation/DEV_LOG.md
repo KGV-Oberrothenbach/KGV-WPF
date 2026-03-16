@@ -198,6 +198,15 @@
   - `KGV.Maui/Pages/BekanntmachungenAdminPage.cs`
   - `KGV.Maui/Pages/TermineAdminPage.cs`
   - `KGV.Maui/Pages/ArbeitseinsaetzeAdminPage.cs`
+
+---
+
+## 2026-03-16 – Admin-Flow: „Nutzer hinzufügen“ ausschließlich per OTP/E-Mail
+
+### Erledigt
+- Admin-Flow „Nutzer hinzufügen“ so umgestellt, dass ausschließlich der OTP-/E-Mail-Invite genutzt wird.
+- Google/OAuth wird in diesem Flow nicht mehr geprüft/verwendet (Google-Verknüpfung bleibt Self‑Service nach erfolgreichem Login).
+- Fehlermeldungen im UI fachlich verständlich gemacht und Logging für Invite-Fehler ergänzt.
 - Android Icon
   - `KGV.Maui/Resources/AppIcon/appicon.png` (Quelle: `Logo.png`)
   - `KGV.Maui/Resources/AppIcon/appicon.svg` (entfernt)
