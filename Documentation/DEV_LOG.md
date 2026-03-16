@@ -251,6 +251,7 @@
 
 ### Ergänzt
 - Minimal-Diagnose für verbleibende 401: ClientRequestId als Header durchgereicht, Client+Edge loggen Token-Info (nur Länge/maskiert) + frühe Auth-Entscheidungspfade.
+- Diagnose erweitert: Client loggt FirstCall/Retry direkt vor Send inkl. TokenLength; Edge loggt explizite 401-Gründe (MissingAuthHeader vs. getUser-failed) und `getUser ok`.
 - Android Icon
   - `KGV.Maui/Resources/AppIcon/appicon.png` (Quelle: `Logo.png`)
   - `KGV.Maui/Resources/AppIcon/appicon.svg` (entfernt)

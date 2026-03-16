@@ -828,6 +828,8 @@ namespace KGV.Infrastructure.Services
                 var payload = JsonSerializer.Serialize(new { mitgliedId, role, inviteMethod = "otp" });
                 req.Content = new StringContent(payload, Encoding.UTF8, "application/json");
 
+                Debug.WriteLine($"[kgv-invite-user] SEND FirstCall ClientRequestId={clientRequestId} HasAccessToken=true TokenLength={token.Length}");
+
                 using var resp = await _http.SendAsync(req);
 
                 var body = await resp.Content.ReadAsStringAsync();
@@ -856,6 +858,8 @@ namespace KGV.Infrastructure.Services
 
                         retryReq.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
                         retryReq.Content = new StringContent(payload, Encoding.UTF8, "application/json");
+
+                        Debug.WriteLine($"[kgv-invite-user] SEND Retry ClientRequestId={clientRequestId}-retry HasAccessToken=true TokenLength={refreshedToken.Length}");
 
                         using var retryResp = await _http.SendAsync(retryReq);
                         statusCode = retryResp.StatusCode;

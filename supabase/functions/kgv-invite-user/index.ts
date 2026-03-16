@@ -115,7 +115,7 @@ Deno.serve(async (req: Request) => {
     const bearerTokenLength = isBearer ? authHeader.trim().length - "Bearer ".length : 0;
     console.log("[kgv-invite-user] auth header", { requestId, clientRequestId, hasAuthorizationHeader: !!authHeader, isBearer, bearerTokenLength });
     if (!authHeader) {
-      console.log("[kgv-invite-user] reject: missing auth header", { requestId });
+      console.log("[kgv-invite-user] reject401: missing auth header", { requestId, clientRequestId });
       return json(
         { success: false, outcome: "unauthorized", errorCode: "Unauthorized", message: "Keine Berechtigung." },
         401,
@@ -152,12 +152,19 @@ Deno.serve(async (req: Request) => {
 
     const { data: userData, error: userError } = await supabaseUser.auth.getUser();
     if (userError || !userData.user) {
-      console.log("[kgv-invite-user] reject: invalid session", { requestId, clientRequestId, error: safeErrorInfo(userError) });
+      console.log("[kgv-invite-user] reject401: getUser failed", { requestId, clientRequestId, error: safeErrorInfo(userError) });
       return json(
         { success: false, outcome: "unauthorized", errorCode: "Unauthorized", message: "Keine gültige Session." },
         401,
       );
     }
+
+    console.log("[kgv-invite-user] getUser ok", {
+      requestId,
+      clientRequestId,
+      callerUserId: userData.user.id,
+      callerEmail: maskEmail(userData.user.email),
+    });
 
     const callerUserId = userData.user.id;
     console.log("[kgv-invite-user] caller", { requestId, clientRequestId, callerUserId });
@@ -178,7 +185,7 @@ Deno.serve(async (req: Request) => {
 
     const callerRole = (callerAppUser?.role ?? "").trim().toLowerCase();
     if (callerRole !== "admin" && callerRole !== "vorstand") {
-      console.log("[kgv-invite-user] reject: insufficient role", { requestId, callerRole });
+      console.log("[kgv-invite-user] reject403: insufficient role", { requestId, clientRequestId, callerRole });
       return json(
         { success: false, outcome: "unauthorized", errorCode: "Unauthorized", message: "Keine Berechtigung." },
         403,
