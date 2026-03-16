@@ -238,6 +238,7 @@
 
 ### Ergänzt
 - Serverseitiges Diagnoselogging für OTP-Invites ausgebaut (Request-Payload gekürzt/maskiert, gewählter Codepfad, Supabase-Error klassifiziert), ohne technische Rohmeldungen an den Client zu geben.
+- Bugfix: Log-Ausgabe so korrigiert, dass `userId` erst nach erfolgreicher Auflösung geloggt wird (verhindert Runtime-Error im Invite-Flow).
 
 ---
 

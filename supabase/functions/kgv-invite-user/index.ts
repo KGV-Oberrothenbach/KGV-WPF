@@ -350,8 +350,6 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    console.log("[kgv-invite-user] auth user resolved", { requestId, mitgliedId, userId });
-
     // After OTP send: resolve/create the auth user id (needed for membership linking).
     const userId = await tryFindAuthUserIdByEmail(supabaseAdmin, email, requestId);
     if (!userId) {
@@ -368,6 +366,8 @@ Deno.serve(async (req: Request) => {
         500,
       );
     }
+
+    console.log("[kgv-invite-user] auth user resolved", { requestId, mitgliedId, userId });
 
     const { error: linkMitgliedError } = await supabaseAdmin
       .from("mitglied")
