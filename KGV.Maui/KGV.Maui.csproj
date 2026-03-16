@@ -32,8 +32,10 @@
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)'=='Release'">
-		<!-- Für reale Verteilung explizit eine installierbare APK erzeugen (nicht AAB). -->
-		<AndroidPackageFormat>apk</AndroidPackageFormat>
+		<!-- Play Store Distribution: AAB als Release-Artefakt -->
+		<AndroidPackageFormat>aab</AndroidPackageFormat>
+		<!-- Play-Store-Builds verwenden keinen eigenen Update-Download-/Installationspfad. -->
+		<DefineConstants>$(DefineConstants);KGV_PLAYSTORE</DefineConstants>
 		<!-- Default: kein eigener Keystore. Release wird dann mit Debug-Key signiert (installierbar).
 		     Ein echter Release-Keystore wird ausschließlich über den Publish-Aufruf (z.B. `release_android.bat`) gesetzt. -->
 		<AndroidKeyStore>false</AndroidKeyStore>

@@ -43,8 +43,14 @@ public sealed class AndroidUpdateService : IAndroidUpdateService
         if (DeviceInfo.Platform != DevicePlatform.Android)
             return new UpdateCheckResult(UpdateCheckStatus.NotAvailable, null, "Nicht unterstützt auf dieser Plattform.");
 
+#if KGV_PLAYSTORE
+        _logger.LogDebug("Android update check skipped: Play Store build (updates are store-managed).");
+        return new UpdateCheckResult(UpdateCheckStatus.NotAvailable, null, "Updates erfolgen über Google Play Store.");
+#else
+
         await EnsureCheckedAsync(cancellationToken).ConfigureAwait(false);
         return _result ?? new UpdateCheckResult(UpdateCheckStatus.NotAvailable, null, "Updateprüfung nicht verfügbar.");
+#endif
     }
 
     private Task EnsureCheckedAsync(CancellationToken cancellationToken)

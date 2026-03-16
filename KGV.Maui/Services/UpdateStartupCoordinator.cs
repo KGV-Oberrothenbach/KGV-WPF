@@ -1,5 +1,6 @@
 using KGV.Core.Updates;
 using KGV.Maui.State;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
 using System.Threading;
@@ -14,6 +15,18 @@ public static class UpdateStartupCoordinator
     public static void Start(IServiceProvider services)
     {
         if (services == null) throw new ArgumentNullException(nameof(services));
+
+#if KGV_PLAYSTORE
+        // Play Store-Version: kein eigener Updater/Download-Pfad.
+        var status = services.GetService<AppStatusState>();
+        if (status != null)
+            status.UpdateStatusText = "Updates über Google Play Store";
+
+        var loggerFactory = services.GetService<ILoggerFactory>();
+        loggerFactory?.CreateLogger("UpdateStartupCoordinator")
+            ?.LogInformation("Android updates: Play Store managed (startup coordinator disabled).");
+        return;
+#endif
 
         if (Interlocked.CompareExchange(ref _started, 1, 0) != 0)
             return;

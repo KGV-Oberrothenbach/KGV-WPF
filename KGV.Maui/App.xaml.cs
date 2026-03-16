@@ -5,6 +5,7 @@ using KGV.Core.Interfaces;
 using KGV.Core.Security;
 using KGV.Infrastructure.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 
@@ -25,7 +26,18 @@ public partial class App : Application
         var loginPage = _services.GetRequiredService<Pages.LoginPage>();
         var root = new NavigationPage(loginPage);
 
+        var logger = _services.GetService<ILogger<App>>();
+#if KGV_PLAYSTORE
+        // Play Store-Version: Updates werden durch den Store verwaltet (kein eigener Updater).
+        var status = _services.GetService<AppStatusState>();
+        if (status != null)
+            status.UpdateStatusText = "Updates über Google Play Store";
+
+        logger?.LogInformation("Android updates: Play Store managed (custom updater disabled).");
+#else
+        logger?.LogInformation("Android updates: custom updater enabled (non-PlayStore build).");
         UpdateStartupCoordinator.Start(_services);
+#endif
 
         _ = TryRestoreSessionAndNavigateAsync();
         return new Window(root);

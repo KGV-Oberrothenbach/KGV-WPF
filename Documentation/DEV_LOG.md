@@ -207,6 +207,15 @@
 - Admin-Flow „Nutzer hinzufügen“ so umgestellt, dass ausschließlich der OTP-/E-Mail-Invite genutzt wird.
 - Google/OAuth wird in diesem Flow nicht mehr geprüft/verwendet (Google-Verknüpfung bleibt Self‑Service nach erfolgreichem Login).
 - Fehlermeldungen im UI fachlich verständlich gemacht und Logging für Invite-Fehler ergänzt.
+
+---
+
+## 2026-03-16 – Update-Pfade: Android (Play Store) vs. Windows (WPF)
+
+### Erledigt
+- Android (Play-Store-Verteilung): eigene Update-Download-/Installationsroutine deaktiviert bzw. aus der Release-App entfernt.
+- Windows/WPF: bestehender Updatepfad unverändert beibehalten.
+- Gemeinsame Update-Logik sauber nach Plattform getrennt, inkl. Logging welches Updateverhalten aktiv ist.
 - Android Icon
   - `KGV.Maui/Resources/AppIcon/appicon.png` (Quelle: `Logo.png`)
   - `KGV.Maui/Resources/AppIcon/appicon.svg` (entfernt)
