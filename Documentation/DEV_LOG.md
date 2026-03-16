@@ -226,6 +226,15 @@
 - Settings-Dialog hinzugefügt, über den alle veränderlichen Werte gepflegt und persistiert werden können.
 - Android-Build im Release Manager robustiert: signiertes Release-AAB wird per `dotnet publish` erzeugt (keine VS-Automation), Signing über Settings/Passwortdateien möglich.
 - MainWindow-Layout breiter/kompakter gestaltet, ohne zusätzliche Höhe; Inhalt bleibt vertikal scrollbar.
+
+---
+
+## 2026-03-16 – Edge Function: `kgv-invite-user` OTP-only Admin-Invite
+
+### Erledigt
+- Supabase Edge Function `kgv-invite-user` so korrigiert, dass Admin-Einladungen ausschließlich über den OTP-/E-Mail-Invite laufen.
+- Provider-/Google-/OAuth-Logik aus dem Admin-Invite entfernt; `inviteMethod="otp"` wird ausgewertet.
+- Logging/Fehlerantworten fachlich bereinigt (keine technischen Rohmeldungen nach außen).
 - Android Icon
   - `KGV.Maui/Resources/AppIcon/appicon.png` (Quelle: `Logo.png`)
   - `KGV.Maui/Resources/AppIcon/appicon.svg` (entfernt)
