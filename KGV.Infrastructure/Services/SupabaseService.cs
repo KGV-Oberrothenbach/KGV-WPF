@@ -810,6 +810,8 @@ namespace KGV.Infrastructure.Services
                         MitgliedId: mitgliedId);
                 }
 
+                Debug.WriteLine($"[kgv-invite-user] HasAccessToken=true len={token.Length}");
+
                 req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
                 var anonKey = _clientFactory.Key;
@@ -832,12 +834,11 @@ namespace KGV.Infrastructure.Services
                 Debug.WriteLine($"[kgv-invite-user] HTTP {(int)statusCode} {reasonPhrase}");
                 Debug.WriteLine($"[kgv-invite-user] RawBody={body}");
 
-                // Minimaler Selbstheilungsversuch: wenn der Server explizit "Invalid JWT" meldet,
-                // einmal Session refreshen und Request erneut senden.
-                if ((resp.StatusCode == System.Net.HttpStatusCode.Unauthorized || resp.StatusCode == System.Net.HttpStatusCode.Forbidden)
-                    && !string.IsNullOrWhiteSpace(body)
-                    && body.Contains("Invalid JWT", StringComparison.OrdinalIgnoreCase))
+                // Selbstheilungsversuch: bei 401/403 einmal Session refreshen und Request erneut senden.
+                // (Edge Functions können 401 liefern, ohne dass der Body explizit "Invalid JWT" enthält.)
+                if (resp.StatusCode == System.Net.HttpStatusCode.Unauthorized || resp.StatusCode == System.Net.HttpStatusCode.Forbidden)
                 {
+                    Debug.WriteLine("[kgv-invite-user] 401/403 received – trying session refresh + retry once.");
                     await _authService.EnsureValidSessionAsync(forceRefresh: true);
 
                     var refreshedToken = _client?.Auth?.CurrentSession?.AccessToken;
@@ -856,6 +857,9 @@ namespace KGV.Infrastructure.Services
                         statusCode = retryResp.StatusCode;
                         reasonPhrase = retryResp.ReasonPhrase;
                         body = await retryResp.Content.ReadAsStringAsync();
+
+                        Debug.WriteLine($"[kgv-invite-user] RETRY HTTP {(int)statusCode} {reasonPhrase}");
+                        Debug.WriteLine($"[kgv-invite-user] RETRY RawBody={body}");
 
                         // Wenn Retry weiterhin fehlschlägt, läuft es unten in die normale Fehlerbehandlung.
                         // (Statuscode wird über retryResp genutzt)
@@ -996,10 +1000,10 @@ namespace KGV.Infrastructure.Services
                 Debug.WriteLine($"[kgv-delete-user] HTTP {(int)statusCode} {reasonPhrase}");
                 Debug.WriteLine($"[kgv-delete-user] RawBody={body}");
 
-                if ((resp.StatusCode == System.Net.HttpStatusCode.Unauthorized || resp.StatusCode == System.Net.HttpStatusCode.Forbidden)
-                    && !string.IsNullOrWhiteSpace(body)
-                    && body.Contains("Invalid JWT", StringComparison.OrdinalIgnoreCase))
+                // Selbstheilungsversuch: bei 401/403 einmal Session refreshen und Request erneut senden.
+                if (resp.StatusCode == System.Net.HttpStatusCode.Unauthorized || resp.StatusCode == System.Net.HttpStatusCode.Forbidden)
                 {
+                    Debug.WriteLine("[kgv-delete-user] 401/403 received – trying session refresh + retry once.");
                     await _authService.EnsureValidSessionAsync(forceRefresh: true);
 
                     var refreshedToken = _client?.Auth?.CurrentSession?.AccessToken;
@@ -1018,6 +1022,9 @@ namespace KGV.Infrastructure.Services
                         statusCode = retryResp.StatusCode;
                         reasonPhrase = retryResp.ReasonPhrase;
                         body = await retryResp.Content.ReadAsStringAsync();
+
+                        Debug.WriteLine($"[kgv-delete-user] RETRY HTTP {(int)statusCode} {reasonPhrase}");
+                        Debug.WriteLine($"[kgv-delete-user] RETRY RawBody={body}");
 
                         if (retryResp.IsSuccessStatusCode)
                         {
@@ -1111,7 +1118,19 @@ namespace KGV.Infrastructure.Services
         {
             try
             {
-                await _authService.EnsureValidSessionAsync(forceRefresh: false);
+                // Wichtig: vor geschützten Calls keine abgelaufenen Tokens weiterverwenden.
+                var ok = await _authService.EnsureValidSessionAsync(forceRefresh: false);
+                if (!ok)
+                {
+                    Debug.WriteLine("[auth] EnsureValidSessionAsync(false) returned false – trying force refresh.");
+                    ok = await _authService.EnsureValidSessionAsync(forceRefresh: true);
+                }
+
+                if (!ok)
+                {
+                    Debug.WriteLine("[auth] EnsureValidSessionAsync(true) returned false – no valid session.");
+                    return null;
+                }
 
                 var token = _client?.Auth?.CurrentSession?.AccessToken;
                 if (!string.IsNullOrWhiteSpace(token))
