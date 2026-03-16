@@ -19,6 +19,9 @@ public partial class MainWindow : Window
     private readonly AndroidReleaseService _androidReleaseService = new();
     private readonly FolderPickerService _folderPickerService = new();
     private readonly ReleaseNotesService _releaseNotesService = new();
+    private readonly SettingsService _settingsService = new();
+
+    private ReleaseManagerSettings _settings = ReleaseManagerSettings.CreateDefaults();
 
     private string _loadedChangelogHeader = "## [Unreleased]";
 
@@ -32,6 +35,9 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+
+        _settings = _settingsService.LoadOrDefault();
+        ApplySettingsToWindow(_settings);
         InitializeDefaultPaths();
         Loaded += (_, _) => LoadVersionsSafe();
     }
@@ -44,10 +50,39 @@ public partial class MainWindow : Window
 
     private void InitializeDefaultPaths()
     {
-        var repoRoot = DetectRepoRoot();
+        var detectedRepoRoot = DetectRepoRoot();
+        var repoRoot = FirstNonEmpty(_settings.General.RepoRoot, detectedRepoRoot);
+
         RepoRootTextBox.Text = repoRoot;
-        PublishRootTextBox.Text = DetectPublishRoot();
-        GitHubRootTextBox.Text = DetectGitHubRoot();
+        PublishRootTextBox.Text = FirstNonEmpty(_settings.General.PublishRoot, DetectPublishRoot());
+        GitHubRootTextBox.Text = FirstNonEmpty(_settings.General.GitHubRoot, DetectGitHubRoot());
+
+        // Project path defaults (settings can override)
+        _settings.General.MauiProjectPath ??= Path.Combine(repoRoot, "KGV.Maui", "KGV.Maui.csproj");
+        _settings.General.WpfProjectPath ??= Path.Combine(repoRoot, "KGV.Wpf", "KGV.Wpf.csproj");
+
+        // GitHub defaults (settings can override)
+        _settings.General.BaseUrl ??= "https://kgv-oberrothenbach.github.io/KGV-WPF";
+        _settings.General.GitRemoteUrl ??= "https://KGV-Oberrothenbach@github.com/KGV-Oberrothenbach/KGV-WPF.git";
+        _settings.General.GitCredentialUsername ??= "KGV-Oberrothenbach";
+        _settings.General.GitUserName ??= "KGV-Oberrothenbach";
+    }
+
+    private static string FirstNonEmpty(string? first, string fallback)
+    {
+        var f = (first ?? string.Empty).Trim();
+        return string.IsNullOrWhiteSpace(f) ? fallback : f;
+    }
+
+    private void ApplySettingsToWindow(ReleaseManagerSettings settings)
+    {
+        if (settings?.Ui == null)
+            return;
+
+        if (settings.Ui.WindowWidth > 0)
+            Width = settings.Ui.WindowWidth;
+        if (settings.Ui.WindowHeight > 0)
+            Height = settings.Ui.WindowHeight;
     }
 
     private static string DetectPublishRoot()
@@ -87,9 +122,11 @@ public partial class MainWindow : Window
         return baseDirectory;
     }
 
-    private string WpfCsprojPath => Path.Combine(RepoRootTextBox.Text.Trim(), "KGV.Wpf", "KGV.Wpf.csproj");
+    private string WpfCsprojPath
+        => FirstNonEmpty(_settings.General.WpfProjectPath, Path.Combine(RepoRootTextBox.Text.Trim(), "KGV.Wpf", "KGV.Wpf.csproj"));
 
-    private string AndroidCsprojPath => Path.Combine(RepoRootTextBox.Text.Trim(), "KGV.Maui", "KGV.Maui.csproj");
+    private string AndroidCsprojPath
+        => FirstNonEmpty(_settings.General.MauiProjectPath, Path.Combine(RepoRootTextBox.Text.Trim(), "KGV.Maui", "KGV.Maui.csproj"));
 
     private string GetReleaseNotesTargetVersion()
     {
@@ -145,6 +182,78 @@ public partial class MainWindow : Window
         {
             GitHubRootTextBox.Text = selected;
         }
+    }
+
+    private void OpenSettings_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var editable = CloneSettings(_settings);
+            var wnd = new SettingsWindow(editable)
+            {
+                Owner = this
+            };
+
+            if (wnd.ShowDialog() != true)
+                return;
+
+            _settings = wnd.Settings;
+            _settingsService.Save(_settings);
+
+            ApplySettingsToWindow(_settings);
+            InitializeDefaultPaths();
+            LoadVersionsSafe();
+        }
+        catch (Exception ex)
+        {
+            System.Windows.MessageBox.Show(this, ex.Message, "Einstellungen", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private static ReleaseManagerSettings CloneSettings(ReleaseManagerSettings source)
+    {
+        source ??= ReleaseManagerSettings.CreateDefaults();
+
+        return new ReleaseManagerSettings
+        {
+            General = new GeneralSettings
+            {
+                RepoRoot = source.General?.RepoRoot,
+                PublishRoot = source.General?.PublishRoot,
+                GitHubRoot = source.General?.GitHubRoot,
+                BaseUrl = source.General?.BaseUrl,
+                GitRemoteUrl = source.General?.GitRemoteUrl,
+                GitCredentialUsername = source.General?.GitCredentialUsername,
+                GitUserName = source.General?.GitUserName,
+                GitUserEmail = source.General?.GitUserEmail,
+                KeepCount = source.General?.KeepCount ?? 3,
+                MauiProjectPath = source.General?.MauiProjectPath,
+                WpfProjectPath = source.General?.WpfProjectPath,
+            },
+            Android = new AndroidSettings
+            {
+                DefaultPackageName = source.Android?.DefaultPackageName,
+                DefaultPlayTrack = source.Android?.DefaultPlayTrack,
+                DefaultPublishingStatus = source.Android?.DefaultPublishingStatus,
+                DefaultStoreUrl = source.Android?.DefaultStoreUrl,
+                ReleaseNameStrategy = source.Android?.ReleaseNameStrategy,
+                KeystorePath = source.Android?.KeystorePath,
+                KeystoreAlias = source.Android?.KeystoreAlias,
+                StorePasswordFile = source.Android?.StorePasswordFile,
+                KeyPasswordFile = source.Android?.KeyPasswordFile,
+                RequireSigning = source.Android?.RequireSigning ?? true,
+                OutputRoot = source.Android?.OutputRoot,
+            },
+            Windows = new WindowsSettings
+            {
+                OutputRoot = source.Windows?.OutputRoot,
+            },
+            Ui = new UiSettings
+            {
+                WindowWidth = source.Ui?.WindowWidth ?? 1500,
+                WindowHeight = source.Ui?.WindowHeight ?? 680,
+            }
+        };
     }
 
     private void LoadVersions_Click(object sender, RoutedEventArgs e)
@@ -484,12 +593,12 @@ public partial class MainWindow : Window
                 RepoRoot: repoRoot,
                 PublishRoot: publishRoot,
                 GitHubRoot: gitHubRoot,
-                BaseUrl: "https://kgv-oberrothenbach.github.io/KGV-WPF",
-                GitRemoteUrl: "https://KGV-Oberrothenbach@github.com/KGV-Oberrothenbach/KGV-WPF.git",
-                GitCredentialUsername: "KGV-Oberrothenbach",
-                GitUserName: "KGV-Oberrothenbach",
-                GitUserEmail: null,
-                KeepCount: 3);
+                BaseUrl: FirstNonEmpty(_settings.General.BaseUrl, "https://kgv-oberrothenbach.github.io/KGV-WPF"),
+                GitRemoteUrl: FirstNonEmpty(_settings.General.GitRemoteUrl, "https://KGV-Oberrothenbach@github.com/KGV-Oberrothenbach/KGV-WPF.git"),
+                GitCredentialUsername: FirstNonEmpty(_settings.General.GitCredentialUsername, "KGV-Oberrothenbach"),
+                GitUserName: FirstNonEmpty(_settings.General.GitUserName, "KGV-Oberrothenbach"),
+                GitUserEmail: TrimOrNull(_settings.General.GitUserEmail),
+                KeepCount: _settings.General.KeepCount > 0 ? _settings.General.KeepCount : 3);
 
             if (request.IncludesWindows)
             {
@@ -535,7 +644,14 @@ public partial class MainWindow : Window
                 if (androidPlayStore == null)
                     throw new InvalidOperationException("Android Play Store Metadaten fehlen.");
 
-                var androidResult = await _androidReleaseService.RunAsync(context, androidVersion!, androidVersionCode, androidPlayStore, AppendLog);
+                var androidResult = await _androidReleaseService.RunAsync(
+                    context,
+                    AndroidCsprojPath,
+                    androidVersion!,
+                    androidVersionCode,
+                    androidPlayStore,
+                    _settings.Android,
+                    AppendLog);
 
                 try
                 {
@@ -545,7 +661,7 @@ public partial class MainWindow : Window
                         PlatformReleaseDefaults.CreateAndroidPlayStore(
                             enabled: true,
                             data: androidPlayStore with { AabArtifactPath = androidResult.AabPath },
-                            status: "AAB erstellt"));
+                            status: $"AAB erstellt ({DateTime.Now:yyyy-MM-dd HH:mm})"));
                 }
                 catch
                 {
@@ -686,16 +802,24 @@ public partial class MainWindow : Window
 
         if (string.IsNullOrWhiteSpace(AndroidPackageNameTextBox.Text))
         {
-            var candidate = projectId ?? draft?.PackageName;
+            var candidate = projectId ?? draft?.PackageName ?? _settings.Android.DefaultPackageName;
             if (!string.IsNullOrWhiteSpace(candidate))
                 AndroidPackageNameTextBox.Text = candidate.Trim();
         }
 
+        if (string.IsNullOrWhiteSpace(AndroidStoreUrlTextBox.Text))
+        {
+            var candidate = draft?.StoreUrl ?? _settings.Android.DefaultStoreUrl;
+            if (!string.IsNullOrWhiteSpace(candidate))
+                AndroidStoreUrlTextBox.Text = candidate.Trim();
+        }
+
+        // Combo defaults: draft first, then settings.
+        TrySelectComboBoxValue(AndroidPlayTrackComboBox, draft?.PlayTrack ?? _settings.Android.DefaultPlayTrack);
+        TrySelectComboBoxValue(AndroidPublishingStatusComboBox, draft?.PublishingStatus ?? _settings.Android.DefaultPublishingStatus);
+
         if (draft is not null)
         {
-            TrySelectComboBoxValue(AndroidPlayTrackComboBox, draft.PlayTrack);
-            TrySelectComboBoxValue(AndroidPublishingStatusComboBox, draft.PublishingStatus);
-
             if (string.IsNullOrWhiteSpace(AndroidReleaseNameTextBox.Text) && !string.IsNullOrWhiteSpace(draft.ReleaseName))
             {
                 var auto = BuildAutoAndroidReleaseNameOrEmpty();

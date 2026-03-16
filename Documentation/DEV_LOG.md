@@ -216,6 +216,16 @@
 - Android (Play-Store-Verteilung): eigene Update-Download-/Installationsroutine deaktiviert bzw. aus der Release-App entfernt.
 - Windows/WPF: bestehender Updatepfad unverändert beibehalten.
 - Gemeinsame Update-Logik sauber nach Plattform getrennt, inkl. Logging welches Updateverhalten aktiv ist.
+
+---
+
+## 2026-03-16 – Release Manager: Settings-Dialog, breiteres Layout, Android signiertes AAB via CLI
+
+### Erledigt
+- Release Manager um lokale, benutzerspezifische Settings ergänzt (Pfade, Defaults, Android-Signing-Konfiguration; keine Secrets im Repo).
+- Settings-Dialog hinzugefügt, über den alle veränderlichen Werte gepflegt und persistiert werden können.
+- Android-Build im Release Manager robustiert: signiertes Release-AAB wird per `dotnet publish` erzeugt (keine VS-Automation), Signing über Settings/Passwortdateien möglich.
+- MainWindow-Layout breiter/kompakter gestaltet, ohne zusätzliche Höhe; Inhalt bleibt vertikal scrollbar.
 - Android Icon
   - `KGV.Maui/Resources/AppIcon/appicon.png` (Quelle: `Logo.png`)
   - `KGV.Maui/Resources/AppIcon/appicon.svg` (entfernt)

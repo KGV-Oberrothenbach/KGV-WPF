@@ -11,13 +11,18 @@ public sealed class AndroidReleaseService
 
     public async Task<AndroidBuildResult> RunAsync(
         ReleaseContext context,
+        string androidProjectPath,
         VersionInfo version,
         int versionCode,
         AndroidPlatformReleaseData playStore,
+        AndroidSettings androidSettings,
         Action<string> log,
         CancellationToken cancellationToken = default)
     {
-        var project = Path.Combine(context.RepoRoot, "KGV.Maui", "KGV.Maui.csproj");
+        var project = androidProjectPath;
+        if (string.IsNullOrWhiteSpace(project))
+            throw new InvalidOperationException("Android-Projektpfad fehlt.");
+
         if (!File.Exists(project))
         {
             throw new FileNotFoundException("MAUI-csproj nicht gefunden.", project);
@@ -26,7 +31,9 @@ public sealed class AndroidReleaseService
         if (string.IsNullOrWhiteSpace(playStore.PackageName) || string.IsNullOrWhiteSpace(playStore.PlayTrack))
             throw new InvalidOperationException("Android Play Store Metadaten unvollständig (PackageName/Track).");
 
-        var localAndroidRoot = Path.Combine(context.PublishRoot, "android");
+        var localAndroidRoot = Path.Combine(
+            string.IsNullOrWhiteSpace(androidSettings.OutputRoot) ? context.PublishRoot : androidSettings.OutputRoot.Trim(),
+            "android");
         var versionDir = Path.Combine(localAndroidRoot, version.DisplayVersion);
         var aabName = $"KGV-android-v{version.DisplayVersion}.aab";
 
@@ -50,27 +57,13 @@ public sealed class AndroidReleaseService
         await RunDotnetAsync(context.RepoRoot, $"restore \"{project}\"", log, cancellationToken);
 
         log("dotnet publish (Android)...");
-        var publishArgs = $"publish \"{project}\" -c Release -f net9.0-android -p:AndroidPackageFormat=aab -o \"{buildOutput}\"";
+        var tfm = TryReadFirstTargetFramework(project) ?? "net9.0-android";
+        var publishArgs = $"publish \"{project}\" -c Release -f {tfm} -p:AndroidPackageFormat=aab -o \"{buildOutput}\"";
 
-        var keystorePath = Environment.GetEnvironmentVariable("KGV_ANDROID_KEYSTORE_PATH");
-        if (!string.IsNullOrWhiteSpace(keystorePath))
-        {
-            var alias = Environment.GetEnvironmentVariable("KGV_ANDROID_KEYSTORE_ALIAS");
-            var storePass = Environment.GetEnvironmentVariable("KGV_ANDROID_KEYSTORE_PASS");
-            var keyPass = Environment.GetEnvironmentVariable("KGV_ANDROID_KEY_PASS");
-
-            if (string.IsNullOrWhiteSpace(alias) || string.IsNullOrWhiteSpace(storePass) || string.IsNullOrWhiteSpace(keyPass))
-            {
-                throw new InvalidOperationException("Android-Signing ist aktiviert (KGV_ANDROID_KEYSTORE_PATH), aber Alias/Passwörter fehlen.");
-            }
-
-            publishArgs +=
-                $" -p:AndroidKeyStore=true" +
-                $" -p:AndroidSigningKeyStore=\"{keystorePath}\"" +
-                $" -p:AndroidSigningKeyAlias=\"{alias}\"" +
-                $" -p:AndroidSigningStorePass=\"{storePass}\"" +
-                $" -p:AndroidSigningKeyPass=\"{keyPass}\"";
-        }
+        // Play Console: Signing ist Pflicht (keine Secrets im Repo; nur lokale Pfade/Passwortdateien).
+        var signingArgs = BuildSigningArgs(androidSettings);
+        if (!string.IsNullOrWhiteSpace(signingArgs))
+            publishArgs += signingArgs;
 
         await RunDotnetAsync(context.RepoRoot, publishArgs, log, cancellationToken);
 
@@ -159,13 +152,112 @@ public sealed class AndroidReleaseService
 
     private static string LocateAab(string buildOutput)
     {
-        static string? FindFirst(string root, string pattern)
+        var candidates = Directory.EnumerateFiles(buildOutput, "*.aab", SearchOption.AllDirectories)
+            .Select(p => new FileInfo(p))
+            .OrderByDescending(f => f.LastWriteTimeUtc)
+            .ToList();
+
+        if (candidates.Count == 0)
+            throw new FileNotFoundException("Keine AAB im Build-Output gefunden.");
+
+        return candidates[0].FullName;
+    }
+
+    private static string? TryReadFirstTargetFramework(string csprojPath)
+    {
+        try
         {
-            return Directory.EnumerateFiles(root, pattern, SearchOption.AllDirectories).FirstOrDefault();
+            var xml = File.ReadAllText(csprojPath);
+
+            string? FindTag(string tag)
+            {
+                var open = $"<{tag}>";
+                var close = $"</{tag}>";
+                var start = xml.IndexOf(open, StringComparison.OrdinalIgnoreCase);
+                if (start < 0) return null;
+                start += open.Length;
+                var end = xml.IndexOf(close, start, StringComparison.OrdinalIgnoreCase);
+                if (end < 0) return null;
+                return xml.Substring(start, end - start).Trim();
+            }
+
+            var tfm = FindTag("TargetFramework");
+            if (!string.IsNullOrWhiteSpace(tfm))
+                return tfm;
+
+            var tfms = FindTag("TargetFrameworks");
+            if (string.IsNullOrWhiteSpace(tfms))
+                return null;
+
+            return tfms.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).FirstOrDefault();
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static string BuildSigningArgs(AndroidSettings settings)
+    {
+        if (settings == null)
+            return string.Empty;
+
+        var keystorePath = (settings.KeystorePath ?? string.Empty).Trim();
+        var alias = (settings.KeystoreAlias ?? string.Empty).Trim();
+        var storePassFile = (settings.StorePasswordFile ?? string.Empty).Trim();
+        var keyPassFile = (settings.KeyPasswordFile ?? string.Empty).Trim();
+
+        // Backward-compatible fallback: allow env vars if settings are empty.
+        if (string.IsNullOrWhiteSpace(keystorePath))
+            keystorePath = (Environment.GetEnvironmentVariable("KGV_ANDROID_KEYSTORE_PATH") ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(alias))
+            alias = (Environment.GetEnvironmentVariable("KGV_ANDROID_KEYSTORE_ALIAS") ?? string.Empty).Trim();
+
+        var storePass = ReadSecretFromFileOrEnv(storePassFile, "KGV_ANDROID_KEYSTORE_PASS");
+        var keyPass = ReadSecretFromFileOrEnv(string.IsNullOrWhiteSpace(keyPassFile) ? storePassFile : keyPassFile, "KGV_ANDROID_KEY_PASS");
+
+        var hasAnySigning = !string.IsNullOrWhiteSpace(keystorePath)
+                            || !string.IsNullOrWhiteSpace(alias)
+                            || !string.IsNullOrWhiteSpace(storePass)
+                            || !string.IsNullOrWhiteSpace(keyPass);
+
+        if (!hasAnySigning)
+        {
+            if (settings.RequireSigning)
+                throw new InvalidOperationException("Android-Signing ist als Pflicht konfiguriert, aber Keystore/Alias/Passwortquelle fehlt.");
+
+            return string.Empty;
         }
 
-        return FindFirst(buildOutput, "*.aab")
-               ?? throw new FileNotFoundException("Keine AAB im Build-Output gefunden.");
+        if (string.IsNullOrWhiteSpace(keystorePath) || string.IsNullOrWhiteSpace(alias) || string.IsNullOrWhiteSpace(storePass) || string.IsNullOrWhiteSpace(keyPass))
+            throw new InvalidOperationException("Android-Signing ist aktiviert, aber Keystore/Alias/Passwort fehlt.");
+
+        if (!File.Exists(keystorePath))
+            throw new FileNotFoundException("Keystore-Datei nicht gefunden.", keystorePath);
+
+        return
+            $" -p:AndroidKeyStore=true" +
+            $" -p:AndroidSigningKeyStore=\"{keystorePath}\"" +
+            $" -p:AndroidSigningKeyAlias=\"{alias}\"" +
+            $" -p:AndroidSigningStorePass=\"{storePass}\"" +
+            $" -p:AndroidSigningKeyPass=\"{keyPass}\"";
+    }
+
+    private static string ReadSecretFromFileOrEnv(string filePath, string envVar)
+    {
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(filePath) && File.Exists(filePath))
+            {
+                var text = File.ReadAllText(filePath);
+                return (text ?? string.Empty).Trim();
+            }
+        }
+        catch
+        {
+        }
+
+        return (Environment.GetEnvironmentVariable(envVar) ?? string.Empty).Trim();
     }
 
     private static void CleanupOldVersionDirectories(string localAndroidRoot, int keepCount)

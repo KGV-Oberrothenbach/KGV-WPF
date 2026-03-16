@@ -2,10 +2,10 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="KGV Release Manager"
-        Width="1250"
-        Height="720"
-        MinWidth="1050"
-        MinHeight="650"
+        Width="1500"
+        Height="680"
+        MinWidth="1200"
+        MinHeight="600"
         WindowStartupLocation="CenterScreen"
         ResizeMode="CanResize">
     <Grid Margin="16">
@@ -81,6 +81,7 @@
                             <WrapPanel>
                                 <Button x:Name="LoadVersionsButton" Width="150" Padding="12,8" Margin="0,0,10,10" Click="LoadVersions_Click" Content="Versionen laden" />
                                 <Button x:Name="StartReleaseButton" Width="170" Padding="12,8" Margin="0,0,10,10" Click="StartRelease_Click" Content="Release starten" />
+                                <Button x:Name="OpenSettingsButton" Width="150" Padding="12,8" Margin="0,0,10,10" Click="OpenSettings_Click" Content="Einstellungen" />
                             </WrapPanel>
                             <CheckBox x:Name="CommitProjectCheckBox" VerticalAlignment="Center" IsChecked="True" Content="KGV-Projekt nach erfolgreichem Release committen" />
                         </StackPanel>
