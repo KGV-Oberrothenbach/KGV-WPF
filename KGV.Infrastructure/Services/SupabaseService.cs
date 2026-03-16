@@ -796,9 +796,12 @@ namespace KGV.Infrastructure.Services
 
                 var requestUrl = $"{urlBase}/functions/v1/kgv-invite-user";
 
-                Debug.WriteLine($"[kgv-invite-user] RequestUrl={requestUrl} mitgliedId={mitgliedId} role={role}");
+                var clientRequestId = Guid.NewGuid().ToString("N");
+
+                Debug.WriteLine($"[kgv-invite-user] Start ClientRequestId={clientRequestId} RequestUrl={requestUrl} mitgliedId={mitgliedId} role={role}");
 
                 using var req = new HttpRequestMessage(HttpMethod.Post, requestUrl);
+                req.Headers.Add("x-kgv-client-request-id", clientRequestId);
 
                 // Access Token aus der aktuellen Supabase-Session (JWT) ermitteln.
                 var token = await TryGetCurrentAccessTokenAsync();
@@ -838,13 +841,14 @@ namespace KGV.Infrastructure.Services
                 // (Edge Functions können 401 liefern, ohne dass der Body explizit "Invalid JWT" enthält.)
                 if (resp.StatusCode == System.Net.HttpStatusCode.Unauthorized || resp.StatusCode == System.Net.HttpStatusCode.Forbidden)
                 {
-                    Debug.WriteLine("[kgv-invite-user] 401/403 received – trying session refresh + retry once.");
+                    Debug.WriteLine($"[kgv-invite-user] 401/403 received – trying session refresh + retry once. ClientRequestId={clientRequestId}");
                     await _authService.EnsureValidSessionAsync(forceRefresh: true);
 
                     var refreshedToken = _client?.Auth?.CurrentSession?.AccessToken;
                     if (!string.IsNullOrWhiteSpace(refreshedToken) && !string.Equals(refreshedToken, token, StringComparison.Ordinal))
                     {
                         using var retryReq = new HttpRequestMessage(HttpMethod.Post, requestUrl);
+                        retryReq.Headers.Add("x-kgv-client-request-id", clientRequestId + "-retry");
                         retryReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", refreshedToken);
 
                         if (!string.IsNullOrWhiteSpace(anonKey))

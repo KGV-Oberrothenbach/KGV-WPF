@@ -99,7 +99,8 @@ async function tryFindAuthUserIdByEmail(
 Deno.serve(async (req: Request) => {
   const requestId = newRequestId();
   try {
-    console.log("[kgv-invite-user] request start", { requestId, method: req.method, url: req.url });
+    const clientRequestId = req.headers.get("x-kgv-client-request-id") ?? undefined;
+    console.log("[kgv-invite-user] request start", { requestId, clientRequestId, method: req.method, url: req.url });
 
     if (req.method !== "POST") {
       console.log("[kgv-invite-user] reject: method", { requestId, method: req.method });
@@ -110,6 +111,9 @@ Deno.serve(async (req: Request) => {
     }
 
     const authHeader = req.headers.get("Authorization");
+    const isBearer = !!authHeader && authHeader.trim().toLowerCase().startsWith("bearer ");
+    const bearerTokenLength = isBearer ? authHeader.trim().length - "Bearer ".length : 0;
+    console.log("[kgv-invite-user] auth header", { requestId, clientRequestId, hasAuthorizationHeader: !!authHeader, isBearer, bearerTokenLength });
     if (!authHeader) {
       console.log("[kgv-invite-user] reject: missing auth header", { requestId });
       return json(
@@ -148,7 +152,7 @@ Deno.serve(async (req: Request) => {
 
     const { data: userData, error: userError } = await supabaseUser.auth.getUser();
     if (userError || !userData.user) {
-      console.log("[kgv-invite-user] reject: invalid session", { requestId, error: safeErrorInfo(userError) });
+      console.log("[kgv-invite-user] reject: invalid session", { requestId, clientRequestId, error: safeErrorInfo(userError) });
       return json(
         { success: false, outcome: "unauthorized", errorCode: "Unauthorized", message: "Keine gültige Session." },
         401,
@@ -156,7 +160,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const callerUserId = userData.user.id;
-    console.log("[kgv-invite-user] caller", { requestId, callerUserId });
+    console.log("[kgv-invite-user] caller", { requestId, clientRequestId, callerUserId });
 
     const { data: callerAppUser, error: callerAppUserError } = await supabaseAdmin
       .from("app_user")

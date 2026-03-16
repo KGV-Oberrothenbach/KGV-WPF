@@ -248,6 +248,9 @@
 - Ursache für 401 beim Edge-Function-Aufruf analysiert (Session wiederhergestellt, aber Access Token nicht zuverlässig vor geschützten Calls validiert/refreshed).
 - Zentralen Ablauf ergänzt: vor geschützten Supabase-/Edge-Function-Calls Session-Gültigkeit prüfen und ggf. Refresh erzwingen.
 - Logging ergänzt: Session vorhanden, Refresh durchgeführt, Edge-Function-Call mit gültigem Authorization-Header.
+
+### Ergänzt
+- Minimal-Diagnose für verbleibende 401: ClientRequestId als Header durchgereicht, Client+Edge loggen Token-Info (nur Länge/maskiert) + frühe Auth-Entscheidungspfade.
 - Android Icon
   - `KGV.Maui/Resources/AppIcon/appicon.png` (Quelle: `Logo.png`)
   - `KGV.Maui/Resources/AppIcon/appicon.svg` (entfernt)
