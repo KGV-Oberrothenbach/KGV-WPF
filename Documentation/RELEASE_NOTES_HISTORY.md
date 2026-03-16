@@ -80,3 +80,21 @@ Verbessert:
 Behoben:
 - Das Speichern von Arbeitseinsätzen, Terminen und Bekanntmachungen wurde korrigiert und arbeitet nun zuverlässig.
 
+## Version 0.2.1 - 2026-03-16
+Titel: Einheitliche Veröffentlichungen für Windows und Android
+
+Kurztext: Mit Version 0.2.1 wurde die Verwaltung von Arbeitseinsätzen, Terminen und Bekanntmachungen weiter verbessert. Außerdem werden Veröffentlichungen und Versionsstände für Windows und Android nun einheitlicher geführt.
+
+Details:
+
+Neu:
+- Finalisierte Release-Texte können versioniert gespeichert und in einer strukturierten Release-Historie erfasst werden.
+- Veröffentlichungen für Windows und Android werden nun gemeinsam verwaltet und mit einer einheitlichen Versionsführung geführt.
+
+Verbessert:
+- Die Bearbeitung von Arbeitseinsätzen, Terminen und Bekanntmachungen wurde klarer gestaltet, mit Speichern und Abbrechen am Ende des Formulars sowie einer Rückfrage bei ungespeicherten Änderungen.
+- Optionale und verpflichtende Eingabefelder wurden zuverlässiger voneinander getrennt, sodass technische Pflichtangaben Anwender nicht mehr unnötig einschränken.
+- Das App-Symbol der Android-App wurde auf das KGV-Logo umgestellt.
+
+Behoben:
+- Das Speichern von Arbeitseinsätzen, Terminen und Bekanntmachungen wurde korrigiert und arbeitet nun zuverlässig.
