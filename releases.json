@@ -1,5 +1,49 @@
 ﻿[
   {
+    "Version": "0.2.1",
+    "ReleaseDate": "2026-03-16",
+    "Title": "Einheitliche Ver\u00F6ffentlichungen f\u00FCr Windows und Android",
+    "ShortText": "Mit Version 0.2.1 wurde die Verwaltung von Arbeitseins\u00E4tzen, Terminen und Bekanntmachungen weiter verbessert. Au\u00DFerdem werden Ver\u00F6ffentlichungen und Versionsst\u00E4nde f\u00FCr Windows und Android nun einheitlicher gef\u00FChrt.",
+    "FullText": "Titel: Einheitliche Ver\u00F6ffentlichungen f\u00FCr Windows und Android\r\n\r\nKurztext: Mit Version 0.2.1 wurde die Verwaltung von Arbeitseins\u00E4tzen, Terminen und Bekanntmachungen weiter verbessert. Au\u00DFerdem werden Ver\u00F6ffentlichungen und Versionsst\u00E4nde f\u00FCr Windows und Android nun einheitlicher gef\u00FChrt.\r\n\r\nDetails:\r\n\r\nNeu:\r\n- Finalisierte Release-Texte k\u00F6nnen versioniert gespeichert und in einer strukturierten Release-Historie erfasst werden.\r\n- Ver\u00F6ffentlichungen f\u00FCr Windows und Android werden nun gemeinsam verwaltet und mit einer einheitlichen Versionsf\u00FChrung gef\u00FChrt.\r\n\r\nVerbessert:\r\n- Die Bearbeitung von Arbeitseins\u00E4tzen, Terminen und Bekanntmachungen wurde klarer gestaltet, mit Speichern und Abbrechen am Ende des Formulars sowie einer R\u00FCckfrage bei ungespeicherten \u00C4nderungen.\r\n- Optionale und verpflichtende Eingabefelder wurden zuverl\u00E4ssiger voneinander getrennt, sodass technische Pflichtangaben Anwender nicht mehr unn\u00F6tig einschr\u00E4nken.\r\n- Das App-Symbol der Android-App wurde auf das KGV-Logo umgestellt.\r\n\r\nBehoben:\r\n- Das Speichern von Arbeitseins\u00E4tzen, Terminen und Bekanntmachungen wurde korrigiert und arbeitet nun zuverl\u00E4ssig.",
+    "Categories": [
+      "Neu",
+      "Verbessert",
+      "Behoben"
+    ],
+    "Status": "Entwurf",
+    "Platforms": [
+      {
+        "Platform": "windows",
+        "Enabled": true,
+        "DistributionType": "DirectDownload",
+        "Status": "gebaut",
+        "Windows": {
+          "DownloadUrl": "https://kgv-oberrothenbach.github.io/KGV-WPF/KGV-Setup.exe",
+          "FileName": "KGV-Setup.exe",
+          "FileSizeBytes": null,
+          "Sha256": null
+        },
+        "Android": null
+      },
+      {
+        "Platform": "android",
+        "Enabled": true,
+        "DistributionType": "PlayStore",
+        "Status": "Entwurf",
+        "Windows": null,
+        "Android": {
+          "PackageName": "de.kgv.oberrothenbach",
+          "PlayTrack": "internal",
+          "PublishingStatus": "draft",
+          "StoreUrl": null,
+          "ReleaseName": "0.2.1 - internal",
+          "VersionCode": 10,
+          "AabArtifactPath": null
+        }
+      }
+    ]
+  },
+  {
     "Version": "0.1.10",
     "ReleaseDate": "2026-03-14",
     "Title": "Verbesserte Verwaltung und stabileres Speichern",
@@ -9,7 +53,9 @@
       "Neu",
       "Verbessert",
       "Behoben"
-    ]
+    ],
+    "Status": null,
+    "Platforms": null
   },
   {
     "Version": "0.1.8",
@@ -21,7 +67,9 @@
       "Neu",
       "Verbessert",
       "Behoben"
-    ]
+    ],
+    "Status": null,
+    "Platforms": null
   },
   {
     "Version": "0.1.7",
@@ -33,7 +81,9 @@
       "Neu",
       "Verbessert",
       "Behoben"
-    ]
+    ],
+    "Status": null,
+    "Platforms": null
   },
   {
     "Version": "0.1.6",
@@ -45,7 +95,9 @@
       "Neu",
       "Verbessert",
       "Behoben"
-    ]
+    ],
+    "Status": null,
+    "Platforms": null
   },
   {
     "Version": "0.1.4",
@@ -53,6 +105,8 @@
     "Title": "Ver\u00F6ffentlichung 0.1.4",
     "ShortText": "F\u00FCr diese Version liegen aktuell keine detaillierten, ver\u00F6ffentlichten Release Notes vor.",
     "FullText": "Titel: Ver\u00F6ffentlichung 0.1.4\nKurztext: F\u00FCr diese Version liegen aktuell keine detaillierten, ver\u00F6ffentlichten Release Notes vor.\nDetails:\n- (Noch keine finalen Release Notes hinterlegt.)",
-    "Categories": []
+    "Categories": [],
+    "Status": null,
+    "Platforms": null
   }
 ]
