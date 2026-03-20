@@ -1,12 +1,12 @@
 {
   "platform": "android",
   "distribution": "PlayStore",
-  "version": "0.2.5",
-  "versionCode": 13,
+  "version": "0.2.6",
+  "versionCode": 14,
   "packageName": "de.kgv.oberrothenbach",
   "playTrack": "internal",
   "publishingStatus": "draft",
   "storeUrl": null,
-  "releaseName": "0.2.5 - internal",
+  "releaseName": "0.2.6 - internal",
   "notes": "Neue Android-Version (Google Play Store)"
 }
