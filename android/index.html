@@ -1,553 +1,276 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Android-App – KGV Oberrothenbach</title>
-  <meta
-    name="description"
-    content="Downloadseite und Installationsanleitung für die Android-App des Kleingartenvereins Oberrothenbach."
-  />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Datenschutzerklärung – KGV Oberrothenbach e.V.</title>
   <style>
-    :root {
-      --bg: #f4f7f2;
-      --surface: #ffffff;
-      --surface-soft: #eef5ea;
-      --text: #203024;
-      --muted: #5e6f62;
-      --primary: #2f6f3e;
-      --primary-hover: #275c33;
-      --border: #d7e2d3;
-      --ok-bg: #edf7ef;
-      --ok-border: #bcd8c2;
-      --warn-bg: #fff8e6;
-      --warn-border: #ead39a;
-      --danger-bg: #fff0f0;
-      --danger-border: #e5b5b5;
-      --shadow: 0 10px 28px rgba(32, 48, 36, 0.08);
-      --radius: 18px;
-      --radius-sm: 12px;
-      --max: 960px;
-    }
-
-    * {
-      box-sizing: border-box;
-    }
-
-    html {
-      scroll-behavior: smooth;
-    }
-
     body {
       margin: 0;
       font-family: Arial, Helvetica, sans-serif;
-      color: var(--text);
-      background:
-        radial-gradient(circle at top right, rgba(47, 111, 62, 0.08), transparent 22%),
-        linear-gradient(180deg, #f8fbf7 0%, var(--bg) 100%);
-      line-height: 1.55;
-    }
-
-    a {
-      color: inherit;
+      line-height: 1.6;
+      color: #1f2937;
+      background: #f5f7fb;
     }
 
     .container {
-      width: min(100% - 32px, var(--max));
+      max-width: 960px;
       margin: 0 auto;
-    }
-
-    .topbar {
-      padding: 18px 0 8px;
-    }
-
-    .brand {
-      display: inline-flex;
-      align-items: center;
-      gap: 12px;
-      text-decoration: none;
-      font-weight: 700;
-      color: var(--text);
-    }
-
-    .brand-mark {
-      width: 42px;
-      height: 42px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, var(--primary), #4d915d);
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      color: #fff;
-      font-size: 18px;
-      box-shadow: var(--shadow);
-      flex: 0 0 auto;
-    }
-
-    main {
-      padding: 18px 0 40px;
+      padding: 24px 16px 48px;
     }
 
     .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      padding: 30px;
-    }
-
-    .eyebrow {
-      display: inline-block;
-      padding: 6px 12px;
-      border-radius: 999px;
-      background: var(--surface-soft);
-      color: var(--primary);
-      font-weight: 700;
-      font-size: 13px;
-      margin-bottom: 14px;
+      background: #ffffff;
+      border-radius: 14px;
+      padding: 24px;
+      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.08);
     }
 
     h1, h2, h3 {
-      margin: 0 0 12px;
-      line-height: 1.2;
+      color: #111827;
+      margin-top: 0;
     }
 
     h1 {
-      font-size: clamp(30px, 5vw, 42px);
+      font-size: 2rem;
+      margin-bottom: 8px;
     }
 
     h2 {
-      font-size: 26px;
       margin-top: 28px;
+      font-size: 1.35rem;
+      border-bottom: 1px solid #e5e7eb;
+      padding-bottom: 8px;
     }
 
-    h3 {
-      font-size: 20px;
-    }
-
-    p {
-      margin: 0 0 14px;
-    }
-
-    .muted {
-      color: var(--muted);
-    }
-
-    .button-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      margin-top: 22px;
-    }
-
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 48px;
-      padding: 0 18px;
-      border-radius: 12px;
-      border: 1px solid transparent;
-      text-decoration: none;
-      font-weight: 700;
-      transition: 0.2s ease;
-      cursor: pointer;
-      text-align: center;
-    }
-
-    .btn-primary {
-      background: var(--primary);
-      color: #fff;
-    }
-
-    .btn-primary:hover {
-      background: var(--primary-hover);
-    }
-
-    .btn-secondary {
-      background: #fff;
-      color: var(--primary);
-      border-color: var(--border);
-    }
-
-    .btn-secondary:hover {
-      background: var(--surface-soft);
-    }
-
-    .status {
-      margin-top: 18px;
-      padding: 14px 16px;
-      border-radius: 14px;
-      border: 1px solid var(--warn-border);
-      background: var(--warn-bg);
-    }
-
-    .status.ok {
-      border-color: var(--ok-border);
-      background: var(--ok-bg);
-    }
-
-    .status.error {
-      border-color: var(--danger-border);
-      background: var(--danger-bg);
-    }
-
-    .meta-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 14px 18px;
-      margin-top: 18px;
-    }
-
-    .meta-item {
-      padding: 14px 16px;
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      background: #fff;
-    }
-
-    .meta-label {
-      display: block;
-      font-size: 13px;
-      color: var(--muted);
-      margin-bottom: 4px;
-    }
-
-    .meta-value {
-      font-weight: 700;
-      word-break: break-word;
-    }
-
-    .box {
-      margin-top: 20px;
-      padding: 18px 20px;
-      border-radius: 16px;
-      border: 1px solid var(--border);
-      background: #fff;
-    }
-
-    .soft-box {
-      background: var(--surface-soft);
-    }
-
-    .warning-box {
-      background: var(--warn-bg);
-      border-color: var(--warn-border);
-    }
-
-    .danger-box {
-      background: var(--danger-bg);
-      border-color: var(--danger-border);
-    }
-
-    .steps {
-      display: grid;
-      gap: 14px;
-      margin-top: 18px;
-    }
-
-    .step {
-      display: grid;
-      grid-template-columns: 40px 1fr;
-      gap: 14px;
-      align-items: start;
-      padding: 16px;
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      background: #fff;
-    }
-
-    .step-number {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      background: var(--surface-soft);
-      color: var(--primary);
-      font-weight: 700;
-      font-size: 16px;
+    p, li {
+      font-size: 1rem;
     }
 
     ul {
-      margin: 10px 0 0;
       padding-left: 20px;
     }
 
-    li + li {
-      margin-top: 8px;
+    .muted {
+      color: #6b7280;
+      margin-bottom: 24px;
     }
 
-    .footer {
-      padding: 0 0 36px;
+    .highlight {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-top: 18px;
+    }
+
+    .contact {
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-top: 12px;
+    }
+
+    a {
+      color: #0f766e;
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    footer {
+      margin-top: 28px;
+      font-size: 0.95rem;
+      color: #6b7280;
       text-align: center;
-      color: var(--muted);
-      font-size: 14px;
     }
 
-    code.inline {
-      font-family: Consolas, Monaco, monospace;
-      background: #eef2ed;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 2px 6px;
-      font-size: 0.95em;
-    }
-
-    @media (max-width: 760px) {
-      .card,
-      .meta-grid {
-        grid-template-columns: 1fr;
+    @media (max-width: 640px) {
+      .card {
+        padding: 18px;
       }
 
-      .card {
-        padding: 22px;
+      h1 {
+        font-size: 1.6rem;
+      }
+
+      h2 {
+        font-size: 1.2rem;
       }
     }
   </style>
 </head>
 <body>
-  <header class="topbar">
-    <div class="container">
-      <a class="brand" href="../index.html">
-        <span class="brand-mark">KGV</span>
-        <span>Kleingartenverein Oberrothenbach</span>
-      </a>
-    </div>
-  </header>
+  <div class="container">
+    <div class="card">
+      <h1>Datenschutzerklärung</h1>
+      <p class="muted">für die KGV-App des KGV Oberrothenbach e.V. – Stand: 01.04.2026</p>
 
-  <main>
-    <div class="container">
-      <div class="card">
-        <span class="eyebrow">Android-App</span>
-        <h1>Vereins-App herunterladen und installieren</h1>
-        <p class="muted">
-          Hier findest du die aktuelle Android-Version der KGV-App sowie eine ausführliche
-          Schritt-für-Schritt-Anleitung für die Installation auf deinem Smartphone.
-        </p>
+      <h2>1. Verantwortlicher</h2>
+      <p>Verantwortlich für die Verarbeitung personenbezogener Daten im Zusammenhang mit dieser App ist:</p>
 
-        <div id="statusBox" class="status">
-          Lade aktuelle Versionsinformationen …
-        </div>
-
-        <div class="button-row">
-          <a
-            id="downloadBtn"
-            class="btn btn-primary"
-            href="#"
-            style="pointer-events:none; opacity:0.6;"
-          >
-            APK herunterladen
-          </a>
-
-          <a class="btn btn-secondary" href="../set-password.html">
-            Passwort setzen / Einladung abschließen
-          </a>
-
-          <a class="btn btn-secondary" href="../index.html">
-            Zur Startseite
-          </a>
-        </div>
-
-        <div class="box">
-          <h2>Aktuelle Version</h2>
-
-          <div class="meta-grid">
-            <div class="meta-item">
-              <span class="meta-label">Version</span>
-              <span id="versionText" class="meta-value">–</span>
-            </div>
-            <div class="meta-item">
-              <span class="meta-label">Build</span>
-              <span id="buildText" class="meta-value">–</span>
-            </div>
-            <div class="meta-item">
-              <span class="meta-label">Datei</span>
-              <span id="fileText" class="meta-value">–</span>
-            </div>
-            <div class="meta-item">
-              <span class="meta-label">Hinweise</span>
-              <span id="notesText" class="meta-value">–</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="box soft-box">
-          <h2>Vor der Installation</h2>
-          <ul>
-            <li>Nutze möglichst den Browser auf dem Smartphone, auf dem die App installiert werden soll.</li>
-            <li>Die APK sollte nur von dieser offiziellen Vereinsseite geladen werden.</li>
-            <li>Je nach Hersteller sehen die Menüs etwas anders aus. Die Bezeichnungen können leicht abweichen.</li>
-          </ul>
-        </div>
-
-        <div class="box">
-          <h2>Schritt-für-Schritt-Anleitung</h2>
-
-          <div class="steps">
-            <div class="step">
-              <div class="step-number">1</div>
-              <div>
-                <h3>APK herunterladen</h3>
-                <p class="muted">
-                  Tippe auf <strong>APK herunterladen</strong> und warte, bis der Download vollständig
-                  abgeschlossen ist.
-                </p>
-              </div>
-            </div>
-
-            <div class="step">
-              <div class="step-number">2</div>
-              <div>
-                <h3>Download öffnen</h3>
-                <p class="muted">
-                  Öffne anschließend die heruntergeladene APK über die Benachrichtigung,
-                  den Download-Ordner oder die Dateien-App.
-                </p>
-              </div>
-            </div>
-
-            <div class="step">
-              <div class="step-number">3</div>
-              <div>
-                <h3>Installation aus dieser Quelle erlauben</h3>
-                <p class="muted">
-                  Wenn Android die Installation blockiert, erlaube sie einmalig für die App,
-                  über die du die Datei geöffnet hast, zum Beispiel Browser oder Dateien-App.
-                </p>
-              </div>
-            </div>
-
-            <div class="step">
-              <div class="step-number">4</div>
-              <div>
-                <h3>Installation bestätigen</h3>
-                <p class="muted">
-                  Kehre zur APK zurück und tippe auf <strong>Installieren</strong>.
-                  Warte, bis die Installation abgeschlossen ist.
-                </p>
-              </div>
-            </div>
-
-            <div class="step">
-              <div class="step-number">5</div>
-              <div>
-                <h3>App öffnen und anmelden</h3>
-                <p class="muted">
-                  Öffne danach die App und melde dich mit deinen Zugangsdaten an.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="box warning-box">
-          <h2>Wenn Android die Installation blockiert</h2>
-          <ul>
-            <li>Die Meldung lautet oft sinngemäß, dass Installationen aus dieser Quelle nicht erlaubt sind.</li>
-            <li>Tippe dann auf <strong>Einstellungen</strong> oder <strong>Zulassen</strong>.</li>
-            <li>Erlaube die Installation für genau die App, aus der du die APK geöffnet hast.</li>
-            <li>Wechsle danach zurück und starte die Installation erneut.</li>
-          </ul>
-        </div>
-
-        <div class="box warning-box">
-          <h2>Wenn Google Play Protect warnt</h2>
-          <ul>
-            <li>Eine Warnung ist bei direkt verteilten APK-Dateien möglich.</li>
-            <li>Installiere nur weiter, wenn du die APK wirklich von dieser offiziellen Vereinsseite geladen hast.</li>
-            <li>Je nach Gerät kannst du dann <strong>Trotzdem installieren</strong> oder <strong>Weitere Details</strong> auswählen.</li>
-          </ul>
-        </div>
-
-        <div class="box danger-box">
-          <h2>Häufige Probleme</h2>
-          <ul>
-            <li><strong>„App wurde nicht installiert“:</strong> Häufig ist bereits eine ältere App mit anderer Signatur installiert. Dann zuerst die alte App deinstallieren und danach die neue APK installieren.</li>
-            <li><strong>APK lässt sich nicht öffnen:</strong> Prüfe, ob der Download vollständig abgeschlossen wurde.</li>
-            <li><strong>Nach dem Antippen passiert nichts:</strong> Öffne die Datei direkt über die Dateien-App oder den Download-Ordner.</li>
-            <li><strong>Speicherplatzproblem:</strong> Prüfe, ob auf dem Gerät noch genügend freier Speicher vorhanden ist.</li>
-          </ul>
-        </div>
-
-        <div class="box">
-          <h2>Technischer Hinweis</h2>
-          <p class="muted">
-            Diese Seite liest die Datei <code class="inline">version.json</code> aus diesem Ordner
-            und verwendet den dort hinterlegten aktuellen Downloadlink.
-          </p>
-        </div>
+      <div class="contact">
+        <strong>KGV Oberrothenbach e.V.</strong><br />
+        Mary Krüger-Rau<br />
+        Scheringer Str. 12<br />
+        08056 Zwickau<br /><br />
+        E-Mail: <a href="mailto:kgvoberrothenbach@gmx.de">kgvoberrothenbach@gmx.de</a>
       </div>
+
+      <h2>2. Allgemeines zur Datenverarbeitung</h2>
+      <p>
+        Wir verarbeiten personenbezogene Daten nur, soweit dies für die Bereitstellung und den Betrieb der KGV-App,
+        die Vereinsverwaltung, die Nutzung der App-Funktionen sowie die technische Sicherheit und Stabilität erforderlich ist.
+      </p>
+      <p>
+        Die KGV-App dient insbesondere der Organisation vereinsbezogener Abläufe, der Anzeige und Pflege von Mitglieds-
+        und Parzellendaten, der Erfassung von Zählerständen sowie – sofern genutzt – der Aufnahme und Speicherung von Fotos
+        zu vereinsbezogenen Vorgängen.
+      </p>
+
+      <h2>3. Welche Daten wir verarbeiten</h2>
+      <p>Je nach Nutzung der App können insbesondere folgende Daten verarbeitet werden:</p>
+      <ul>
+        <li>Stammdaten und Kontaktdaten, z. B. Name, E-Mail-Adresse und vereinsbezogene Zuordnungen</li>
+        <li>Mitglieds-, Parzellen- und Nutzungsdaten</li>
+        <li>Ablese- und Zählerdaten, z. B. Medium, Zählernummer, Zählerstand, Datum und zugehörige Parzelle</li>
+        <li>hochgeladene oder aufgenommene Fotos</li>
+        <li>technische Protokoll- und Diagnosedaten, soweit dies zur Fehleranalyse, Sicherheit und Stabilität der App erforderlich ist</li>
+        <li>Anmelde- und Sitzungsdaten zur Nutzung geschützter Bereiche der App</li>
+      </ul>
+
+      <h2>4. Kameraberechtigung (android.permission.CAMERA)</h2>
+      <p>Die App kann die Berechtigung zur Nutzung der Kamera anfordern.</p>
+      <p>
+        Die Kamera wird ausschließlich dann verwendet, wenn Sie selbst aktiv eine Funktion aufrufen, bei der ein Foto
+        aufgenommen werden soll, zum Beispiel im Zusammenhang mit:
+      </p>
+      <ul>
+        <li>der Erfassung einer Ablesung,</li>
+        <li>einem Zählerwechsel,</li>
+        <li>der Dokumentation eines vereinsbezogenen Vorgangs.</li>
+      </ul>
+      <p>
+        Ohne Ihre aktive Auslösung wird kein Foto aufgenommen. Es erfolgt keine dauerhafte Kameraüberwachung
+        und keine unbemerkte Aufnahme im Hintergrund.
+      </p>
+      <p>
+        Wenn Sie die Kameraberechtigung nicht erteilen, können Sie die App grundsätzlich weiter nutzen; einzelne
+        Funktionen zur direkten Fotoaufnahme stehen dann jedoch nicht oder nur eingeschränkt zur Verfügung.
+      </p>
+
+      <div class="highlight">
+        <strong>Hinweis zur Kamera:</strong><br />
+        Die Kamera wird nur verwendet, wenn Sie selbst ein Foto für eine Ablesung, einen Zählerwechsel oder einen
+        ähnlichen Vorgang aufnehmen. Das Foto wird zusammen mit den zugehörigen Vorgangsdaten gespeichert, damit der
+        Vorgang dokumentiert werden kann.
+      </div>
+
+      <h2>5. Zwecke der Verarbeitung</h2>
+      <ul>
+        <li>Bereitstellung und Betrieb der App</li>
+        <li>Anmeldung und Authentifizierung von Nutzerinnen und Nutzern</li>
+        <li>Verwaltung vereinsbezogener Daten und Vorgänge</li>
+        <li>Erfassung, Dokumentation und Nachvollziehbarkeit von Ablesungen, Zählerwechseln und ähnlichen Prozessen</li>
+        <li>Speicherung und Zuordnung von Fotos zu fachlichen Vorgängen</li>
+        <li>technische Administration, Fehleranalyse sowie Schutz vor Missbrauch</li>
+      </ul>
+
+      <h2>6. Rechtsgrundlagen der Verarbeitung</h2>
+      <p>Soweit personenbezogene Daten verarbeitet werden, erfolgt dies insbesondere auf Grundlage von:</p>
+      <ul>
+        <li>Art. 6 Abs. 1 lit. b DSGVO, soweit die Verarbeitung für die Nutzung der App oder die Durchführung vereinsbezogener Leistungen erforderlich ist</li>
+        <li>Art. 6 Abs. 1 lit. c DSGVO, soweit eine rechtliche Verpflichtung besteht</li>
+        <li>Art. 6 Abs. 1 lit. f DSGVO, soweit die Verarbeitung zur Wahrung berechtigter Interessen des Vereins erforderlich ist, insbesondere für einen sicheren, funktionsfähigen und nachvollziehbaren App-Betrieb</li>
+        <li>Art. 6 Abs. 1 lit. a DSGVO, soweit im Einzelfall eine Einwilligung erforderlich ist oder eingeholt wird</li>
+      </ul>
+
+      <h2>7. Empfänger und eingesetzte Dienstleister</h2>
+      <p>
+        Zur technischen Bereitstellung der App und der zugehörigen Funktionen können externe Dienstleister eingesetzt werden.
+      </p>
+      <p>Dazu gehören insbesondere:</p>
+      <ul>
+        <li>Dienste für Authentifizierung, Datenbank und technische App-Infrastruktur</li>
+        <li>Dienste für die Speicherung und Verwaltung hochgeladener Dateien und Fotos</li>
+        <li>IT- und Hosting-Dienstleister, soweit dies für Betrieb, Wartung und Support erforderlich ist</li>
+      </ul>
+      <p>
+        Eine Weitergabe personenbezogener Daten erfolgt nur, soweit dies zur Bereitstellung der App und der beschriebenen
+        Funktionen erforderlich ist oder eine rechtliche Verpflichtung besteht.
+      </p>
+
+      <h2>8. Speicherung von Fotos und Dateien</h2>
+      <p>
+        Wenn Sie eine Foto-Funktion der App verwenden, wird das Foto zusammen mit den zugehörigen fachlichen Angaben
+        verarbeitet und gespeichert, soweit dies zur Dokumentation des jeweiligen Vorgangs erforderlich ist.
+      </p>
+      <p>
+        Fotos können insbesondere mit Angaben wie Parzelle, Medium, Datum, Uhrzeit oder Vorgangsart verknüpft werden,
+        damit eine ordnungsgemäße Zuordnung und Nachvollziehbarkeit möglich ist.
+      </p>
+
+      <h2>9. Speicherdauer</h2>
+      <p>
+        Wir speichern personenbezogene Daten nur so lange, wie dies für die jeweiligen Zwecke erforderlich ist oder
+        gesetzliche bzw. vereinsinterne Aufbewahrungspflichten bestehen.
+      </p>
+      <p>
+        Sobald die Daten für den jeweiligen Zweck nicht mehr erforderlich sind und keine Aufbewahrungspflichten
+        entgegenstehen, werden sie gelöscht oder anonymisiert.
+      </p>
+
+      <h2>10. Datensicherheit</h2>
+      <p>
+        Wir treffen angemessene technische und organisatorische Maßnahmen, um personenbezogene Daten gegen Verlust,
+        Missbrauch, unbefugten Zugriff, unbefugte Veränderung oder unbefugte Offenlegung zu schützen.
+      </p>
+
+      <h2>11. Ihre Rechte</h2>
+      <p>Sie haben im Rahmen der gesetzlichen Vorgaben insbesondere folgende Rechte:</p>
+      <ul>
+        <li>Recht auf Auskunft über die zu Ihrer Person gespeicherten Daten</li>
+        <li>Recht auf Berichtigung unrichtiger Daten</li>
+        <li>Recht auf Löschung</li>
+        <li>Recht auf Einschränkung der Verarbeitung</li>
+        <li>Recht auf Datenübertragbarkeit, soweit die gesetzlichen Voraussetzungen vorliegen</li>
+        <li>Recht auf Widerspruch gegen bestimmte Verarbeitungen</li>
+        <li>Recht auf Widerruf einer erteilten Einwilligung mit Wirkung für die Zukunft</li>
+      </ul>
+      <p>
+        Zur Ausübung Ihrer Rechte können Sie sich an die oben genannten Kontaktdaten wenden.
+      </p>
+
+      <h2>12. Beschwerderecht bei einer Aufsichtsbehörde</h2>
+      <p>
+        Sie haben das Recht, sich bei einer Datenschutz-Aufsichtsbehörde über die Verarbeitung Ihrer personenbezogenen
+        Daten zu beschweren.
+      </p>
+
+      <h2>13. Bereitstellung der Daten</h2>
+      <p>
+        Die Bereitstellung bestimmter personenbezogener Daten ist erforderlich, damit wesentliche Funktionen der App
+        genutzt werden können. Ohne diese Daten können einzelne Funktionen ganz oder teilweise nicht zur Verfügung stehen.
+      </p>
+      <p>
+        Die Erteilung der Kameraberechtigung ist freiwillig. Ohne diese Berechtigung ist jedoch keine direkte Fotoaufnahme
+        innerhalb der App möglich.
+      </p>
+
+      <h2>14. Änderungen dieser Datenschutzerklärung</h2>
+      <p>
+        Wir behalten uns vor, diese Datenschutzerklärung anzupassen, wenn dies aufgrund technischer, rechtlicher oder
+        organisatorischer Änderungen erforderlich wird. Es gilt jeweils die in der App oder auf der zugehörigen
+        Veröffentlichungsseite bereitgestellte aktuelle Fassung.
+      </p>
+
+      <footer>
+        KGV Oberrothenbach e.V. – Datenschutzerklärung für die KGV-App
+      </footer>
     </div>
-  </main>
-
-  <footer class="footer">
-    <div class="container">
-      Kleingartenverein Oberrothenbach – Android-App Download und Installationsanleitung
-    </div>
-  </footer>
-
-  <script>
-    const statusBox = document.getElementById("statusBox");
-    const downloadBtn = document.getElementById("downloadBtn");
-    const versionText = document.getElementById("versionText");
-    const buildText = document.getElementById("buildText");
-    const fileText = document.getElementById("fileText");
-    const notesText = document.getElementById("notesText");
-
-    function setStatus(message, type = "default") {
-      statusBox.textContent = message;
-      if (type === "ok") {
-        statusBox.className = "status ok";
-      } else if (type === "error") {
-        statusBox.className = "status error";
-      } else {
-        statusBox.className = "status";
-      }
-    }
-
-    async function loadVersionInfo() {
-      try {
-        const response = await fetch("./version.json", { cache: "no-store" });
-
-        if (!response.ok) {
-          throw new Error("version.json konnte nicht geladen werden.");
-        }
-
-        const data = await response.json();
-
-        const version = data.version ?? "–";
-        const build = data.build ?? "–";
-        const fileName = data.fileName ?? "–";
-        const notes = data.notes ?? "Keine Hinweise hinterlegt.";
-        const downloadUrl = data.downloadUrl;
-
-        versionText.textContent = version;
-        buildText.textContent = build;
-        fileText.textContent = fileName;
-        notesText.textContent = notes;
-
-        if (!downloadUrl) {
-          throw new Error("Die Download-URL fehlt in der version.json.");
-        }
-
-        downloadBtn.href = downloadUrl;
-        downloadBtn.style.pointerEvents = "auto";
-        downloadBtn.style.opacity = "1";
-
-        setStatus("Aktuelle Android-Version gefunden. Du kannst die APK jetzt herunterladen.", "ok");
-      } catch (error) {
-        versionText.textContent = "nicht verfügbar";
-        buildText.textContent = "nicht verfügbar";
-        fileText.textContent = "nicht verfügbar";
-        notesText.textContent = "Versionsinformationen konnten nicht geladen werden.";
-        setStatus("Versionsinformationen konnten nicht geladen werden. Bitte später erneut versuchen.", "error");
-        console.error(error);
-      }
-    }
-
-    loadVersionInfo();
-  </script>
+  </div>
 </body>
 </html>
