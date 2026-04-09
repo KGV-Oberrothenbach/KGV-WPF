@@ -1,5 +1,11 @@
 {
-  "version": "0.2.6",
+  "version": "0.4.24",
+  "publishedAt": "2026-04-09",
   "downloadUrl": "https://kgv-oberrothenbach.github.io/KGV-WPF/KGV-Setup.exe",
-  "notes": "Neue Windows-Version"
+  "mandatory": false,
+  "notes": [
+    "Fehlerbehebungen",
+    "Verbesserte Navigation",
+    "Optimierungen im Login"
+  ]
 }
