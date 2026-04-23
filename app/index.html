@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>KGV-App Oberrothenbach</title>
+  <meta
+    name="description"
+    content="Die KGV-App Oberrothenbach unterstützt die Verwaltung von Mitgliedern, Parzellen, Ablesungen, Dokumenten und vereinsbezogenen Prozessen."
+  />
+  <style>
+    :root {
+      --bg: #f4f7f2;
+      --surface: #ffffff;
+      --text: #1f2a1f;
+      --muted: #5c6b5d;
+      --primary: #2f6b3d;
+      --primary-dark: #245330;
+      --border: #dbe6da;
+      --shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+      --radius: 18px;
+      --max: 980px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top right, #dfeedd 0%, transparent 30%),
+        linear-gradient(180deg, #f7faf6 0%, var(--bg) 100%);
+      line-height: 1.6;
+    }
+
+    a {
+      color: var(--primary);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    .wrap {
+      width: min(100% - 32px, var(--max));
+      margin: 0 auto;
+    }
+
+    header {
+      padding: 28px 0 18px;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .brand {
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+      color: var(--primary-dark);
+    }
+
+    .nav {
+      display: flex;
+      gap: 18px;
+      flex-wrap: wrap;
+      font-size: 0.98rem;
+    }
+
+    .hero {
+      background: linear-gradient(135deg, #edf7ec 0%, #ffffff 100%);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 42px 28px;
+      margin: 18px 0 28px;
+    }
+
+    .badge {
+      display: inline-block;
+      background: #e3f1e5;
+      color: var(--primary-dark);
+      border: 1px solid #cfe4d2;
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+
+    h1 {
+      margin: 0 0 14px;
+      font-size: clamp(2rem, 4vw, 3rem);
+      line-height: 1.15;
+      color: var(--primary-dark);
+    }
+
+    .lead {
+      font-size: 1.08rem;
+      color: var(--muted);
+      max-width: 760px;
+      margin: 0 0 22px;
+    }
+
+    .actions {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      margin-top: 16px;
+    }
+
+    .btn {
+      display: inline-block;
+      padding: 12px 18px;
+      border-radius: 12px;
+      font-weight: 700;
+      border: 1px solid var(--primary);
+      transition: 0.2s ease;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-dark);
+      text-decoration: none;
+    }
+
+    .btn-secondary {
+      background: #fff;
+      color: var(--primary-dark);
+    }
+
+    .btn-secondary:hover {
+      background: #f3f8f3;
+      text-decoration: none;
+    }
+
+    main section {
+      margin: 0 0 22px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 18px;
+    }
+
+    .card {
+      grid-column: span 12;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 24px;
+    }
+
+    .card h2 {
+      margin-top: 0;
+      margin-bottom: 12px;
+      font-size: 1.45rem;
+      color: var(--primary-dark);
+    }
+
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+      margin-top: 16px;
+    }
+
+    .feature {
+      background: #f8fbf8;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+    }
+
+    .feature h3 {
+      margin: 0 0 8px;
+      font-size: 1.05rem;
+      color: var(--primary-dark);
+    }
+
+    .feature p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.97rem;
+    }
+
+    .note {
+      background: #fff9e8;
+      border: 1px solid #f0df9b;
+      border-radius: 14px;
+      padding: 16px 18px;
+      color: #5f4d10;
+      font-size: 0.97rem;
+    }
+
+    footer {
+      padding: 10px 0 36px;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .footer-box {
+      background: rgba(255, 255, 255, 0.75);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 22px;
+    }
+
+    @media (max-width: 700px) {
+      .hero {
+        padding: 30px 20px;
+      }
+
+      .card {
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="wrap">
+    <div class="topbar">
+      <div class="brand">KGV-App Oberrothenbach</div>
+      <nav class="nav" aria-label="Hauptnavigation">
+        <a href="#ueberblick">Überblick</a>
+        <a href="#funktionen">Funktionen</a>
+        <a href="#datenschutz">Datenschutz</a>
+      </nav>
+    </div>
+
+    <section class="hero" id="ueberblick">
+      <div class="badge">Vereinsinterne Anwendung</div>
+      <h1>KGV-App für die digitale Vereinsverwaltung</h1>
+      <p class="lead">
+        Die KGV-App Oberrothenbach unterstützt vereinsbezogene Abläufe wie
+        Mitgliedsverwaltung, Parzellenübersicht, Dokumente, Ablesungen,
+        Arbeitsstunden und weitere organisatorische Prozesse im
+        Kleingartenverein.
+      </p>
+      <div class="actions">
+        <a
+          class="btn btn-primary"
+          href="https://kgv-oberrothenbach.github.io/KGV-WPF/android/"
+        >
+          Zur Datenschutzerklärung
+        </a>
+        <a class="btn btn-secondary" href="#funktionen">
+          Funktionen ansehen
+        </a>
+      </div>
+    </section>
+  </header>
+
+  <main class="wrap">
+    <section class="grid">
+      <article class="card">
+        <h2>Was macht die Anwendung?</h2>
+        <p>
+          Die Anwendung dient der internen Unterstützung von Verwaltungs- und
+          Organisationsaufgaben im Vereinsumfeld. Dazu gehören insbesondere die
+          Anzeige und Pflege vereinsbezogener Daten, die Verwaltung von
+          Mitgliedern und Parzellen, die Erfassung von Zählerständen,
+          Dokumentenprozesse sowie mobile Arbeitsabläufe für berechtigte Nutzer.
+        </p>
+        <p>
+          Je nach Berechtigung können innerhalb der App auch Fotos aufgenommen
+          oder hochgeladen werden, zum Beispiel zur Dokumentation von
+          Ablesungen, Zählerwechseln oder anderen vereinsbezogenen Vorgängen.
+        </p>
+      </article>
+    </section>
+
+    <section class="grid" id="funktionen">
+      <article class="card">
+        <h2>Wichtige Funktionen</h2>
+        <div class="features">
+          <div class="feature">
+            <h3>Mitglieder &amp; Parzellen</h3>
+            <p>
+              Anzeige und Verwaltung von Mitgliedsdaten, Parzellenzuordnungen
+              und vereinsinternen Stammdaten.
+            </p>
+          </div>
+          <div class="feature">
+            <h3>Ablesungen &amp; Zähler</h3>
+            <p>
+              Unterstützung bei der Erfassung von Zählerständen, RFID-bezogenen
+              Prozessen und zugehöriger Dokumentation.
+            </p>
+          </div>
+          <div class="feature">
+            <h3>Dokumente</h3>
+            <p>
+              Bereitstellung und Verarbeitung vereinsbezogener Dokumente und
+              Formulare innerhalb der vorgesehenen Rollen- und Rechtebereiche.
+            </p>
+          </div>
+          <div class="feature">
+            <h3>Arbeitsabläufe mobil</h3>
+            <p>
+              Nutzung auf mobilen Geräten für ausgewählte Verwaltungs- und
+              Erfassungsprozesse im Vereinsalltag.
+            </p>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section class="grid">
+      <article class="card">
+        <h2>Zugriff und Nutzung</h2>
+        <p>
+          Die KGV-App ist für vereinsbezogene Zwecke vorgesehen. Der Zugriff auf
+          einzelne Bereiche und Funktionen richtet sich nach den jeweils
+          zugewiesenen Berechtigungen innerhalb der Anwendung.
+        </p>
+        <div class="note">
+          Hinweis: Diese Seite dient als öffentliche Informationsseite zur
+          Anwendung. Informationen zur Verarbeitung personenbezogener Daten
+          findest du in der verlinkten Datenschutzerklärung.
+        </div>
+      </article>
+    </section>
+
+    <section class="grid" id="datenschutz">
+      <article class="card">
+        <h2>Datenschutz</h2>
+        <p>
+          Informationen zur Verarbeitung personenbezogener Daten im Zusammenhang
+          mit der Nutzung der KGV-App findest du in der folgenden
+          Datenschutzerklärung:
+        </p>
+        <p>
+          <a href="https://kgv-oberrothenbach.github.io/KGV-WPF/android/">
+            https://kgv-oberrothenbach.github.io/KGV-WPF/android/
+          </a>
+        </p>
+      </article>
+    </section>
+  </main>
+
+  <footer class="wrap">
+    <div class="footer-box">
+      <strong>KGV-App Oberrothenbach</strong><br />
+      Öffentliche Informationsseite zur Anwendung für die Google-OAuth- und
+      Verifizierungsangaben.
+    </div>
+  </footer>
+</body>
+</html>
