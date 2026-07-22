@@ -1,8 +1,8 @@
 ﻿{
-    "version":  "0.6.8",
+    "version":  "0.6.11",
     "setupUrl":  "https://kgv-oberrothenbach.github.io/KGV-WPF/KGV-Setup.exe",
-    "versionedSetupUrl":  "https://kgv-oberrothenbach.github.io/KGV-WPF/KGV-Setup-0.6.8.exe",
-    "publishedAt":  "2026-07-22T19:00:42Z",
+    "versionedSetupUrl":  "https://kgv-oberrothenbach.github.io/KGV-WPF/KGV-Setup-0.6.11.exe",
+    "publishedAt":  "2026-07-22T19:59:36Z",
     "mandatory":  false,
     "notes":  ""
 }
